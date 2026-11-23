@@ -1,0 +1,25 @@
+flowchart TD
+    %% OVIC EON — Data Storage Architecture
+    %% Document ID: EON-ARCH-DIAG-DATA-STORE-001
+
+    subgraph VOLATILE_RAM["Volatile RAM Storage (Zero Disk Write)"]
+        FRAME_BUF["Raw Video Ring Buffer\n(Pre-allocated 30 frames)"]
+        AUDIO_BUF["Raw PCM Audio Buffer\n(Pre-allocated 3.5s ring)"]
+        WM_BUF["Working Memory Buffer\n(20-turn conversational context)"]
+        BUS_QUEUES["Event Bus Priority Queues\n(In-flight event envelopes)"]
+    end
+
+    subgraph ENCRYPTED_DISK["Encrypted Disk Storage (/var/lib/eon/)"]
+        SQLCIPHER["SQLCipher Encrypted Database\n(User Preferences & Episodic Summaries)"]
+        CONFIG_YAML["Declarative Configuration\n(/etc/eon/eon_config.yaml)"]
+        AUDIT_LOG["Tamper-Evident Hash Audit Log\n(/var/log/eon/audit.log)"]
+    end
+
+    subgraph KEY_STORE["Key Management"]
+        KEYRING["Linux Keyutils Kernel Keyring\n(Argon2id Master Key & User DEKs)"]
+    end
+
+    %% Wiring
+    KEYRING -.->|Decrypts at Runtime| SQLCIPHER
+    WM_BUF -->|Consent Granted| SQLCIPHER
+    FRAME_BUF & AUDIO_BUF -.->|Zero-Wipe on Extraction| FRAME_BUF

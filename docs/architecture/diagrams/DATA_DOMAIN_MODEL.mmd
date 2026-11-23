@@ -1,0 +1,47 @@
+classDiagram
+    %% OVIC EON — Data Domain Entity Relationships
+    %% Document ID: EON-ARCH-DIAG-DATA-DOM-001
+
+    class SessionContext {
+        +UUID session_id
+        +InteractionStage stage
+        +DateTime start_time
+        +int turn_count
+    }
+
+    class ParticipantContext {
+        +string participant_id
+        +float distance_meters
+        +string proxemic_zone
+        +bool mutual_gaze
+    }
+
+    class AffectiveState {
+        +UUID state_id
+        +float valence
+        +float arousal
+        +float dominance
+        +DateTime last_decay_update
+    }
+
+    class UserPreference {
+        +UUID preference_id
+        +string user_id_hash
+        +string preferred_name
+        +string language
+        +float preferred_formality
+        +DateTime consent_granted_at
+    }
+
+    class EpisodicMemoryRecord {
+        +UUID record_id
+        +string user_id_hash
+        +DateTime timestamp
+        +DateTime expires_at
+        +string sanitized_summary
+    }
+
+    SessionContext "1" *-- "many" ParticipantContext : tracks
+    ParticipantContext "1" o-- "1" AffectiveState : exhibits
+    UserPreference "1" <.. "many" EpisodicMemoryRecord : links (consent-gated)
+    SessionContext "1" ..> "0..1" UserPreference : active persona

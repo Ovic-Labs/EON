@@ -1,0 +1,26 @@
+stateDiagram-v2
+    %% OVIC EON — Context Record Lifecycle
+    %% Document ID: EON-ARCH-DIAG-CTX-LIFE-001
+
+    [*] --> CREATED : Schema Validated
+    CREATED --> NORMALIZED : Values Clamped & UTC Timestamped
+    NORMALIZED --> ACTIVE_RAM : Placed in Working Memory (RAM)
+    
+    state ACTIVE_RAM {
+        [*] --> FRESH
+        FRESH --> AGED : Time Elapsed
+        AGED --> STALE : Exceeds 5.0s (Transient)
+    }
+
+    ACTIVE_RAM --> COMMITTED_DB : Consent Granted -> Encrypted Write
+    ACTIVE_RAM --> PURGED_RAM : Session Closes (DISENGAGED)
+
+    state COMMITTED_DB {
+        [*] --> RETAINED
+        RETAINED --> TTL_EXPIRED : Exceeds 30 Days TTL
+    }
+
+    COMMITTED_DB --> CRYPTO_SHREDDED : User GDPR Erasure Request
+    TTL_EXPIRED --> [*]
+    PURGED_RAM --> [*]
+    CRYPTO_SHREDDED --> [*]

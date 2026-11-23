@@ -1,0 +1,48 @@
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as Robot Application
+    participant SDK as AsyncEonClient
+    participant Sub as Subsystem Client (e.g. Events)
+    participant Trans as Transport Layer (HTTP / WS)
+    participant Gate as EON API Gateway / Core
+
+    Note over App, Gate: 1. Client Initialization & Handshake
+    App->>SDK: AsyncEonClient(base_url, credentials)
+    App->>SDK: await client.connect()
+    SDK->>Trans: Initialize Connection Pool / SSL Context
+    Trans->>Gate: GET /api/v1/version (Compatibility Handshake)
+    Gate-->>Trans: 200 OK {"api_version": "1.4.0", "min_client": "0.1.0"}
+    Trans-->>SDK: Handshake Verified
+    SDK-->>App: Connected (Ready)
+
+    Note over App, Gate: 2. Synchronous / Asynchronous Subsystem Call
+    App->>Sub: await client.events.publish(envelope)
+    Sub->>Sub: Validate Pydantic Schema & Scopes
+    Sub->>Trans: Send Request (POST /api/v1/events)
+    alt Network Disruption / 503 Unavailable
+        Trans-->>Trans: Intercept Error (Transient Fault)
+        Trans->>Trans: Apply Full Jitter Exponential Backoff (Wait Δt)
+        Trans->>Gate: Retry Request (Attempt 2)
+    end
+    Gate-->>Trans: 200 OK {"ack_id": "ack_89f1", "status": "DELIVERED"}
+    Trans-->>Sub: Deserialize Response to EventAck
+    Sub-->>App: Return EventAck
+
+    Note over App, Gate: 3. Real-Time Event Subscription Stream
+    App->>Sub: await client.events.subscribe(["eon.perception.*"])
+    Sub->>Trans: Open WebSocket (WSS) + Topic Subscription
+    Gate-->>Trans: 101 Switching Protocols
+    loop Incoming Stream
+        Gate-->>Trans: Push EventEnvelope Frame
+        Trans-->>Sub: Parse Typed EventEnvelope
+        Sub-->>App: Yield Event via AsyncIterator
+    end
+
+    Note over App, Gate: 4. Graceful Teardown
+    App->>SDK: await client.close()
+    SDK->>Trans: Drain Queues & Close Sockets
+    Trans->>Gate: Close WS Connection (Code 1000 Normal Closure)
+    Trans-->>SDK: Closed
+    SDK-->>App: Teardown Complete
+```

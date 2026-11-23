@@ -1,0 +1,30 @@
+sequenceDiagram
+    %% OVIC EON — Context Access and Deletion Flow
+    %% Document ID: EON-ARCH-DIAG-CTX-ACCESS-001
+
+    autonumber
+    participant ERE as L4: ERE (Reasoning)
+    participant CtxMgr as L6: Context Manager
+    participant EMS as L4: EMS (Memory Custodian)
+    participant DB as Encrypted Storage (SQLCipher)
+    participant Shredder as CryptoShredder
+    participant User as User / Admin API
+
+    Note over ERE,CtxMgr: SCENARIO 1: LEAST-PRIVILEGE CONTEXT RETRIEVAL
+    ERE->>CtxMgr: query_context(session_id, scope="preferences")
+    CtxMgr->>CtxMgr: Check engine permissions (ERE: Read OK)
+    CtxMgr->>EMS: Request user preference view
+    EMS->>DB: Query encrypted SQLite
+    DB-->>EMS: Decrypted preference record
+    EMS-->>CtxMgr: Return scrubbed preferences
+    CtxMgr-->>ERE: Return UserPreferences (formality, language)
+
+    Note over User,Shredder: SCENARIO 2: VERIFIABLE GDPR USER DATA ERASURE
+    User->>CtxMgr: purge_user_data(user_id, auth_token)
+    CtxMgr->>EMS: Execute cryptographic purge
+    EMS->>Shredder: destroy_user_key(user_id)
+    Shredder-->>EMS: Key Permanently Destroyed
+    EMS->>DB: DELETE FROM records WHERE user_id = :id
+    DB-->>EMS: Rows Removed & WAL Checkpoint Executed
+    EMS-->>CtxMgr: Return DeletionReceipt(status="ERASED")
+    CtxMgr-->>User: Deletion Confirmation (<500ms)

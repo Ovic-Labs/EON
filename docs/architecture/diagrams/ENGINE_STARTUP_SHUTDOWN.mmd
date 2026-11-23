@@ -1,0 +1,32 @@
+sequenceDiagram
+    %% OVIC EON — Dependency-Aware Engine Startup and Shutdown Flow
+    %% Document ID: EON-ARCH-DIAG-ENG-SEQ-001
+
+    autonumber
+    participant Core as Core Lifecycle Coordinator
+    participant Tier1 as Tier 1: Ingest (HBU & ERS)
+    participant Tier2 as Tier 2: State (EMS & SIE)
+    participant Tier3 as Tier 3: Reasoning (ERE & PSE)
+    participant Tier4 as Tier 4: Actuation (ERG)
+
+    Note over Core: PHASE 1: TOPOLOGICAL STARTUP SEQUENCE
+    Core->>Tier1: start() [Sensory Ingestion]
+    Tier1-->>Core: RUNNING (Ingesting frames & audio)
+    Core->>Tier2: start() [State Dynamics & Turn HFSM]
+    Tier2-->>Core: RUNNING (Listening to observations)
+    Core->>Tier3: start() [Cognitive Appraisal & Personality]
+    Tier3-->>Core: RUNNING (Ready for emotional intents)
+    Core->>Tier4: start() [Surface NLG & TTS Vocoder]
+    Tier4-->>Core: RUNNING (Ready for speech & kinesics)
+    Note over Core: ALL ENGINES OPERATIONAL (State: READY)
+
+    Note over Core: PHASE 2: REVERSE-TOPOLOGICAL SHUTDOWN SEQUENCE
+    Core->>Tier4: stop(timeout=1.0s) [Cease speech & gestures]
+    Tier4-->>Core: STOPPED (Queues drained)
+    Core->>Tier3: stop(timeout=1.0s) [Halt deliberation]
+    Tier3-->>Core: STOPPED (Intents finalized)
+    Core->>Tier2: stop(timeout=1.0s) [Persist context & flush WAL]
+    Tier2-->>Core: STOPPED (Memory committed)
+    Core->>Tier1: stop(timeout=1.0s) [Close sensor buffers]
+    Tier1-->>Core: STOPPED (HAL disconnected)
+    Note over Core: SYSTEM SHUTDOWN COMPLETE

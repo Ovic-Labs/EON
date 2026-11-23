@@ -1,0 +1,32 @@
+flowchart TD
+    %% OVIC EON — API Architecture
+    %% Document ID: EON-ARCH-DIAG-API-001
+
+    subgraph CLIENTS["External API Clients"]
+        DASH["Robot Teleop Dashboard\n(Browser / WebSocket)"]
+        ADMIN["Admin CLI / Curl\n(REST HTTP Client)"]
+        FLEET["Fleet Management Portal\n(HTTP Polling)"]
+    end
+
+    subgraph API_GATEWAY["Layer 9: FastAPI Gateway"]
+        TLS_GATE["TLS 1.3 Termination\n(Reverse Proxy / Uvicorn)"]
+        AUTH_MW["Authentication Middleware\n(API Key & JWT Verification)"]
+        RATE_MW["Rate Limiting Middleware\n(60 req/min Token Bucket)"]
+        CORS_MW["CORS & Security Headers\n(Domain Whitelist)"]
+        ROUTERS["FastAPI API Routers\n(/health, /engines, /session, /models)"]
+        WS_MGR["WebSocket Stream Manager\n(Real-Time Envelope Broadcast)"]
+    end
+
+    subgraph INTERNAL_CORE["Layer 5 & 8: Core Runtime Substrate"]
+        CORE_MGR["CoreApplicationManager"]
+        HEALTH_SUP["HealthManager"]
+        EVENT_BUS["Core Event Bus"]
+    end
+
+    %% Wiring
+    DASH -->|WSS /api/v1/events/stream| TLS_GATE
+    ADMIN & FLEET -->|HTTPS /api/v1/*| TLS_GATE
+    TLS_GATE --> AUTH_MW --> RATE_MW --> CORS_MW
+    CORS_MW --> ROUTERS & WS_MGR
+    ROUTERS --> CORE_MGR & HEALTH_SUP
+    WS_MGR <==>|Tap Subscribed Events| EVENT_BUS

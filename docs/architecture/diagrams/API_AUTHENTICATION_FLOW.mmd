@@ -1,0 +1,28 @@
+sequenceDiagram
+    %% OVIC EON — API Authentication and RBAC Flow
+    %% Document ID: EON-ARCH-DIAG-API-AUTH-001
+
+    autonumber
+    participant Client as API Client / Operator
+    participant Gate as API Gateway / AuthMiddleware
+    participant TokenStore as Token Validator / Keyring
+    participant Router as API Endpoint Controller
+    participant Core as Core Application Manager
+
+    Client->>Gate: POST /api/v1/session/reset (Header: Authorization: Bearer <token>)
+    Gate->>TokenStore: Validate JWT Signature & Expiration (HS256)
+    alt Token Invalid or Expired
+        TokenStore-->>Gate: Token Verification Failed
+        Gate-->>Client: 401 Unauthorized (RFC 7807 JSON)
+    else Token Valid
+        TokenStore-->>Gate: Valid (User: "eng_operator", Role: "Operator")
+        Gate->>Gate: Check RBAC policy (Operator role permitted for session reset)
+        alt Insufficient Role Permissions
+            Gate-->>Client: 403 Forbidden (Insufficient Privileges)
+        else Authorized
+            Gate->>Router: Forward request with RequestContext
+            Router->>Core: reset_session_context()
+            Core-->>Router: Operation Success
+            Router-->>Client: 200 OK (ResetConfirmation)
+        end
+    end

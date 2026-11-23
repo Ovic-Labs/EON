@@ -1,0 +1,26 @@
+flowchart TD
+    %% OVIC EON — Event Failure and Recovery Mechanics
+    %% Document ID: EON-ARCH-DIAG-COMM-FAIL-001
+
+    subgraph OVERLOAD_EVENTS["Overload & Error Conditions"]
+        BURST["High-Rate Frame Burst\n(60 fps video storm)"]
+        SLOW_SUB["Slow Consumer\n(Database Lock / Model Delay)"]
+        MALFORMED["Malformed Envelope\n(Schema Validation Error)"]
+    end
+
+    subgraph RECOVERY_MECHANISMS["Core Event Bus Recovery Mechanisms"]
+        DROP_GATE["DROP_OLDEST Policy\n(Evict stale frames)"]
+        REJECT_GATE["REJECT Policy\n(Signal backpressure upstream)"]
+        TIMEOUT_GATE["Handler Timeout Enforcer\n(Cancel stalled worker)"]
+        SCHEMA_REJECT["Pydantic Rejection\n(Emit InvalidEventError)"]
+    end
+
+    subgraph SYSTEM_PROTECTION["System Protection Outcomes"]
+        MEM_BOUND["Bounded Memory Preserved\n(Zero OOM Crash)"]
+        BUS_CONTINUES["Event Loop Remains Fluid\n(Zero Event Loop Blocking)"]
+        AUDIT_LOG["Security Alert Emitted\n(SafetyAdvisoryEvent)"]
+    end
+
+    BURST --> DROP_GATE --> MEM_BOUND
+    SLOW_SUB --> TIMEOUT_GATE & REJECT_GATE --> BUS_CONTINUES
+    MALFORMED --> SCHEMA_REJECT --> AUDIT_LOG

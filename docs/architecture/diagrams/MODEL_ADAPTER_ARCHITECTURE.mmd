@@ -1,0 +1,38 @@
+flowchart TD
+    %% OVIC EON — Model Adapter Architecture
+    %% Document ID: EON-ARCH-DIAG-MOD-001
+
+    subgraph ENGINE_LAYER["Intelligence Engines (L4)"]
+        ERS["ERS: Action Units & SER"]
+        HBU["HBU: ST-GCN Pose"]
+        ERG["ERG: SLM & Piper TTS"]
+        ERE["ERE: CPM Appraisal"]
+    end
+
+    subgraph ADAPTER_LAYER["Model Adapter Subsystem (L7)"]
+        REGISTRY["ModelAdapterRegistry\n(Lifecycle, Discovery & Metadata)"]
+        HW_DETECTOR["HardwareCapabilityDetector\n(AVX2, NEON, RKNN, CUDA)"]
+    end
+
+    subgraph RUNTIME_ADAPTERS["Provider-Neutral Adapters"]
+        ONNX_ADP["OnnxInferenceAdapter\n(MediaPipe, Silero, SER)"]
+        LLAMA_ADP["LlamaCppInferenceAdapter\n(Qwen2.5-1.5B GGUF)"]
+        PIPER_ADP["PiperTtsAdapter\n(Neural Speech Vocoder)"]
+        RULE_ADP["DeterministicRuleAdapter\n(Fast Fallback Templates)"]
+    end
+
+    subgraph HARDWARE_BACKENDS["Hardware Execution Backends"]
+        CPU_SIMD["Edge Host CPU\n(ARM64 NEON / x86 AVX2)"]
+        NPU_RKNN["Rockchip NPU\n(/dev/rknpu RK3588)"]
+        GPU_CUDA["NVIDIA GPU\n(Jetson CUDA/TensorRT)"]
+    end
+
+    %% Wiring
+    ERS & HBU -->|Inference Query| REGISTRY
+    ERG & ERE -->|Inference Query| REGISTRY
+    REGISTRY --> HW_DETECTOR
+    REGISTRY --> ONNX_ADP & LLAMA_ADP & PIPER_ADP & RULE_ADP
+    ONNX_ADP --> CPU_SIMD & NPU_RKNN & GPU_CUDA
+    LLAMA_ADP --> CPU_SIMD
+    PIPER_ADP --> CPU_SIMD
+    RULE_ADP --> CPU_SIMD

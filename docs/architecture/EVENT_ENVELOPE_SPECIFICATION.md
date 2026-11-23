@@ -1,22 +1,23 @@
 # OVIC EON — Event Envelope Specification
 
-**Document ID:** EON-SPEC-ENV-001  
+**Document ID:** `EON-SPEC-ENV-001`  
 **Product:** OVIC EON  
 **Tagline:** Emotional Intelligence Infrastructure for Robotics  
 **Organization:** OVIC Labs  
-**Target Milestone:** Phase 1.2 — Data Schemas and Event Envelopes  
+**Phase:** Phase 1.2 (Qualified Base) & Phase 2.5 (Extended Specification)  
 **Status:** `QUALIFIED AND VERIFIED`  
+**Version:** 2.0.0  
 **Date:** 2026-11-23  
 
 ---
 
 ## 1. Overview
 
-The OVIC EON Event Envelope provides a standardized outer container for all asynchronous messages, perceptual observations, cognitive inferences, safety cues, and diagnostic heartbeats exchanged across the EON Event Bus and external middleware bridges.
+The OVIC EON Event Envelope provides a standardized, versioned outer container for all asynchronous messages, perceptual observations, cognitive inferences, safety cues, and diagnostic heartbeats exchanged across the EON Event Bus and external middleware bridges.
 
 ---
 
-## 2. Event Envelope Structure
+## 2. Event Envelope Structure and Schema
 
 The envelope is formalized by `eon.schemas.events.EventEnvelope[PayloadT]`:
 
@@ -26,7 +27,10 @@ The envelope is formalized by `eon.schemas.events.EventEnvelope[PayloadT]`:
   "event_type": "eon.observation",
   "schema_version": "1.0.0",
   "source": "sensor.camera.rgb",
+  "destination": "eon.engine.ers",
   "timestamp": "2026-11-23T12:00:00.000000Z",
+  "expires_at": "2026-11-23T12:00:00.500000Z",
+  "priority": "NORMAL",
   "metadata": {
     "correlation_id": "99887766-5544-3322-1100-aabbccddeeff",
     "causation_id": "11223344-5566-7788-99aa-bbccddeeff00",
@@ -40,17 +44,24 @@ The envelope is formalized by `eon.schemas.events.EventEnvelope[PayloadT]`:
 }
 ```
 
-### Field Definitions
+### Field Definitions and Mandatory Rules
 
-| Field Name | Type | Requirement | Description |
+| Field Name | Type | Requirement | Semantics & Validation Rules |
 |---|---|---|---|
-| `event_id` | `UUID4 String` | **Required** | Globally unique identifier generated automatically for each event instance. |
-| `event_type` | `EventType (Enum)` | **Required** | Canonical event category identifier (e.g. `eon.observation`, `eon.emotion_estimate`). |
-| `schema_version` | `SemVer String` | **Required** | Version of the contract (defaults to `1.0.0`). Rejects unsupported versions. |
-| `source` | `SourceId (String)` | **Required** | Dot-separated producer identifier (e.g. `eon.ers`, `sensor.mic.array`). |
-| `timestamp` | `UtcTimestamp` | **Required** | Timezone-aware UTC timestamp recording the creation time of the envelope. |
-| `metadata` | `EventMetadata` | **Required** | Contextual tracing, causality tracking, and privacy classification metadata. |
-| `payload` | `PayloadT (Generic)` | **Required** | Strongly typed payload conforming to its specific schema model. |
+| `event_id` | `UUID4 String` | **Mandatory** | Globally unique identifier generated automatically for each event instance. |
+| `event_type` | `EventType (Enum)` | **Mandatory** | Canonical event category identifier (e.g. `eon.observation`, `eon.emotion_estimate`). |
+| `schema_version` | `SemVer String` | **Mandatory** | Version of the contract (defaults to `1.0.0`). Rejects unsupported versions. |
+| `source` | `SourceId (String)` | **Mandatory** | Dot-separated producer identifier (e.g. `eon.ers`, `sensor.mic.array`). |
+| `destination` | `String` | Optional | Optional routing target or specific engine recipient. |
+| `timestamp` | `UtcTimestamp` | **Mandatory** | Timezone-aware UTC timestamp recording the creation time of the envelope. |
+| `expires_at` | `UtcTimestamp` | Optional | Explicit freshness deadline; envelopes older than this are dropped as stale. |
+| `priority` | `EventPriority` | **Mandatory** | Scheduling priority: `CRITICAL`, `HIGH`, `NORMAL`, `LOW`. |
+| `metadata` | `EventMetadata` | **Mandatory** | Contextual tracing, causality tracking, and privacy classification metadata. |
+| `payload` | `PayloadT (Generic)`| **Mandatory** | Strongly typed payload conforming to its specific Pydantic v2 schema model. |
+
+### Prohibited Fields
+- Raw byte buffers (`bytes` or `bytearray`) must **never** be placed directly into JSON envelope fields without typed base64 or tensor schema wrapping.
+- Unredacted personal identifiable information (PII) is strictly prohibited in `metadata`.
 
 ---
 
@@ -59,47 +70,15 @@ The envelope is formalized by `eon.schemas.events.EventEnvelope[PayloadT]`:
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Sensor as Ingest (sensor.camera)
-    participant ERS as ERS (eon.ers)
-    participant Context as Context Manager (eon.context)
-    participant SIE as SIE (eon.sie)
+    participant Sensor as L1/L3: Sensor Pipeline
+    participant ERS as L4: Emotion Recognition (ERS)
+    participant ERE as L4: Empathy Reasoning (ERE)
+    participant ERG as L4: Response Generation (ERG)
 
-    Note over Sensor,SIE: Shared Correlation ID = corr-001 | Session ID = session-42
-
-    Sensor->>ERS: ObservationEvent (event_id = E1, causation_id = null)
-    Note over ERS: Analyzes facial kinematics & computes valence/arousal
-    ERS->>Context: EmotionEstimateEvent (event_id = E2, causation_id = E1)
-    Note over Context: Updates engagement status & turn stage
-    Context->>SIE: ContextUpdateEvent (event_id = E3, causation_id = E2)
-    Note over SIE: Assesses proximity and issues social cue
-    SIE->>Sensor: SafetyAdvisoryEvent (event_id = E4, causation_id = E3)
+    Sensor->>ERS: Event 1: Observation (event_id: E1, causation_id: None)
+    Note over ERS: ERS processes cues<br/>Sets causation_id = E1
+    ERS->>ERE: Event 2: EmotionEstimate (event_id: E2, causation_id: E1)
+    Note over ERE: ERE formulates intent<br/>Sets causation_id = E2
+    ERE->>ERG: Event 3: ResponseIntent (event_id: E3, causation_id: E2)
+    Note over ERG: All events share correlation_id = C1
 ```
-
-1. **Correlation Tracking (`correlation_id`):**  
-   Retained across all downstream events spawned by a single originating human action or conversational turn.
-2. **Causation Tracking (`causation_id`):**  
-   Points directly to the immediate predecessor event, establishing a verifiable directed acyclic graph (DAG) of system decisions.
-3. **Session Tracking (`session_id`):**  
-   Binds all events to an ongoing user interaction or operational deployment session.
-
----
-
-## 4. Concrete Event Implementations
-
-| Event Class | Payload Type | Typical Producer | Primary Consumer |
-|---|---|---|---|
-| `ObservationEvent` | `ObservationPayload` | Sensor Ingest, Hardware Adapters | ERS, HBU |
-| `EmotionEstimateEvent` | `EmotionEstimatePayload` | ERS | ERE, PSE, SIE, EMS |
-| `ContextUpdateEvent` | `InteractionContextPayload` | EON Core Context Manager | SIE, ERG |
-| `SafetyAdvisoryEvent` | `SafetyAdvisoryPayload` | Safety Interlock, SIE, EON Core | ROS 2 Bridge, Host Robot PLC |
-| `ComponentHealthEvent` | `ComponentHealthPayload` | All Engines and Transports | Lifecycle Supervisor |
-
----
-
-## 5. Polymorphic Deserialization
-
-The `deserialize_event(json_str: str) -> EventEnvelope[Any]` function provides safe polymorphic deserialization:
-1. Validates that the input is a valid JSON string and under the 10 MB payload limit.
-2. Inspects `event_type` without arbitrary dynamic imports.
-3. Routes the payload dictionary to the appropriate strongly typed event model.
-4. Raises explicit, human-readable errors if the event type or schema version is unrecognized.

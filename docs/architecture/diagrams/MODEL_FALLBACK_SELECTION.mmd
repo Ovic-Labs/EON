@@ -1,0 +1,19 @@
+flowchart TD
+    %% OVIC EON — Model Fallback Selection Logic
+    %% Document ID: EON-ARCH-DIAG-MOD-FALLBACK-001
+
+    START["Inference Request Received"] --> CHECK_HW{"Hardware Accelerator\nAvailable & Healthy?"}
+    
+    CHECK_HW -- Yes (NPU/GPU Detected) --> RUN_ACCEL["Execute on Hardware Accelerator\n(RKNN / TensorRT)"]
+    CHECK_HW -- No (CPU-Only Mode) --> RUN_CPU["Execute on Quantized CPU Runtime\n(ONNX INT8 / llama.cpp)"]
+    
+    RUN_ACCEL --> ACCEL_OK{"Execution\nSuccess?"}
+    ACCEL_OK -- Yes --> RETURN_OK["Return Validated Predictions"]
+    ACCEL_OK -- Timeout / Crash --> RUN_CPU
+    
+    RUN_CPU --> CPU_OK{"CPU Execution\nSuccess?"}
+    CPU_OK -- Yes --> RETURN_OK
+    CPU_OK -- Timeout / OOM --> RUN_TEMPLATE["Engage Deterministic Rule Fallback\n(<5ms Algebraic Template Lookup)"]
+    
+    RUN_TEMPLATE --> LOG_ALERT["Log Safety Advisory Warning\n(Health State -> DEGRADED)"]
+    LOG_ALERT --> RETURN_FALLBACK["Return Safe Fallback Payload\n(Conversational Continuity Preserved)"]

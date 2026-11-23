@@ -1,0 +1,30 @@
+sequenceDiagram
+    %% OVIC EON — Event Delivery and Causality Sequence
+    %% Document ID: EON-ARCH-DIAG-COMM-FLOW-001
+
+    autonumber
+    participant Pub as Publisher (e.g. ERS)
+    participant Router as EventRouter
+    participant QM as QueueManager
+    participant Q as Subscriber PriorityQueue
+    participant Worker as Subscriber Worker Task
+    participant Sub as Handler (e.g. ERE)
+
+    Pub->>Router: publish(envelope, priority=NORMAL)
+    Router->>Router: Match topic subscriptions (exact & prefix)
+    Router->>QM: Enqueue for matched subscribers
+    QM->>Q: put_nowait(item) [Check bounded capacity]
+    alt Queue Full & DROP_OLDEST
+        Q->>Q: Evict oldest unread item
+        Q->>Q: Append new item
+    else Normal Enqueue
+        Q->>Q: Append new item
+    end
+    Q-->>Worker: Worker dequeues item (FIFO within Priority)
+    alt Asynchronous Handler
+        Worker->>Sub: await async_handler(envelope)
+    else Synchronous Handler
+        Worker->>Worker: Offload to ThreadPoolExecutor
+    end
+    Sub-->>Worker: Handler execution complete
+    Worker->>QM: task_done() [Deterministic accounting decrement]

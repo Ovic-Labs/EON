@@ -1,0 +1,31 @@
+stateDiagram-v2
+    %% OVIC EON — 11-State Engine Lifecycle State Machine
+    %% Document ID: EON-ARCH-DIAG-ENG-LIFE-001
+
+    [*] --> DISCOVERED
+    DISCOVERED --> REGISTERED : register()
+    REGISTERED --> VALIDATING : validate()
+    VALIDATING --> FAILED : validation_error
+    VALIDATING --> INITIALIZING : validation_ok
+    INITIALIZING --> FAILED : init_error
+    INITIALIZING --> INITIALIZED : initialize() OK
+    INITIALIZED --> STARTING : start()
+    STARTING --> FAILED : start_timeout
+    STARTING --> RUNNING : workers_active
+
+    RUNNING --> DEGRADED : anomaly_detected / timeout
+    DEGRADED --> RUNNING : recover() OK
+    DEGRADED --> FAILED : recovery_failed_3x
+
+    RUNNING --> PAUSED : pause()
+    PAUSED --> RUNNING : resume()
+
+    RUNNING --> STOPPING : stop()
+    PAUSED --> STOPPING : stop()
+    DEGRADED --> STOPPING : stop()
+
+    STOPPING --> STOPPED : drain_complete
+    STOPPING --> FAILED : stop_timeout
+
+    STOPPED --> [*]
+    FAILED --> [*]

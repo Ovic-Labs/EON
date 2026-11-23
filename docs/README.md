@@ -57,6 +57,8 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 
 ### 1.5 Architecture Documentation (`docs/architecture/`)
 
+#### 1.5.1 Foundations & Layered Architecture (Sub-phases 2.1 & 2.2)
+
 | Document | Document ID | Description |
 |---|---|---|
 | [Data Schema Architecture](architecture/DATA_SCHEMA_ARCHITECTURE.md) | EON-ARCH-SCHEMA-001 | Foundational data contracts, Pydantic v2 architecture, and security boundaries |
@@ -72,9 +74,94 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | [Engine Boundary Specifications](architecture/ENGINE_BOUNDARY_SPECIFICATIONS.md) | EON-SPEC-ENG-001 | Complete 27-item boundary specifications for all seven intelligence engines |
 | [Engine Dependency Matrix](architecture/ENGINE_DEPENDENCY_MATRIX.md) | EON-ARCH-DEP-002 | Authoritative 7x7 engine interaction matrix, event dependencies, and DAG |
 | [Engine Input/Output Contracts](architecture/ENGINE_INPUT_OUTPUT_CONTRACTS.md) | EON-SPEC-ENG-IO-001 | Schema mapping, existing Phase 1.2 contracts, and proposed Phase 2 schemas |
-| [Phase 2.1 & 2.2 Qualification Report](architecture/PHASE_2_1_2_2_ARCHITECTURE_QUALIFICATION_REPORT.md) | EON-QUAL-PH2-ARCH-001 | Architecture qualification report and acceptance matrix for Sub-phases 2.1 & 2.2 |
 
-#### 1.5.1 Architecture Decision Records (`docs/architecture/decisions/`)
+#### 1.5.2 EON Core Architecture (Sub-phase 2.3)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [EON Core Architecture](architecture/EON_CORE_ARCHITECTURE.md) | EON-ARCH-CORE-004 | Kernel supervision, component topology, and lifecycle coordination |
+| [EON Core Components](architecture/EON_CORE_COMPONENTS.md) | EON-ARCH-CORE-005 | Specification of Core Kernel subcomponents and ownership boundaries |
+| [EON Core Initialization](architecture/EON_CORE_INITIALIZATION.md) | EON-ARCH-CORE-006 | Single-pass topological startup sequence and readiness probing |
+| [EON Core State Model](architecture/EON_CORE_STATE_MODEL.md) | EON-ARCH-CORE-007 | System-level finite state machine and transition rules |
+| [EON Core Failure Handling](architecture/EON_CORE_FAILURE_HANDLING.md) | EON-ARCH-CORE-008 | Three-tier failure recovery supervision, fault isolation, and circuit breaking |
+
+#### 1.5.3 Engine Lifecycle Architecture (Sub-phase 2.4)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Engine Lifecycle Architecture](architecture/ENGINE_LIFECYCLE_ARCHITECTURE.md) | EON-ARCH-LIFE-001 | Uniform lifecycle state machine and supervisor coordination |
+| [Engine Lifecycle Contract](architecture/ENGINE_LIFECYCLE_CONTRACT.md) | EON-SPEC-LIFE-001 | Formal Python protocol, state hooks, and timeout constraints |
+| [Engine State Transitions](architecture/ENGINE_STATE_TRANSITIONS.md) | EON-ARCH-LIFE-002 | Transition rules, state invariants, and concurrency safety |
+| [Engine Recovery and Failure Policies](architecture/ENGINE_RECOVERY_AND_FAILURE_POLICIES.md) | EON-POL-LIFE-001 | Restart limits, fallback modes, and progressive degradation |
+| [Engine Resource Declarations](architecture/ENGINE_RESOURCE_DECLARATIONS.md) | EON-SPEC-LIFE-002 | CPU, RAM, VRAM, and thread budget enforcement |
+
+#### 1.5.4 Event-Driven Communication Architecture (Sub-phase 2.5)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Event-Driven Communication](architecture/EVENT_DRIVEN_COMMUNICATION.md) | EON-ARCH-COMM-001 | Decoupled pub/sub message bus and cross-engine streaming |
+| [Event Envelope Specification v2.0.0](architecture/EVENT_ENVELOPE_SPECIFICATION.md) | EON-SPEC-ENV-001 | Universal CloudEvents v1.0.2 event envelope specification |
+| [Event Taxonomy](architecture/EVENT_TAXONOMY.md) | EON-SPEC-COMM-001 | Hierarchical topic taxonomy and event payload schema catalog |
+| [Event Delivery and Reliability](architecture/EVENT_DELIVERY_AND_RELIABILITY.md) | EON-SPEC-COMM-002 | At-least-once / at-most-once delivery, ack tracking, and backpressure |
+| [Event Security and Privacy](architecture/EVENT_SECURITY_AND_PRIVACY.md) | EON-POL-COMM-001 | Topic ACLs, encryption in transit, and ephemeral payload scrubbing |
+
+#### 1.5.5 Shared Context Management Architecture (Sub-phase 2.6)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Shared Context Architecture](architecture/SHARED_CONTEXT_ARCHITECTURE.md) | EON-ARCH-CTX-001 | Unified contextual state management for interaction and memory |
+| [Context Data Model](architecture/CONTEXT_DATA_MODEL.md) | EON-SPEC-CTX-001 | Working memory, interaction state, and long-term user profile schemas |
+| [Context Lifecycle](architecture/CONTEXT_LIFECYCLE.md) | EON-SPEC-CTX-002 | Session demarcations, continuous presence timeouts, and eviction |
+| [Context Access Control](architecture/CONTEXT_ACCESS_CONTROL.md) | EON-POL-CTX-001 | Capability-based read/write access and per-engine scopes |
+| [Context Privacy and Retention](architecture/CONTEXT_PRIVACY_AND_RETENTION.md) | EON-POL-CTX-002 | GDPR compliance, retention tags, and epistemological qualifications |
+| [Context Conflict Resolution](architecture/CONTEXT_CONFLICT_RESOLUTION.md) | EON-SPEC-CTX-003 | Optimistic concurrency control and field-level merge strategies |
+
+#### 1.5.6 Model Adapter Architecture (Sub-phase 2.7)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Model Adapter Architecture](architecture/MODEL_ADAPTER_ARCHITECTURE.md) | EON-ARCH-MOD-001 | Provider-neutral neural execution and hardware abstraction |
+| [Model Adapter Interface Specification](architecture/MODEL_ADAPTER_INTERFACE_SPECIFICATION.md) | EON-SPEC-MOD-001 | Synchronous and streaming inference protocol specifications |
+| [Model Runtime Compatibility](architecture/MODEL_RUNTIME_COMPATIBILITY.md) | EON-SPEC-MOD-002 | ONNX Runtime, TensorRT, PyTorch, and llama.cpp execution profiles |
+| [Hardware Capability Abstraction](architecture/HARDWARE_CAPABILITY_ABSTRACTION.md) | EON-SPEC-MOD-003 | Hardware auto-detection, execution tier ranking, and fallback routing |
+| [Model Lifecycle](architecture/MODEL_LIFECYCLE.md) | EON-SPEC-MOD-004 | Model registration, memory allocation, warm-up, and hot-swapping |
+| [Model Provenance and Governance](architecture/MODEL_PROVENANCE_AND_GOVERNANCE.md) | EON-POL-MOD-001 | License verification, SBOM, and weight checksum validation |
+
+#### 1.5.7 Data Architecture (Sub-phase 2.8)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Data Architecture](architecture/DATA_ARCHITECTURE.md) | EON-ARCH-DATA-001 | Edge storage architecture, multi-engine persistence, and synchronization |
+| [Data Domain Model](architecture/DATA_DOMAIN_MODEL.md) | EON-SPEC-DATA-001 | Relational, document, and vector domain entities |
+| [Data Storage Strategy](architecture/DATA_STORAGE_STRATEGY.md) | EON-SPEC-DATA-002 | SQLite WAL, DuckDB analytics, and vector index configurations |
+| [Data Schema Versioning and Migrations](architecture/DATA_SCHEMA_VERSIONING_AND_MIGRATIONS.md) | EON-SPEC-DATA-003 | Automated migration runner, rollback contracts, and backward compatibility |
+| [Data Security](architecture/DATA_SECURITY.md) | EON-POL-DATA-001 | AES-256-GCM encryption at rest and OS-keychain master key management |
+| [Data Privacy and Retention](architecture/DATA_PRIVACY_AND_RETENTION.md) | EON-POL-DATA-002 | Automated retention sweeps and cryptographic shredding |
+| [Edge and Cloud Data Synchronization](architecture/EDGE_AND_CLOUD_DATA_SYNCHRONIZATION.md) | EON-SPEC-DATA-004 | Offline-first sync, differential transfers, and conflict resolution |
+
+#### 1.5.8 API Architecture (Sub-phase 2.9)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [API Architecture](architecture/API_ARCHITECTURE.md) | EON-ARCH-API-001 | Unified Northbound API Gateway, protocol topologies, and concurrency |
+| [API Endpoint Catalog](architecture/API_ENDPOINT_CATALOG.md) | EON-SPEC-API-001 | Complete catalog of 24 REST endpoints and 4 WebSocket streams |
+| [API Authentication and Authorization](architecture/API_AUTHENTICATION_AND_AUTHORIZATION.md) | EON-SPEC-API-002 | mTLS, JWT Bearer tokens, and API Key authentication contracts |
+| [API Security](architecture/API_SECURITY.md) | EON-POL-API-001 | Threat modeling, token bucket rate limiting, and request validation |
+| [API Versioning and Compatibility](architecture/API_VERSIONING_AND_COMPATIBILITY.md) | EON-SPEC-API-003 | URL path versioning, backward compatibility, and sunsetting policy |
+| [API Error and Reliability Contract](architecture/API_ERROR_AND_RELIABILITY_CONTRACT.md) | EON-SPEC-API-004 | RFC 7807 problem details, circuit breaking, and reliability SLAs |
+
+#### 1.5.9 Python SDK Architecture (Sub-phase 2.10)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Python SDK Architecture](architecture/PYTHON_SDK_ARCHITECTURE.md) | EON-ARCH-SDK-001 | Dual-mode client design, async/sync paradigms, and 9 illustrative examples |
+| [Python SDK Package Structure](architecture/PYTHON_SDK_PACKAGE_STRUCTURE.md) | EON-SPEC-SDK-001 | Package layout under `src/eon/`, public exports, and lean dependencies |
+| [Python SDK API Contracts](architecture/PYTHON_SDK_API_CONTRACTS.md) | EON-SPEC-SDK-002 | Fully typed interfaces for top-level and subsystem clients |
+| [Python SDK Authentication and Security](architecture/PYTHON_SDK_AUTHENTICATION_AND_SECURITY.md) | EON-POL-SDK-001 | Credential resolution, mTLS handling, and token lifecycle management |
+| [Python SDK Error Handling](architecture/PYTHON_SDK_ERROR_HANDLING.md) | EON-SPEC-SDK-003 | Deterministic `EonError` hierarchy, status mapping, and full-jitter retry |
+| [Python SDK Compatibility](architecture/PYTHON_SDK_COMPATIBILITY.md) | EON-SPEC-SDK-004 | Python 3.10–3.12 compatibility matrix and API version handshake |
+
+#### 1.5.10 Architecture Decision Records (`docs/architecture/decisions/`)
 
 | ADR | Title | Status | Scope |
 |---|---|---|---|
@@ -89,6 +176,29 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | [ADR-009](architecture/decisions/ADR-009-ROBOT-ABSTRACTION.md) | Robot Hardware Abstraction & Non-Authoritative Actuation | Approved | Strict advisory boundaries; zero direct motor control |
 | [ADR-010](architecture/decisions/ADR-010-EDGE-CLOUD-SEPARATION.md) | Edge-First Execution and Cloud Separation Boundary | Approved | Air-gapped edge autonomy with zero cloud dependency |
 | [ADR-011](architecture/decisions/ADR-011-SECURITY-AND-PRIVACY-ARCHITECTURE.md) | Security, Privacy, and Verifiable Data Governance | Approved | Zero raw media persistence and cryptographic shredding |
+| [ADR-012](architecture/decisions/ADR-012-eon-core-architecture.md) | EON Core Architecture & Kernel Orchestration | Approved | Kernel supervision and deterministic lifecycle sequence |
+| [ADR-013](architecture/decisions/ADR-013-engine-lifecycle-contract.md) | Engine Lifecycle Contract Protocol | Approved | 6-state engine FSM and escalation recovery policies |
+| [ADR-014](architecture/decisions/ADR-014-event-driven-communication-and-delivery-guarantees.md) | Event-Driven Communication and Delivery Guarantees | Approved | Bounded message broker, topic taxonomy, and QoS |
+| [ADR-015](architecture/decisions/ADR-015-shared-context-and-access-control.md) | Shared Context Architecture & Access Control | Approved | Optimistic concurrency and capability-scoped contexts |
+| [ADR-016](architecture/decisions/ADR-016-provider-neutral-model-adapter-architecture.md) | Provider-Neutral Model Adapter Architecture | Approved | Hardware abstraction, multi-backend routing, and fallback |
+| [ADR-017](architecture/decisions/ADR-017-edge-storage-and-data-governance.md) | Edge Data Architecture, Storage & Retention | Approved | Multi-engine edge storage, AES-256-GCM, and shredding |
+| [ADR-018](architecture/decisions/ADR-018-api-architecture-and-security.md) | API Gateway Architecture, Protocol & Security | Approved | Northbound API Gateway, OpenAPI 3.1, and token bucket |
+| [ADR-019](architecture/decisions/ADR-019-python-sdk-architecture.md) | Dual-Mode Synchronous/Asynchronous Python SDK | Approved | Local in-process and remote client modes, strong typing |
+
+#### 1.5.11 Phase 2 Architectural Qualification Reports
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Phase 2.1 & 2.2 Qualification Report](architecture/PHASE_2_1_2_2_ARCHITECTURE_QUALIFICATION_REPORT.md) | EON-QUAL-PH2-ARCH-001 | Architecture qualification report for Sub-phases 2.1 & 2.2 |
+| [Phase 2.3 Qualification Report](architecture/PHASE_2_3_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.3-001 | Architecture qualification report for Sub-phase 2.3 (EON Core) |
+| [Phase 2.4 Qualification Report](architecture/PHASE_2_4_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.4-001 | Architecture qualification report for Sub-phase 2.4 (Engine Lifecycle) |
+| [Phase 2.5 Qualification Report](architecture/PHASE_2_5_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.5-001 | Architecture qualification report for Sub-phase 2.5 (Event Communication) |
+| [Phase 2.6 Qualification Report](architecture/PHASE_2_6_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.6-001 | Architecture qualification report for Sub-phase 2.6 (Shared Context) |
+| [Phase 2.7 Qualification Report](architecture/PHASE_2_7_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.7-001 | Architecture qualification report for Sub-phase 2.7 (Model Adapters) |
+| [Phase 2.8 Qualification Report](architecture/PHASE_2_8_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.8-001 | Architecture qualification report for Sub-phase 2.8 (Data Architecture) |
+| [Phase 2.9 Qualification Report](architecture/PHASE_2_9_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.9-001 | Architecture qualification report for Sub-phase 2.9 (API Architecture) |
+| [Phase 2.10 Qualification Report](architecture/PHASE_2_10_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.10-001 | Architecture qualification report for Sub-phase 2.10 (Python SDK) |
+| [Phase 2.3–2.10 Master Qualification Report](architecture/PHASE_2_3_TO_2_10_FINAL_QUALIFICATION_REPORT.md) | EON-QUAL-PH2-FINAL-001 | Master consolidated qualification report for Sub-phases 2.3 through 2.10 |
 
 ### 1.6 Engineering Implementation Reports (`docs/engineering/`)
 

@@ -1,0 +1,33 @@
+sequenceDiagram
+    %% OVIC EON — API Request Lifecycle and Reliability
+    %% Document ID: EON-ARCH-DIAG-API-LIFE-001
+
+    autonumber
+    participant Client as Developer / Client
+    participant API as FastAPI Request Handler
+    participant RateLimiter as Rate Limiter (Token Bucket)
+    participant Validator as Pydantic Schema Validator
+    participant Service as Internal EON Core Service
+
+    Client->>API: HTTP Request (POST /api/v1/config/reload)
+    API->>API: Generate unique request_id (UUID4)
+    API->>RateLimiter: Check client IP bucket (Max 60/min)
+    alt Rate Limit Exceeded
+        RateLimiter-->>API: Limit Exceeded
+        API-->>Client: 429 Too Many Requests (Retry-After: 30)
+    else Limit OK
+        API->>Validator: Parse & validate request payload
+        alt Validation Error
+            Validator-->>API: ValidationError (Invalid JSON / Types)
+            API-->>Client: 400 Bad Request (RFC 7807 with request_id)
+        else Payload Valid
+            API->>Service: Execute operation with timeout=2.0s
+            alt Operation Succeeded
+                Service-->>API: Return response data
+                API-->>Client: 200 OK (Response JSON + Header: X-Request-ID)
+            else Service Timeout / Degraded
+                Service-->>API: TimeoutException
+                API-->>Client: 503 Service Unavailable (Fallback Details)
+            end
+        end
+    end

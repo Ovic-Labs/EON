@@ -345,8 +345,8 @@ OVIC EON is being developed through controlled, milestone-based engineering with
   Research scope across all eighteen sub-phases (1.1–1.18) is completed and qualified, subject to documented conditions and outstanding live-hardware verification.
 - **Phase 1 Runtime Foundation:** `IMPLEMENTED & QUALIFIED`  
   Repository packaging scaffolding (Phase 1.1), foundational data schemas and serialization contracts (Phase 1.2), and the asynchronous in-memory core event bus (Phase 1.3) are implemented with complete regression test evidence.
-- **Phase 2 Architecture & Engine Boundaries (Sub-phases 2.1 & 2.2):** `QUALIFIED — ARCHITECTURE & BOUNDARIES SPECIFIED`  
-  The 10-tier layered architecture, inter-layer interfaces, system constraints, seven-engine boundary specifications, 7x7 dependency matrix, input/output contracts, and 11 ADRs are fully specified and qualified.
+- **Phase 2 Architecture & System Engineering Design (Sub-phases 2.1–2.10):** `QUALIFIED — ARCHITECTURE & SUBSYSTEMS SPECIFIED`  
+  The 10-tier layered architecture, seven-engine boundary specifications, EON Core, Engine Lifecycle, Event-Driven Communication, Shared Context Management, Model Adapter Architecture, Data Architecture, API Architecture, Python SDK, 19 ADRs, and master qualification report (`EON-QUAL-PH2-FINAL-001`) are fully specified and qualified.
 - **Seven Intelligence Engines:** `NOT IMPLEMENTED (0%)`  
   Full software runtimes for ERS, EMS, ERE, PSE, SIE, ERG, and HBU are not yet implemented.
 - **ROS 2 Integration:** `NOT IMPLEMENTED`  
@@ -434,7 +434,7 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [ROS 2 Integration Architecture](docs/research/phase-1/ROS2_INTEGRATION_ARCHITECTURE.md)
 - [Phase 1 Master Qualification Report](docs/research/phase-1/PHASE_1_FINAL_QUALIFICATION_REPORT.md)
 
-### System architecture and engineering design (Phase 2 Sub-phases 2.1 & 2.2)
+### System architecture and engineering design (Phase 2 Sub-phases 2.1–2.10)
 
 - [System Layered Architecture](docs/architecture/SYSTEM_LAYERED_ARCHITECTURE.md)
 - [Inter-Layer Interfaces](docs/architecture/INTER_LAYER_INTERFACES.md)
@@ -443,8 +443,16 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [Engine Boundary Specifications](docs/architecture/ENGINE_BOUNDARY_SPECIFICATIONS.md)
 - [Engine Dependency Matrix](docs/architecture/ENGINE_DEPENDENCY_MATRIX.md)
 - [Engine Input/Output Contracts](docs/architecture/ENGINE_INPUT_OUTPUT_CONTRACTS.md)
-- [Phase 2.1 & 2.2 Architecture Qualification Report](docs/architecture/PHASE_2_1_2_2_ARCHITECTURE_QUALIFICATION_REPORT.md)
-- [Architecture Decision Records](docs/architecture/decisions/ADR-001-LAYERED-ARCHITECTURE.md)
+- [EON Core Architecture](docs/architecture/EON_CORE_ARCHITECTURE.md)
+- [Engine Lifecycle Architecture](docs/architecture/ENGINE_LIFECYCLE_ARCHITECTURE.md)
+- [Event-Driven Communication](docs/architecture/EVENT_DRIVEN_COMMUNICATION.md)
+- [Shared Context Architecture](docs/architecture/SHARED_CONTEXT_ARCHITECTURE.md)
+- [Model Adapter Architecture](docs/architecture/MODEL_ADAPTER_ARCHITECTURE.md)
+- [Data Architecture](docs/architecture/DATA_ARCHITECTURE.md)
+- [API Architecture](docs/architecture/API_ARCHITECTURE.md)
+- [Python SDK Architecture](docs/architecture/PYTHON_SDK_ARCHITECTURE.md)
+- [Architecture Decision Records (ADR-001 through ADR-019)](docs/architecture/decisions/ADR-001-LAYERED-ARCHITECTURE.md)
+- [Phase 2.3–2.10 Master Qualification Report](docs/architecture/PHASE_2_3_TO_2_10_FINAL_QUALIFICATION_REPORT.md)
 
 ### Additional documentation
 

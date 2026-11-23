@@ -1,0 +1,33 @@
+flowchart TD
+    %% OVIC EON — Shared Context Architecture
+    %% Document ID: EON-ARCH-DIAG-CTX-001
+
+    subgraph ENGINE_CLIENTS["Context Consumers & Providers"]
+        ERS["ERS: Emotion Observations"]
+        EMS["EMS: Affective Memory (Custodian)"]
+        ERE["ERE: Empathy Reasoning"]
+        SIE["SIE: Social Interaction"]
+        ERG["ERG: Response Generation"]
+    end
+
+    subgraph CONTEXT_LAYER["L6 Shared Context Subsystem"]
+        MGR["ContextManager\n(Coordination & Access Enforcement)"]
+        CONFLICT["ConflictResolver\n(Observation Divergence & Staleness)"]
+        LIFECYCLE["ContextLifecycleManager\n(TTL Enforcement & Purge)"]
+    end
+
+    subgraph STORAGE_PROVIDERS["Storage Providers (SPI)"]
+        WM["Working Memory Buffer\n(Volatile RAM Ring Buffer)"]
+        EPISODIC["Episodic & Semantic Store\n(Encrypted SQLite / SQLCipher)"]
+        SHREDDER["CryptoShredder\n(Per-User AES-256 DEK Manager)"]
+    end
+
+    %% Flows
+    ERS & SIE -->|Submit Observations & Context| MGR
+    MGR --> CONFLICT
+    CONFLICT --> LIFECYCLE
+    LIFECYCLE --> WM
+    EMS <-->|Consent-Gated Long-Term Store| EPISODIC
+    SHREDDER -.->|Cryptographic Erasure| EPISODIC
+    WM & EPISODIC -->|Context Retrieval| MGR
+    MGR -->|Filtered Context Query| ERE & SIE & ERG

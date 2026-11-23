@@ -1,0 +1,59 @@
+```mermaid
+graph TD
+    subgraph AppLayer ["Client Application Layer"]
+        UserApp["Robot Application / Script / HRI Node"]
+    end
+
+    subgraph SDKLayer ["EON Python SDK (src/eon/)"]
+        ClientSync["EonClient (Synchronous API)"]
+        ClientAsync["AsyncEonClient (Asynchronous API)"]
+        
+        subgraph SubClients ["Subsystem Domain Clients"]
+            EnginesClient["EngineClient / AsyncEngineClient"]
+            EventsClient["EventClient / AsyncEventClient"]
+            ContextClient["ContextClient / AsyncContextClient"]
+            ModelsClient["ModelClient / AsyncModelClient"]
+            HealthClient["HealthClient / AsyncHealthClient"]
+        end
+        
+        subgraph ModelsSecurity ["Models & Security Infrastructure"]
+            PydanticModels["Strongly Typed Models (Pydantic)"]
+            SecurityAuth["Auth & Security (mTLS, JWT, API Key)"]
+            RetryErrors["Resilient Error Handling & Full Jitter Retry"]
+        end
+
+        subgraph TransportLayer ["Transport Abstraction"]
+            BaseTransport["BaseTransport (Interface)"]
+            InProcessTransport["InProcessTransport (Direct Shared Memory)"]
+            HttpTransport["HttpTransport (httpx REST Engine)"]
+            WsTransport["WebSocketTransport (websockets Stream)"]
+            GrpcTransport["GrpcTransport (Optional Protobuf)"]
+        end
+    end
+
+    subgraph CoreLayer ["EON Core System Architecture"]
+        EonCore["EON Core Kernel (In-Process Direct)"]
+        ApiGateway["EON API Gateway (Remote Networked)"]
+    end
+
+    UserApp --> ClientSync
+    UserApp --> ClientAsync
+    
+    ClientSync --> SubClients
+    ClientAsync --> SubClients
+    
+    SubClients --> PydanticModels
+    SubClients --> SecurityAuth
+    SubClients --> RetryErrors
+    
+    SubClients --> BaseTransport
+    BaseTransport --> InProcessTransport
+    BaseTransport --> HttpTransport
+    BaseTransport --> WsTransport
+    BaseTransport --> GrpcTransport
+
+    InProcessTransport -.->|"Zero-Copy Direct Call"| EonCore
+    HttpTransport -.->|"HTTPS / TLS 1.3"| ApiGateway
+    WsTransport -.->|"WSS Event Stream"| ApiGateway
+    GrpcTransport -.->|"gRPC / HTTP/2"| ApiGateway
+```

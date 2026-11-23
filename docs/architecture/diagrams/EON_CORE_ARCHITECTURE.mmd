@@ -1,0 +1,43 @@
+flowchart TD
+    %% OVIC EON — EON Core Architecture
+    %% Document ID: EON-ARCH-DIAG-CORE-001
+
+    subgraph CORE_APP["Core Application Plane (L5)"]
+        CAM["Core Application Manager\n(Master Orchestrator)"]
+        CONFIG["Configuration Manager\n(Schema Validation & Env Vars)"]
+        POLICY["Policy Enforcer\n(Non-Authoritative & Security Gate)"]
+        SHUTDOWN["Shutdown Coordinator\n(Orderly Resource Draining)"]
+    end
+
+    subgraph ENGINE_MGMT["Engine Management Plane (L5)"]
+        COMP_REG["Component Registry\n(Service Provider Lookup)"]
+        ENG_REG["Engine Registry\n(Seven Engines Catalog)"]
+        DEP_RES["Dependency Resolver\n(Acyclic Graph & Ordering)"]
+        LIFECYCLE["Lifecycle Coordinator\n(State Transitions & Sync)"]
+        HEALTH["Health Manager\n(Heartbeat & Fault Supervisor)"]
+    end
+
+    subgraph MEDIATION_INTERFACES["Mediation Interfaces (L5)"]
+        EVENT_INT["Event Interface\n(Core Event Bus Router)"]
+        CONTEXT_INT["Context Interface\n(Session & Working Memory)"]
+        MODEL_INT["Model Adapter Interface\n(Inference Runtime Catalog)"]
+    end
+
+    subgraph L4_ENGINES["Seven Intelligence Engines (L4)"]
+        ERS["ERS: Emotion Recognition"]
+        EMS["EMS: Affective Memory"]
+        ERE["ERE: Empathy Reasoning"]
+        PSE["PSE: Personality Engine"]
+        SIE["SIE: Social Interaction"]
+        ERG["ERG: Response Generation"]
+        HBU["HBU: Behaviour Understanding"]
+    end
+
+    %% Wiring
+    CAM --> CONFIG & POLICY & SHUTDOWN
+    CAM --> LIFECYCLE & HEALTH
+    LIFECYCLE --> DEP_RES & ENG_REG & COMP_REG
+    CAM --> EVENT_INT & CONTEXT_INT & MODEL_INT
+    EVENT_INT <==>|Typed Envelopes| L4_ENGINES
+    LIFECYCLE -->|Lifecycle SPI| L4_ENGINES
+    HEALTH <..|Health Reports| L4_ENGINES

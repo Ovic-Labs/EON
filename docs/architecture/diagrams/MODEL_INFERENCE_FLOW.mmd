@@ -1,0 +1,25 @@
+sequenceDiagram
+    %% OVIC EON — Model Inference Execution Flow
+    %% Document ID: EON-ARCH-DIAG-MOD-FLOW-001
+
+    autonumber
+    participant Engine as L4 Engine (e.g. ERG)
+    participant Reg as L7 Model Adapter Registry
+    participant Adapter as L7 Inference Adapter (e.g. LlamaCpp)
+    participant HW as Hardware Backend (CPU SIMD)
+    participant Rule as Deterministic Rule Fallback
+
+    Engine->>Reg: predict(model_id, input_tensors, timeout=350ms)
+    Reg->>Adapter: Route to active execution session
+    alt Model Healthy & Within Budget
+        Adapter->>HW: Execute tensor forward pass (Worker Thread)
+        HW-->>Adapter: Return logits / tokens
+        Adapter-->>Reg: Format output into typed contract
+        Reg-->>Engine: Return PredictionResult
+    else Model Crash / OOM / Timeout
+        Adapter-->>Reg: Raise ModelInferenceError
+        Note over Reg: INITIATE DETERMINISTIC FALLBACK
+        Reg->>Rule: Select approved safety template
+        Rule-->>Reg: Return deterministic fallback response (<5ms)
+        Reg-->>Engine: Return FallbackResult (Flagged: degraded=True)
+    end

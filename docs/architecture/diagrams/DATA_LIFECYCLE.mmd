@@ -1,0 +1,26 @@
+stateDiagram-v2
+    %% OVIC EON — Data Lifecycle State Machine
+    %% Document ID: EON-ARCH-DIAG-DATA-LIFE-001
+
+    [*] --> CREATION : Ingest / Generate
+    CREATION --> VALIDATION : Schema Pydantic v2 Check
+    VALIDATION --> REJECTED : Schema Failure
+    REJECTED --> [*]
+
+    VALIDATION --> PERSISTENCE_RAM : Volatile Session Data
+    PERSISTENCE_RAM --> RAM_PURGED : Session Closed (DISENGAGED)
+    RAM_PURGED --> [*]
+
+    VALIDATION --> PERSISTENCE_DISK : Consent-Gated Record
+    PERSISTENCE_DISK --> ENCRYPTED_AT_REST : AES-256 SQLCipher Write
+    
+    state ENCRYPTED_AT_REST {
+        [*] --> ACTIVE
+        ACTIVE --> TTL_EXPIRED : Age > 30 Days
+        ACTIVE --> SHRED_REQUESTED : User Purge Command
+    }
+
+    TTL_EXPIRED --> HARD_DELETE : SQLite Row Eviction
+    SHRED_REQUESTED --> KEY_DESTROYED : User DEK Shredded
+    KEY_DESTROYED --> HARD_DELETE
+    HARD_DELETE --> [*]

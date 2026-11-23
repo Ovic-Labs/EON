@@ -1,0 +1,45 @@
+flowchart TD
+    %% OVIC EON — Event-Driven Architecture
+    %% Document ID: EON-ARCH-DIAG-COMM-001
+
+    subgraph PUBLISHERS["Event Publishers (Producers)"]
+        P_PERC["L3: Perception Pipelines"]
+        P_ERS["L4: ERS (Emotions)"]
+        P_ERE["L4: ERE (Intent)"]
+        P_SIE["L4: SIE (Turn Action)"]
+        P_ERG["L4: ERG (Responses)"]
+    end
+
+    subgraph CORE_EVENT_BUS["L5 Core Event Bus (Router Substrate)"]
+        ROUTER["EventRouter\n(Topic Pattern Matcher)"]
+        QUEUE_MGR["QueueManager\n(Task Accounting & Invariants)"]
+        THREADPOOL["ThreadPoolExecutor\n(Sync Worker Isolation)"]
+    end
+
+    subgraph SUBSCRIBER_QUEUES["Per-Subscriber Bounded Priority Queues"]
+        Q_ERS["ERS Queue\n(Cap: 100, DROP_OLDEST)"]
+        Q_EMS["EMS Queue\n(Cap: 200, WAIT 50ms)"]
+        Q_ERE["ERE Queue\n(Cap: 100, DROP_OLDEST)"]
+        Q_SIE["SIE Queue\n(Cap: 100, DROP_OLDEST)"]
+        Q_ERG["ERG Queue\n(Cap: 50, REJECT)"]
+    end
+
+    subgraph CONSUMERS["Event Consumers (Subscribers)"]
+        C_EMS["EMS: Affective Memory"]
+        C_ERE["ERE: Empathy Reasoning"]
+        C_SIE["SIE: Turn Management"]
+        C_ERG["ERG: Speech Generation"]
+        C_ROBOT["L8: Robot Middleware Bridge"]
+    end
+
+    %% Flow
+    PUBLISHERS ==>|publish envelope| ROUTER
+    ROUTER --> QUEUE_MGR
+    QUEUE_MGR --> Q_ERS & Q_EMS & Q_ERE & Q_SIE & Q_ERG
+    Q_ERS --> P_ERS
+    Q_EMS --> C_EMS
+    Q_ERE --> C_ERE
+    Q_SIE --> C_SIE
+    Q_ERG --> C_ERG
+    C_ERG --> C_ROBOT
+    QUEUE_MGR -.->|Offload Sync Handlers| THREADPOOL
