@@ -3,9 +3,9 @@
 **Project:** OVIC EON
 **Document ID:** `EON-RES-TCM-001`
 **Phase:** Phase 1 — Technical Research and Feasibility
-**Scope:** Sub-phases 1.1 through 1.5
+**Scope:** Sub-phases 1.1 through 1.11
 **Status:** Approved
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Classification:** Technical Architecture Specification
 
 ---
@@ -90,12 +90,83 @@ Each candidate approach is assessed against eight standardized technical dimensi
 
 ---
 
-## 7. Cross-Domain Synthesis and Architectural Decisions
+## 7. Sub-phase 1.6 — Gesture and Posture Recognition
+
+| Framework / Architecture | Tracking Representation | CPU Latency (4-Core x86) | Tracking Memory (RAM) | Static vs Dynamic | Occlusion Tolerance | Commercial License | EON Recommendation |
+|---|---|---|---|---|---|---|---|
+| **MediaPipe Hands + Geometric Rules** | 21 3D Hand Landmarks | **$6.5\text{ms}$ per hand** | $\sim 24\text{MB}$ | Static + Simple Dynamic | Moderate (Recovers tracking via palm anchor) | **Apache 2.0** | **RECOMMENDED PRIMARY** |
+| **MediaPipe Pose Posture Classifier** | 33 3D Skeletal Angles | **$<1.0\text{ms}$** | $\sim 28\text{MB}$ | Static Posture | High (Infers occluded joints) | **Apache 2.0** | **RECOMMENDED POSTURE STACK** |
+| **Trajectory Dynamic Time Warping (DTW)** | Spatial Keypoint Trajectory | **$<1.2\text{ms}$** | $<2\text{MB}$ | Dynamic Gesture | High (Aligns variable-speed motion) | **MIT / Public Domain** | **RECOMMENDED DYNAMIC MATCHER** |
+| **Skeletal ST-GCN / 1D-TCN Gesture** | Graph Convolution on Joints | **$4.2\text{ms}$** | $\sim 14\text{MB}$ | Complex Dynamic Gesture | High | **Apache 2.0** | **RECOMMENDED NEURAL GESTURE** |
+| **OpenPose Hand** | 21 2D Keypoints | $75.0\text{ms}$ per hand | $\sim 350\text{MB}$ | Static | Poor | Non-Commercial | **UNSUITABLE (Latency & license)** |
+
+---
+
+## 8. Sub-phase 1.7 — Long-Term Memory Architectures
+
+| Architecture Alternative | Primary Storage Technology | Read Latency (10k records, CPU) | Write Latency (WAL Mode) | Data Types Supported | Deletion Verification (GDPR Art 17) | Edge CPU Footprint | EON Recommendation |
+|---|---|---|---|---|---|---|---|
+| **Option A: Structured Relational** | SQLite (SQLCipher Encrypted) | **$<0.5\text{ms}$** | **$<2.0\text{ms}$** | SQL Rows, JSON payloads | **Trivial** (`PRAGMA secure_delete`) | **$<15\text{MB}$ RAM** | **RECOMMENDED MINIMAL BASELINE** |
+| **Option B: Pure Semantic Vector** | Qdrant / FAISS Standalone | $4.0\text{ms}\text{--}8.0\text{ms}$ | $12.0\text{ms}$ | Dense Vector Embeddings | Complex (Index tombstoning) | $\sim 120\text{MB}$ RAM | **UNSUITABLE AS SOLE STORE** |
+| **Option C: Hybrid Hierarchical** | SQLite Facts + Qdrant Embedded Vectors | **$<2.0\text{ms}$** | **$<6.0\text{ms}$** | Relational Facts + Vector Pointers | **Coordinated Purge + Crypto-Shred** | **$\sim 60\text{MB}$ RAM** | **RECOMMENDED TARGET ARCHITECTURE** |
+| **Graph Database** | Neo4j / RDF Triple Store | $15.0\text{ms}\text{--}45.0\text{ms}$ | $25.0\text{ms}$ | Graph Entities & Relations | Moderate | $>350\text{MB}$ RAM | **UNSUITABLE (Heavy edge memory)** |
+
+---
+
+## 9. Sub-phase 1.8 — Empathy Reasoning Approaches
+
+| Approach | Reasoning Engine | Execution Latency (CPU) | Determinism & Auditability | Edge Memory Overhead | Anthropomorphic Risk | EON Recommendation |
+|---|---|---|---|---|---|---|
+| **Deterministic Decision Trees / FSM** | Scherer CPM Appraisal Checks | **$<0.5\text{ms}$** | **100% Deterministic** | $<2\text{MB}$ RAM | **Zero** (Explicit machine boundary) | **RECOMMENDED SAFETY CORE** |
+| **Bayesian Decision Networks** | Graphical Belief Propagation | **$1.8\text{ms}$** | High (Mathematical probability) | $\sim 5\text{MB}$ RAM | Low | **RECOMMENDED PROBABILISTIC** |
+| **Generative LLM Prompting** | End-to-end prompt-based empathy | $85.0\text{ms}\text{--}250.0\text{ms}$ | Low (Stochastic tokens) | $>1.2\text{GB}$ RAM | **High** (May feign human feelings) | **RESTRICTED TO CONSTRAINED ADVISOR** |
+| **Hybrid Policy Engine** | FSM Safety Guard + Bayesian Appraisal | **$<2.5\text{ms}$** | **High** (Deterministic override) | $\sim 8\text{MB}$ RAM | Low | **RECOMMENDED TARGET ARCHITECTURE** |
+
+---
+
+## 10. Sub-phase 1.9 — Personality Modelling Approaches
+
+| Persona Architecture | Parameter Representation | Execution Latency | Stability & Consistency | Vulnerability to Drift | User Customization | EON Recommendation |
+|---|---|---|---|---|---|---|
+| **Option A: Fixed Profiles** | Rigid Hardcoded Configurations | **$<0.1\text{ms}$** | **Maximum** (100% constant) | **Zero** | None | Minimal Baseline |
+| **Option B: Unconstrained RL** | Neural Policy Gradient | $>50.0\text{ms}$ | Extremely Poor | **Severe** (Drifts unpredictably) | Opaque | **REJECTED AS UNSAFE** |
+| **Option C: Hybrid Persona Engine** | Base JSON + Context Modulation + Clamps | **$<0.5\text{ms}$** | **High** (Bounded by math clamps) | **Zero** (Hard clamp invariants) | **Full Explicit Control** | **RECOMMENDED TARGET ARCHITECTURE** |
+
+---
+
+## 11. Sub-phase 1.10 — Social Interaction Systems
+
+| Interaction System Architecture | Coordination Framework | Turn-Taking Latency | Edge CPU Footprint | Interruption Resilience | Multi-Party Support | EON Recommendation |
+|---|---|---|---|---|---|---|
+| **Option A: Deterministic HFSM** | Hierarchical Finite State Machine | Fixed Timer ($>1.2\text{s}$) | **$<1\text{MB}$ RAM** | Moderate | Basic | Minimal Baseline |
+| **Option B: Pure LLM Agent** | Autoregressive Next-Action LLM | Slow ($>800\text{ms}$) | $>2.5\text{GB}$ RAM | Extremely Poor | Poor | **UNSUITABLE ON EDGE CPU** |
+| **Option C: Hybrid Social Engine** | HFSM Macro + Multimodal TRP + Frame/Slot | **Adaptive ($<350\text{ms}$)** | **$<15\text{MB}$ RAM** | **Instant ($<50\text{ms}$ halt)** | **High** (F-Formation tracking) | **RECOMMENDED TARGET ARCHITECTURE** |
+
+---
+
+## 12. Sub-phase 1.11 — Response Generation Technologies
+
+| Generation & Synthesis Stack | Component Architectures | Latency (TTFS on 4-Core CPU) | Resident Memory (RAM) | Offline Capability | Commercial License | EON Recommendation |
+|---|---|---|---|---|---|---|
+| **Template-Only NLG + Piper TTS** | Parameter Substitution + VITS TTS | **$<85\text{ms}$** | $\sim 75\text{MB}$ | **100% Offline** | MIT License | **RECOMMENDED FAST FALLBACK** |
+| **Quantized SLM (Qwen2.5-1.5B) + Piper** | `llama.cpp` Q4_K_M + Piper VITS | **$<350\text{ms}$ (streaming)** | $\sim 1.25\text{GB}$ | **100% Offline** | Apache 2.0 / MIT | **RECOMMENDED PRIMARY HYBRID** |
+| **Cloud LLM API (OpenAI / Claude)** | Proprietary Cloud API over HTTP | $1200\text{ms}\text{--}2500\text{ms}$ | $<10\text{MB}$ local | **Zero (Fails offline)** | Proprietary Paid API | **UNSUITABLE FOR BASE PLATFORM** |
+| **Full LLM (7B / 14B) on Edge CPU** | `llama.cpp` 7B Q4 | $>2500\text{ms}$ (Unusable) | $>4.5\text{GB}$ | 100% Offline | Apache 2.0 | **UNSUITABLE FOR REAL-TIME CPU** |
+
+---
+
+## 13. Consolidated Cross-Domain Synthesis (Sub-phases 1.1 through 1.11)
 
 | Sub-phase | Selected Baseline Architecture | Fallback Architecture | Target CPU Budget | Max Permissible Latency (p95) | Safety Invariant |
 |---|---|---|---|---|---|
-| **1.1 Emotion Methods** | Continuous VAD Regression + Discrete Softmax Mapping | Unimodal Rules / Majority Voting | $<10\text{ms}$ | $15\text{ms}$ | Probabilistic observation only; non-diagnostic. |
-| **1.2 Facial Analysis** | SCRFD-500M + MediaPipe Face Mesh + Clean-Room AU Regressor | Landmark Distance Heuristics | $<15\text{ms}$ | $25\text{ms}$ | Ephemeral tracking IDs; zero face biometrics stored. |
-| **1.3 Speech Emotion** | Silero VAD + DistilHuBERT (or eGeMAPS + LightGBM) | Open-source Prosodic Feature Rules | $<25\text{ms}$ | $40\text{ms}$ | Ephemeral in-memory audio buffers; zero persistent audio. |
+| **1.1 Emotion Methods** | Continuous VAD Regression + Discrete Softmax | Unimodal Rules / Majority Voting | $<10\text{ms}$ | $15\text{ms}$ | Probabilistic observation only; non-diagnostic. |
+| **1.2 Facial Analysis** | SCRFD-500M + MediaPipe Face Mesh + AU Regressor | Landmark Distance Heuristics | $<15\text{ms}$ | $25\text{ms}$ | Ephemeral tracking IDs; zero face biometrics stored. |
+| **1.3 Speech Emotion** | Silero VAD + DistilHuBERT-SER (ONNX INT8) | eGeMAPS + LightGBM | $<25\text{ms}$ | $40\text{ms}$ | Ephemeral in-memory audio buffers; zero persistent audio. |
 | **1.4 Multimodal Fusion** | Hybrid Reliability-Aware Gated Cross-Attention | Late Bayesian Decision Averaging | $<12\text{ms}$ | $20\text{ms}$ | Explicit conflict flags; never forces consensus. |
-| **1.5 Activity Recognition**| MediaPipe Pose + ST-GCN Skeletal Action Classifier | Kinematic Velocity Thresholds | $<20\text{ms}$ | $30\text{ms}$ | Non-inferential; physical motion classification only. |
+| **1.5 Activity (HAR)** | MediaPipe Pose + ST-GCN Skeletal Classifier | Kinematic Velocity Thresholds | $<20\text{ms}$ | $30\text{ms}$ | Non-inferential; physical motion classification only. |
+| **1.6 Gesture & Posture**| MediaPipe Hands + DTW Trajectory Matching | Geometric Angular Finger Flexion | $<15\text{ms}$ | $20\text{ms}$ | Gestures are advisory; cannot bypass safety stops. |
+| **1.7 Long-Term Memory**| Option C: Hybrid SQLite Facts + Qdrant Vectors | SQLite Relational Alone | $<5\text{ms}$ | $10\text{ms}$ | Anti-profiling; hard deletion; untrusted data boundary. |
+| **1.8 Empathy Reasoning**| Cognitive Appraisal FSM + Bayesian Belief Net | Static Policy Table | $<3\text{ms}$ | $5\text{ms}$ | Never claim subjective feeling; clarify before assuming. |
+| **1.9 Personality PSE** | Base Persona Asset + Dynamic Clamps | Fixed Unmodulated Profile | $<1\text{ms}$ | $2\text{ms}$ | Bounded style parameters; anti-drift mathematical clamps. |
+| **1.10 Social Interaction**| HFSM Macro Stages + Multimodal TRP | Fixed Timer Turn-Taking | $<5\text{ms}$ | $10\text{ms}$ | Social costmaps are advisory; safety nav is authoritative. |
+| **1.11 Response Gen ERG** | Qwen2.5-1.5B (llama.cpp) + Piper Neural TTS | Parameterized Templates + Piper | $<350\text{ms}$ | $500\text{ms}$ | Language models never directly command physical motors. |

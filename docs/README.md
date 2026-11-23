@@ -87,16 +87,25 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | Document | Document ID | Description |
 |---|---|---|
 | [Phase 1 Research Overview](research/phase-1/README.md) | EON-RES-OVR-001 | Phase 1 research objective, scope boundaries, methodology, and navigational index |
-| [Scientific Terminology Glossary](research/phase-1/GLOSSARY.md) | EON-RES-GLOSS-001 | Definitions for affective computing, vision, acoustics, fusion, and uncertainty |
-| [Research Source Register](research/phase-1/RESEARCH_SOURCE_REGISTER.md) | EON-RES-SRC-001 | 50 independently audited, verifiable scientific sources (`SRC-001`–`SRC-050`) |
-| [Technical Comparison Matrix](research/phase-1/TECHNICAL_COMPARISON_MATRIX.md) | EON-RES-TCM-001 | Multi-dimensional comparison of algorithms, CPU suitability, latency, and licensing |
+| [Scientific Terminology Glossary](research/phase-1/GLOSSARY.md) | EON-RES-GLOSS-001 | Definitions for affective computing, vision, acoustics, memory, social reasoning, and NLG |
+| [Research Source Register](research/phase-1/RESEARCH_SOURCE_REGISTER.md) | EON-RES-SRC-001 | 100 independently audited, verifiable scientific sources (`SRC-001`–`SRC-100`) |
+| [Technical Comparison Matrix](research/phase-1/TECHNICAL_COMPARISON_MATRIX.md) | EON-RES-TCM-001 | Multi-dimensional comparison of algorithms, CPU suitability, latency, and licensing across 1.1–1.11 |
+| [Engine Dependency Matrix](research/phase-1/ENGINE_DEPENDENCY_MATRIX.md) | EON-ARCH-DEP-001 | Cross-engine interactions, event hand-offs, and capability mappings for all seven engines |
 | [Initial Perception Architecture](research/phase-1/EON_PERCEPTION_ARCHITECTURE.md) | EON-ARCH-PERC-001 | Proposed edge-CPU perception pipeline, Mermaid diagram, and data contracts |
+| [Social Intelligence Architecture](research/phase-1/EON_SOCIAL_INTELLIGENCE_ARCHITECTURE.md) | EON-ARCH-SOC-001 | Proposed social intelligence pipeline, memory lifecycle, and multimodal response architecture |
 | [Emotion Recognition Methods](research/phase-1/1.1-emotion-recognition-methods.md) | EON-RES-SUB-1.1 | Sub-phase 1.1: Foundations, VAD representation, calibration, and datasets |
 | [Facial Expression Analysis](research/phase-1/1.2-facial-expression-analysis.md) | EON-RES-SUB-1.2 | Sub-phase 1.2: MediaPipe Face Mesh, FACS Action Units, and ephemeral tracking |
 | [Speech Emotion Analysis](research/phase-1/1.3-speech-emotion-analysis.md) | EON-RES-SUB-1.3 | Sub-phase 1.3: Silero VAD, DistilHuBERT-SER, acoustics, and noise resilience |
 | [Multimodal Fusion Methods](research/phase-1/1.4-multimodal-fusion-methods.md) | EON-RES-SUB-1.4 | Sub-phase 1.4: Hybrid Gated Cross-Attention, sliding windows, and conflict flags |
 | [Human Activity Recognition](research/phase-1/1.5-human-activity-recognition.md) | EON-RES-SUB-1.5 | Sub-phase 1.5: 3D BlazePose + ST-GCN, taxonomy, and non-inferential safety |
-| [Phase 1.1–1.5 Qualification Report](research/phase-1/PHASE_1_1_TO_1_5_QUALIFICATION_REPORT.md) | EON-QUAL-PHASE1-001 | Sections A–L synthesis, CPU budgets, licensing audit, and qualification decision |
+| [Gesture & Posture Recognition](research/phase-1/1.6-gesture-and-posture-recognition.md) | EON-RES-SUB-1.6 | Sub-phase 1.6: MediaPipe Hands, DTW trajectories, pointing deictics, and posture semantics |
+| [Long-Term Memory Architectures](research/phase-1/1.7-long-term-memory-architectures.md) | EON-RES-SUB-1.7 | Sub-phase 1.7: Hybrid hierarchical memory (SQLite + Qdrant), anti-profiling, and GDPR deletion |
+| [Empathy Reasoning Approaches](research/phase-1/1.8-empathy-reasoning-approaches.md) | EON-RES-SUB-1.8 | Sub-phase 1.8: Cognitive appraisal (Scherer CPM), perspective-taking, and anti-manipulation |
+| [Personality Modelling](research/phase-1/1.9-personality-modelling.md) | EON-RES-SUB-1.9 | Sub-phase 1.9: Parametric style profiles, anti-drift clamps, and user preference controls |
+| [Social Interaction Systems](research/phase-1/1.10-social-interaction-systems.md) | EON-RES-SUB-1.10 | Sub-phase 1.10: 12-stage interaction HFSM, multimodal TRP turn-taking, and social navigation |
+| [Response Generation](research/phase-1/1.11-response-generation.md) | EON-RES-SUB-1.11 | Sub-phase 1.11: Hybrid NLG (Qwen2.5-1.5B via `llama.cpp`), Piper neural TTS, and motor safety firewalls |
+| [Phase 1.1–1.5 Qualification Report](research/phase-1/PHASE_1_1_TO_1_5_QUALIFICATION_REPORT.md) | EON-QUAL-PHASE1-001 | Sections A–L synthesis for Perception Sub-phases 1.1 through 1.5 |
+| [Phase 1.6–1.11 Qualification Report](research/phase-1/PHASE_1_6_TO_1_11_QUALIFICATION_REPORT.md) | EON-QUAL-PHASE1-002 | Sections 1–20 synthesis for Social Intelligence Sub-phases 1.6 through 1.11 |
 
 ---
 
