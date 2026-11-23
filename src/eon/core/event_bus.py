@@ -2,8 +2,10 @@
 
 import asyncio
 import time
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from typing import Any, Final
+from uuid import uuid4
 
 from pydantic import Field
 
@@ -14,6 +16,7 @@ from eon.core.exceptions import (
     EventBusNotRunningError,
     InvalidEventError,
     InvalidLifecycleTransitionError,
+    QueueClosedError,
     QueueFullError,
 )
 from eon.core.metrics import EventBusMetrics, EventBusMetricsSnapshot
@@ -31,6 +34,8 @@ DEFAULT_QUEUE_CAPACITY: Final[int] = 1000
 DEFAULT_PUBLISH_TIMEOUT: Final[float] = 2.0
 DEFAULT_HANDLER_TIMEOUT: Final[float] = 5.0
 DEFAULT_SHUTDOWN_TIMEOUT: Final[float] = 5.0
+DEFAULT_SYNC_WORKERS: Final[int] = 4
+DEFAULT_STARVATION_THRESHOLD: Final[int] = 10
 
 
 class EventBusLifecycleState(str, Enum):
@@ -75,6 +80,16 @@ class EventBusConfig(EonBaseModel):
         gt=0,
         description="Number of concurrent worker tasks allocated per subscription.",
     )
+    sync_executor_workers: int = Field(
+        default=DEFAULT_SYNC_WORKERS,
+        gt=0,
+        description="Maximum worker threads allocated for synchronous handlers.",
+    )
+    starvation_threshold: int = Field(
+        default=DEFAULT_STARVATION_THRESHOLD,
+        gt=0,
+        description="High-priority dispatches before a waiting lower-priority event is dispatched.",
+    )
 
 
 class EventBus:
@@ -83,10 +98,13 @@ class EventBus:
     Provides:
     - Typed event publishing accepting validated EventEnvelope data contracts.
     - Snapshot-based event routing with exact event-type and wildcard matching.
-    - Isolated, bounded priority queues per subscriber with deterministic FIFO ordering.
+    - Isolated, bounded priority queues per subscriber with true oldest-event eviction.
     - Explicit backpressure policies (WAIT, REJECT, DROP_NEWEST, DROP_OLDEST).
-    - Failure isolation: handler errors and timeouts never crash the bus or other subscribers.
-    - Graceful lifecycle shutdown with queue draining and zero task leaks.
+    - Starvation prevention ensuring lower-priority events are not starved by high-priority traffic.
+    - Multi-subscriber concurrent enqueue preventing saturated subscribers from blocking others.
+    - Failure isolation: synchronous handlers run in thread executor; exceptions never leak secrets.
+    - Robust publish_and_wait with futures resolved on every terminal outcome.
+    - Graceful lifecycle shutdown with queue draining, queue closure, and zero task leaks.
     - In-process concurrency-safe metrics.
 
     NON-AUTHORITY SAFETY NOTICE:
@@ -102,8 +120,11 @@ class EventBus:
         self._router = EventRouter()
         self._metrics = EventBusMetrics()
         self._workers: list[asyncio.Task[None]] = []
-        self._completion_waiters: dict[str, asyncio.Event] = {}
-        self._waiter_lock = asyncio.Lock()
+        self._delivery_waiters: dict[tuple[str, str], list[asyncio.Future[DeliveryOutcome]]] = {}
+        self._sync_executor = ThreadPoolExecutor(
+            max_workers=self._config.sync_executor_workers,
+            thread_name_prefix="eon_sync_worker",
+        )
 
     @property
     def lifecycle_state(self) -> EventBusLifecycleState:
@@ -140,7 +161,7 @@ class EventBus:
                 self._ensure_workers(sub)
 
     async def stop(self, timeout: float | None = None) -> None:
-        """Gracefully shut down the event bus, draining queues and stopping workers.
+        """Gracefully shut down the event bus, closing queues, draining, and stopping workers.
 
         Idempotent: Calling stop() on an already STOPPED bus is a safe no-op.
         """
@@ -149,16 +170,22 @@ class EventBus:
                 return
             if self._state == EventBusLifecycleState.CREATED:
                 self._state = EventBusLifecycleState.STOPPED
+                self._sync_executor.shutdown(wait=False, cancel_futures=True)
                 return
 
             self._state = EventBusLifecycleState.STOPPING
 
         shutdown_timeout = timeout if timeout is not None else self._config.shutdown_timeout_seconds
-
-        # Drain queues and wait for active handlers to complete up to timeout boundary
         all_subs = self._router.get_all_subscribers()
+
+        # Step 1: Explicitly close each subscriber queue.
+        # This immediately unblocks any publishers waiting on WAIT policy.
+        for sub in all_subs:
+            sub.queue.close()
+
+        # Step 2: Drain queues and wait for active handlers to complete up to timeout boundary
         if all_subs:
-            drain_tasks = [sub.queue._queue.join() for sub in all_subs]
+            drain_tasks = [sub.queue.join() for sub in all_subs]
             try:
                 if shutdown_timeout > 0:
                     await asyncio.wait_for(
@@ -170,7 +197,7 @@ class EventBus:
             except asyncio.TimeoutError:
                 pass
 
-        # Cancel all remaining worker tasks
+        # Step 3: Cancel all remaining worker tasks
         for worker in self._workers:
             if not worker.done():
                 worker.cancel()
@@ -179,11 +206,23 @@ class EventBus:
             await asyncio.gather(*self._workers, return_exceptions=True)
         self._workers.clear()
 
-        # Evacuate any remaining items in queues and mark them cancelled
+        # Step 4: Evacuate any remaining items in queues, mark them cancelled, and resolve waiters
         for sub in all_subs:
             drained_items = sub.queue.drain()
-            for _ in drained_items:
+            for item in drained_items:
                 self._metrics.record_cancelled()
+                diag_id = f"ERR-SHUT-{uuid4().hex[:8].upper()}"
+                cancelled_outcome = DeliveryOutcome.create(
+                    event_id=str(item.event_id),
+                    subscription_id=sub.subscription_id,
+                    state=DeliveryState.CANCELLED,
+                    error_category="ShutdownCancelled",
+                    diagnostic_id=diag_id,
+                )
+                self._resolve_waiters(str(item.event_id), sub.subscription_id, cancelled_outcome)
+
+        # Step 5: Shut down synchronous worker executor
+        self._sync_executor.shutdown(wait=False, cancel_futures=True)
 
         async with self._state_lock:
             self._state = EventBusLifecycleState.STOPPED
@@ -215,12 +254,40 @@ class EventBus:
         """Register a subscriber for the specified event type.
 
         Can be called before start() or during RUNNING.
+        Rejects non-positive configuration values with ValueError.
         Returns unique SubscriptionId.
         """
         if self._state in (EventBusLifecycleState.STOPPING, EventBusLifecycleState.STOPPED):
             raise EventBusNotRunningError(
                 f"Cannot subscribe when Event Bus is in state {self._state.value}."
             )
+
+        if queue_capacity is not None:
+            if queue_capacity <= 0:
+                raise ValueError(f"queue_capacity must be positive (> 0), got {queue_capacity}")
+            resolved_capacity = queue_capacity
+        else:
+            resolved_capacity = self._config.default_queue_capacity
+
+        if timeout_seconds is not None:
+            if timeout_seconds <= 0.0:
+                raise ValueError(f"timeout_seconds must be positive (> 0.0), got {timeout_seconds}")
+            resolved_timeout = timeout_seconds
+        else:
+            resolved_timeout = self._config.handler_timeout_seconds
+
+        if max_concurrency is not None:
+            if max_concurrency <= 0:
+                raise ValueError(f"max_concurrency must be positive (> 0), got {max_concurrency}")
+            resolved_concurrency = max_concurrency
+        else:
+            resolved_concurrency = self._config.max_workers_per_subscription
+
+        resolved_policy = (
+            backpressure_policy
+            if backpressure_policy is not None
+            else self._config.default_backpressure_policy
+        )
 
         sub_id = generate_subscription_id()
         etype_str = event_type.value if isinstance(event_type, EventType) else str(event_type)
@@ -231,10 +298,11 @@ class EventBus:
             event_type=etype_str,
             handler=handler,
             name=sub_name,
-            backpressure_policy=backpressure_policy or self._config.default_backpressure_policy,
-            queue_capacity=queue_capacity or self._config.default_queue_capacity,
-            timeout_seconds=timeout_seconds or self._config.handler_timeout_seconds,
-            max_concurrency=max_concurrency or self._config.max_workers_per_subscription,
+            backpressure_policy=resolved_policy,
+            queue_capacity=resolved_capacity,
+            timeout_seconds=resolved_timeout,
+            max_concurrency=resolved_concurrency,
+            starvation_threshold=self._config.starvation_threshold,
         )
 
         self._router.register(sub)
@@ -265,16 +333,39 @@ class EventBus:
         )
 
     async def unsubscribe(self, subscription_id: SubscriptionId) -> bool:
-        """Unregister a subscription and terminate its worker tasks."""
+        """Unregister a subscription, terminate workers, drain pending items, and balance queues."""
         try:
             sub = self._router.unregister(subscription_id)
-            for w in sub.workers:
-                if not w.done():
-                    w.cancel()
-            sub.workers.clear()
-            return True
         except Exception:
             return False
+
+        sub.is_active = False
+        sub.queue.close()
+
+        for w in sub.workers:
+            if not w.done():
+                w.cancel()
+
+        if sub.workers:
+            await asyncio.gather(*sub.workers, return_exceptions=True)
+            self._workers = [w for w in self._workers if w not in sub.workers]
+            sub.workers.clear()
+
+        # Drain any remaining items and record as cancelled
+        drained_items = sub.queue.drain()
+        for item in drained_items:
+            self._metrics.record_cancelled()
+            diag_id = f"ERR-UNSUB-{uuid4().hex[:8].upper()}"
+            cancelled_outcome = DeliveryOutcome.create(
+                event_id=str(item.event_id),
+                subscription_id=sub.subscription_id,
+                state=DeliveryState.CANCELLED,
+                error_category="SubscriptionCancelled",
+                diagnostic_id=diag_id,
+            )
+            self._resolve_waiters(str(item.event_id), sub.subscription_id, cancelled_outcome)
+
+        return True
 
     def _ensure_workers(self, sub: Subscription) -> None:
         """Ensure worker tasks are running for a given subscription."""
@@ -290,59 +381,160 @@ class EventBus:
             sub.workers.append(worker_task)
             self._workers.append(worker_task)
 
+    def _register_waiter(
+        self,
+        event_id: str,
+        subscription_id: str,
+        future: asyncio.Future[DeliveryOutcome],
+    ) -> None:
+        """Register a delivery completion future for an event and subscription."""
+        key = (event_id, subscription_id)
+        self._delivery_waiters.setdefault(key, []).append(future)
+
+    def _resolve_waiters(
+        self,
+        event_id: str,
+        subscription_id: str | None,
+        outcome: DeliveryOutcome,
+    ) -> None:
+        """Resolve all registered completion futures for an event and subscription."""
+        if subscription_id is None:
+            return
+        key = (event_id, subscription_id)
+        waiters = self._delivery_waiters.pop(key, None)
+        if waiters:
+            for fut in waiters:
+                if not fut.done():
+                    fut.set_result(outcome)
+
     async def _dispatch_worker(self, sub: Subscription) -> None:
         """Isolated background worker consuming events from a subscriber queue."""
         while self._state in (EventBusLifecycleState.RUNNING, EventBusLifecycleState.STOPPING):
             try:
-                # Wait for next prioritized event
                 priority, event = await sub.queue.get()
-            except asyncio.CancelledError:
+            except (asyncio.CancelledError, QueueClosedError):
                 break
 
             start_time = time.monotonic()
             is_timeout = False
-            error_msg: str | None = None
+            delivery_state = DeliveryState.DELIVERED
+            err_category: str | None = None
+            diag_id: str | None = None
+
             try:
-                # Execute subscriber handler with timeout
-                await asyncio.wait_for(sub.invoke_handler(event), timeout=sub.timeout_seconds)
-                delivery_state = DeliveryState.DELIVERED
+                # Execute subscriber handler with timeout, running sync handlers in executor
+                await asyncio.wait_for(
+                    sub.invoke_handler(event, executor=self._sync_executor),
+                    timeout=sub.timeout_seconds,
+                )
             except asyncio.TimeoutError:
                 is_timeout = True
                 delivery_state = DeliveryState.FAILED
-                error_msg = f"Handler execution timed out after {sub.timeout_seconds}s"
+                err_category = "HandlerTimeout"
+                diag_id = f"ERR-TO-{uuid4().hex[:8].upper()}"
             except asyncio.CancelledError:
                 delivery_state = DeliveryState.CANCELLED
-                error_msg = "Handler task cancelled during dispatch"
-                break
-            except Exception as exc:
-                delivery_state = DeliveryState.FAILED
-                # Failure isolation: format error message without leaking sensitive payloads
-                error_msg = f"Handler exception: {type(exc).__name__}: {str(exc)}"
-            finally:
-                duration_ms = (time.monotonic() - start_time) * 1000.0
+                err_category = "HandlerCancelled"
+                diag_id = f"ERR-CAN-{uuid4().hex[:8].upper()}"
                 sub.queue.task_done()
-                _outcome = DeliveryOutcome.create(
+                outcome = DeliveryOutcome.create(
                     event_id=str(event.event_id),
                     subscription_id=sub.subscription_id,
                     state=delivery_state,
-                    duration_ms=duration_ms,
-                    error_message=error_msg,
+                    duration_ms=(time.monotonic() - start_time) * 1000.0,
+                    error_category=err_category,
+                    diagnostic_id=diag_id,
                 )
+                self._metrics.record_cancelled()
+                self._resolve_waiters(str(event.event_id), sub.subscription_id, outcome)
+                break
+            except Exception as exc:
+                delivery_state = DeliveryState.FAILED
+                err_category = f"HandlerException[{type(exc).__name__}]"
+                diag_id = f"ERR-{uuid4().hex[:8].upper()}"
+            finally:
+                if delivery_state != DeliveryState.CANCELLED:
+                    duration_ms = (time.monotonic() - start_time) * 1000.0
+                    sub.queue.task_done()
+                    outcome = DeliveryOutcome.create(
+                        event_id=str(event.event_id),
+                        subscription_id=sub.subscription_id,
+                        state=delivery_state,
+                        duration_ms=duration_ms,
+                        error_category=err_category,
+                        diagnostic_id=diag_id,
+                    )
 
-                # Update metrics
-                if delivery_state == DeliveryState.DELIVERED:
-                    self._metrics.record_delivered(duration_ms)
-                elif delivery_state == DeliveryState.FAILED:
-                    self._metrics.record_failed(is_timeout=is_timeout)
-                elif delivery_state == DeliveryState.CANCELLED:
-                    self._metrics.record_cancelled()
+                    # Update metrics
+                    if delivery_state == DeliveryState.DELIVERED:
+                        self._metrics.record_delivered(duration_ms)
+                    elif delivery_state == DeliveryState.FAILED:
+                        self._metrics.record_failed(is_timeout=is_timeout)
 
-                # Notify any completion waiter
-                waiter_key = f"{event.event_id}:{sub.subscription_id}"
-                async with self._waiter_lock:
-                    waiter = self._completion_waiters.get(waiter_key)
-                    if waiter:
-                        waiter.set()
+                    # Resolve completion waiter
+                    self._resolve_waiters(str(event.event_id), sub.subscription_id, outcome)
+
+    def _record_publish_outcome(
+        self,
+        event_id_str: str,
+        sub: Subscription,
+        state: DeliveryState,
+        evicted: Any | None,
+        exc: Exception | None,
+        outcomes: list[DeliveryOutcome],
+    ) -> None:
+        """Record the publication outcome for a subscriber and resolve any eviction waiters."""
+        if state == DeliveryState.QUEUED:
+            self._metrics.record_accepted()
+            outcomes.append(
+                DeliveryOutcome.create(
+                    event_id=event_id_str,
+                    subscription_id=sub.subscription_id,
+                    state=DeliveryState.QUEUED,
+                )
+            )
+            if evicted is not None:
+                self._metrics.record_dropped()
+                diag_id = f"ERR-EVICT-{uuid4().hex[:8].upper()}"
+                evicted_outcome = DeliveryOutcome.create(
+                    event_id=str(evicted.event_id),
+                    subscription_id=sub.subscription_id,
+                    state=DeliveryState.DROPPED,
+                    error_category="QueueEvicted",
+                    diagnostic_id=diag_id,
+                )
+                self._resolve_waiters(str(evicted.event_id), sub.subscription_id, evicted_outcome)
+        elif state == DeliveryState.DROPPED:
+            self._metrics.record_dropped()
+            diag_id = f"ERR-DROP-{uuid4().hex[:8].upper()}"
+            dropped_outcome = DeliveryOutcome.create(
+                event_id=event_id_str,
+                subscription_id=sub.subscription_id,
+                state=DeliveryState.DROPPED,
+                error_category=f"Dropped[{sub.backpressure_policy.value}]",
+                diagnostic_id=diag_id,
+            )
+            outcomes.append(dropped_outcome)
+            self._resolve_waiters(event_id_str, sub.subscription_id, dropped_outcome)
+        else:  # REJECTED
+            self._metrics.record_rejected()
+            diag_id = f"ERR-REJ-{uuid4().hex[:8].upper()}"
+            rej_category = (
+                "QueueFull"
+                if isinstance(exc, QueueFullError)
+                else "QueueClosed"
+                if isinstance(exc, QueueClosedError)
+                else "PublishRejected"
+            )
+            rejected_outcome = DeliveryOutcome.create(
+                event_id=event_id_str,
+                subscription_id=sub.subscription_id,
+                state=DeliveryState.REJECTED,
+                error_category=rej_category,
+                diagnostic_id=diag_id,
+            )
+            outcomes.append(rejected_outcome)
+            self._resolve_waiters(event_id_str, sub.subscription_id, rejected_outcome)
 
     async def publish(
         self,
@@ -351,11 +543,12 @@ class EventBus:
     ) -> list[DeliveryOutcome]:
         """Publish an event to all matching subscribers asynchronously.
 
-        Requirements:
-        - Validates that event is an instance of EventEnvelope.
-        - Enforces RUNNING lifecycle state.
-        - Applies configured subscriber backpressure policies.
-        - Returns immediate list of DeliveryOutcome records (QUEUED, REJECTED, or DROPPED).
+        Multi-Subscriber Fairness:
+        When any matching subscriber is saturated under WAIT policy, enqueues concurrently
+        using asyncio.gather to avoid head-of-line blocking for other subscribers.
+        For unsaturated subscribers, enqueues synchronously without task scheduling latency.
+
+        Returns immediate list of DeliveryOutcome records (QUEUED, REJECTED, or DROPPED).
         """
         start_ts = time.monotonic()
 
@@ -390,44 +583,47 @@ class EventBus:
             ]
 
         outcomes: list[DeliveryOutcome] = []
-        for sub in subscribers:
-            try:
-                state = await sub.queue.put(
-                    item=event,
-                    priority=priority,
-                    policy=sub.backpressure_policy,
-                    timeout=self._config.publish_timeout_seconds,
-                )
-                if state == DeliveryState.QUEUED:
-                    self._metrics.record_accepted()
-                    outcomes.append(
-                        DeliveryOutcome.create(
-                            event_id=event_id_str,
-                            subscription_id=sub.subscription_id,
-                            state=DeliveryState.QUEUED,
-                        )
+        has_waiting_sub = any(
+            sub.queue.is_full() and sub.backpressure_policy == BackpressurePolicy.WAIT
+            for sub in subscribers
+        )
+
+        if not has_waiting_sub:
+            for sub in subscribers:
+                try:
+                    state = await sub.queue.put(
+                        item=event,
+                        priority=priority,
+                        policy=sub.backpressure_policy,
+                        timeout=self._config.publish_timeout_seconds,
                     )
-                elif state == DeliveryState.DROPPED:
-                    self._metrics.record_dropped()
-                    outcomes.append(
-                        DeliveryOutcome.create(
-                            event_id=event_id_str,
-                            subscription_id=sub.subscription_id,
-                            state=DeliveryState.DROPPED,
-                            error_message=(
-                                f"Event dropped under {sub.backpressure_policy.value} policy"
-                            ),
-                        )
+                    evicted = sub.queue.pop_last_evicted()
+                    self._record_publish_outcome(event_id_str, sub, state, evicted, None, outcomes)
+                except Exception as pub_exc:
+                    self._record_publish_outcome(
+                        event_id_str, sub, DeliveryState.REJECTED, None, pub_exc, outcomes
                     )
-            except QueueFullError as e:
-                self._metrics.record_rejected()
-                outcomes.append(
-                    DeliveryOutcome.create(
-                        event_id=event_id_str,
-                        subscription_id=sub.subscription_id,
-                        state=DeliveryState.REJECTED,
-                        error_message=str(e),
+        else:
+
+            async def _enqueue_sub(
+                sub: Subscription,
+            ) -> tuple[Subscription, DeliveryState, Any | None, Exception | None]:
+                try:
+                    state = await sub.queue.put(
+                        item=event,
+                        priority=priority,
+                        policy=sub.backpressure_policy,
+                        timeout=self._config.publish_timeout_seconds,
                     )
+                    evicted = sub.queue.pop_last_evicted()
+                    return (sub, state, evicted, None)
+                except Exception as e:
+                    return (sub, DeliveryState.REJECTED, None, e)
+
+            results = await asyncio.gather(*[_enqueue_sub(s) for s in subscribers])
+            for sub, state, evicted, enqueue_exc in results:
+                self._record_publish_outcome(
+                    event_id_str, sub, state, evicted, enqueue_exc, outcomes
                 )
 
         latency_ms = (time.monotonic() - start_ts) * 1000.0
@@ -440,41 +636,85 @@ class EventBus:
         priority: EventPriority = EventPriority.NORMAL,
         timeout: float | None = None,
     ) -> list[DeliveryOutcome]:
-        """Publish an event and wait for all matching subscribers to finish processing."""
+        """Publish an event and wait for all matching subscribers to complete terminal delivery.
+
+        Guarantees:
+        - Creates dedicated completion futures per subscriber delivery.
+        - Resolves waiters on all terminal outcomes (DELIVERED, FAILED, DROPPED, etc.).
+        - Eliminates key collisions and indefinite hanging.
+        - Returns actual subscriber-level terminal DeliveryOutcome records.
+        """
+        if not isinstance(event, EventEnvelope):
+            raise InvalidEventError(
+                f"Expected EventEnvelope instance, received {type(event).__name__}."
+            )
+
+        if self._state != EventBusLifecycleState.RUNNING:
+            self._metrics.record_rejected()
+            raise EventBusNotRunningError(
+                f"Cannot publish event while Event Bus is in state '{self._state.value}'."
+            )
+
         subscribers = self._router.get_subscribers(event.event_type)
         if not subscribers:
             return await self.publish(event, priority=priority)
 
         event_id_str = str(event.event_id)
-        waiters: list[tuple[Subscription, asyncio.Event]] = []
+        loop = asyncio.get_running_loop()
+        futures: list[tuple[Subscription, asyncio.Future[DeliveryOutcome]]] = []
 
-        async with self._waiter_lock:
-            for sub in subscribers:
-                ev = asyncio.Event()
-                self._completion_waiters[f"{event_id_str}:{sub.subscription_id}"] = ev
-                waiters.append((sub, ev))
+        for sub in subscribers:
+            fut = loop.create_future()
+            self._register_waiter(event_id_str, sub.subscription_id, fut)
+            futures.append((sub, fut))
 
-        try:
-            outcomes = await self.publish(event, priority=priority)
+        # Start enqueuing
+        await self.publish(event, priority=priority)
 
-            # Wait for all queued subscribers to finish
-            wait_timeout = timeout if timeout is not None else self._config.handler_timeout_seconds
-            wait_tasks = [ev.wait() for sub, ev in waiters]
+        # Wait for all subscriber delivery futures to resolve
+        wait_timeout = timeout if timeout is not None else self._config.handler_timeout_seconds
+        terminal_outcomes: list[DeliveryOutcome] = []
 
-            if wait_tasks:
+        for sub, fut in futures:
+            try:
                 if wait_timeout > 0:
-                    await asyncio.wait_for(
-                        asyncio.gather(*wait_tasks),
-                        timeout=wait_timeout,
-                    )
+                    outcome = await asyncio.wait_for(fut, timeout=wait_timeout)
                 else:
-                    await asyncio.gather(*wait_tasks)
+                    outcome = await fut
+                terminal_outcomes.append(outcome)
+            except asyncio.TimeoutError:
+                diag_id = f"ERR-TO-{uuid4().hex[:8].upper()}"
+                terminal_outcomes.append(
+                    DeliveryOutcome.create(
+                        event_id=event_id_str,
+                        subscription_id=sub.subscription_id,
+                        state=DeliveryState.FAILED,
+                        error_category="HandlerTimeout",
+                        diagnostic_id=diag_id,
+                    )
+                )
+            except asyncio.CancelledError:
+                diag_id = f"ERR-CAN-{uuid4().hex[:8].upper()}"
+                terminal_outcomes.append(
+                    DeliveryOutcome.create(
+                        event_id=event_id_str,
+                        subscription_id=sub.subscription_id,
+                        state=DeliveryState.CANCELLED,
+                        error_category="HandlerCancelled",
+                        diagnostic_id=diag_id,
+                    )
+                )
+            finally:
+                # Clean up future from waiter registry
+                key = (event_id_str, sub.subscription_id)
+                if key in self._delivery_waiters:
+                    self._delivery_waiters[key] = [
+                        f for f in self._delivery_waiters[key] if f is not fut
+                    ]
+                    if not self._delivery_waiters[key]:
+                        del self._delivery_waiters[key]
 
-            return outcomes
-        finally:
-            async with self._waiter_lock:
-                for sub, _ in waiters:
-                    self._completion_waiters.pop(f"{event_id_str}:{sub.subscription_id}", None)
+        return terminal_outcomes
 
     def get_metrics(self) -> EventBusMetricsSnapshot:
         """Retrieve an immutable snapshot of operational metrics."""

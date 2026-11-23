@@ -37,6 +37,10 @@ class QueueFullError(EventBusError):
     """Raised when an event cannot be enqueued under REJECT backpressure policy."""
 
 
+class QueueClosedError(EventBusError):
+    """Raised when attempting to enqueue into or dequeue from a closed queue."""
+
+
 class EventRejectedError(EventBusError):
     """Raised when an event is rejected during publishing or dispatch."""
 

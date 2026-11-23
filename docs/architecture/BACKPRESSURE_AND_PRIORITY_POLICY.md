@@ -52,11 +52,12 @@ flowchart TD
    - Increments the `dropped_events` telemetry counter.
    - Recommended for high-rate sensor feeds (e.g. video frames) where stale data is immediately superseded by newer data.
 
-4. **`DROP_OLDEST` (Sliding Window Policy):**
-   - If the queue is at capacity, the oldest queued item is dequeued and discarded.
-   - The incoming event is enqueued into the vacated slot.
+4. **`DROP_OLDEST` (True Oldest Eviction Sliding Window Policy):**
+   - If the queue is at capacity, the queue scans its items to identify the item with the smallest monotonic sequence number (the true oldest item), removes it, and reheapifies the remaining items.
+   - Importantly, it does NOT pop the min-heap head (which would mistakenly evict the highest-priority item).
+   - The evicted event ID is recorded, and its outcome is resolved as `DeliveryState.DROPPED`.
+   - The incoming event is enqueued into the vacated slot, preserving exact queue task accounting.
    - Increments the `dropped_events` telemetry counter.
-   - Recommended for temporal buffers where only the latest observations are relevant to downstream inference.
 
 ---
 
@@ -85,3 +86,19 @@ The queue stores items wrapped as `PrioritizedItem`:
 
 ### 2.3 Non-Authority Notice
 Priority scheduling governs execution precedence within the Python asyncio event loop. **CRITICAL priority does NOT confer safety authority, hardware emergency-stop overrides, or physical motion authorization.**
+
+---
+
+## 3. Starvation Prevention and Fairness
+
+### 3.1 Starvation Prevention Guarantee
+Under heavy load, a continuous flood of `CRITICAL` or `HIGH` priority events could indefinitely starve lower-priority events (`NORMAL`, `LOW`). To prevent indefinite starvation:
+- The `SubscriberQueue` maintains a counter of consecutive high-priority dispatches (`_consecutive_high_dispatches`).
+- When this counter reaches `starvation_threshold` (default: 10 dispatches), the queue inspects its contents for any waiting lower-priority items (`< EventPriority.HIGH`).
+- If a lower-priority item exists, it is dequeued and dispatched immediately, and the consecutive counter is reset to zero.
+- This guarantees that lower-priority streams make progress even under sustained emergency traffic.
+
+### 3.2 Multi-Subscriber Dispatch Fairness
+In a publish-subscribe system with multiple subscribers, one subscriber's queue state must never impede deliveries to other subscribers:
+- When publishing an event across multiple subscribers where one or more subscribers are saturated under the `WAIT` policy, the event bus enqueues concurrently across all subscribers using `asyncio.gather`.
+- A saturated subscriber awaiting queue space does not block or delay delivery to healthy, unsaturated subscribers.

@@ -71,8 +71,24 @@ class DeliveryOutcome:
     timestamp: datetime.datetime
     duration_ms: float = 0.0
     error_message: str | None = None
+    diagnostic_id: str | None = None
 ```
 
-### Privacy Guarantee
+### Privacy Guarantee and Error Sanitization
 - The `DeliveryOutcome` never stores event payloads, raw perception data, or personal biometrics.
-- The `error_message` field is truncated to $\le 256$ characters and sanitized to prevent exception trace dumps from leaking sensitive input data.
+- The `error_message` field never copies raw `str(exc)` from exceptions. Exceptions are strictly categorized into safe descriptions (e.g. `HandlerException[ValueError]`, `HandlerTimeout`, `QueueFull`) accompanied by unique diagnostic identifiers (`ERR-XXXXXXXX`).
+- Synthetic secret tokens or private keys present in exception messages are guaranteed zero leakage into telemetry or delivery outcomes.
+
+---
+
+## 4. Terminal Outcome Resolution in publish_and_wait
+
+The `publish_and_wait()` method guarantees deterministic completion:
+1. **Dedicated Per-Delivery Futures:** Each matching subscriber delivery creates a dedicated `asyncio.Future[DeliveryOutcome]`.
+2. **Every Terminal Outcome Resolved:** Futures are resolved on all terminal states:
+   - `DELIVERED`: Handler finished successfully.
+   - `FAILED`: Handler threw an exception or timed out.
+   - `CANCELLED`: Unsubscription or bus shutdown cancelled delivery.
+   - `DROPPED`: Queue dropped or evicted event under lossy backpressure.
+   - `REJECTED`: Queue rejected event under full capacity.
+3. **No Indefinite Hanging:** If `publish_and_wait()` times out, remaining unresolved futures are marked `FAILED` with `HandlerTimeout` and cleaned up safely. Key collisions from repeated event IDs are eliminated.

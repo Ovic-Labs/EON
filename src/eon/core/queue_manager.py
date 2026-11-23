@@ -1,36 +1,52 @@
-"""Bounded subscriber queue with priority ordering and backpressure management."""
+"""Bounded subscriber queue with priority scheduling, oldest eviction, and starvation prevention."""
 
 import asyncio
+import heapq
 import time
 from typing import Any
 
 from eon.core.backpressure import BackpressurePolicy
 from eon.core.delivery import DeliveryState
-from eon.core.exceptions import QueueFullError
+from eon.core.exceptions import QueueClosedError, QueueFullError
 from eon.core.priority import EventPriority, PrioritizedItem
 
 
 class SubscriberQueue:
     """Asyncio-based bounded priority queue for an individual subscriber.
 
-    Enforces:
+    Guarantees:
     - Bounded memory usage via configurable queue capacity.
+    - True oldest-event eviction under DROP_OLDEST (evicts the item with lowest sequence number,
+      not the highest priority item at the heap head).
+    - Starvation prevention: dispatches lower-priority events after consecutive high-priority
+      preemptions reach the starvation threshold.
     - Deterministic FIFO ordering among equal-priority events via monotonic sequence numbering.
-    - Priority-based scheduling (higher priority events dispatched before lower priority).
-    - Explicit backpressure policies (WAIT, REJECT, DROP_NEWEST, DROP_OLDEST).
-    - Queue-depth tracking and saturation metrics.
+    - Explicit queue closure semantics that immediately unblock waiting producers and consumers.
+    - Balanced task accounting via task_done() and join().
     """
 
-    def __init__(self, capacity: int, name: str = "default") -> None:
+    def __init__(
+        self,
+        capacity: int,
+        name: str = "default",
+        starvation_threshold: int = 10,
+    ) -> None:
         if capacity <= 0:
             raise ValueError(f"Queue capacity must be positive, got {capacity}")
+        if starvation_threshold <= 0:
+            raise ValueError(f"Starvation threshold must be positive, got {starvation_threshold}")
+
         self._capacity = capacity
         self._name = name
-        self._queue: asyncio.PriorityQueue[PrioritizedItem] = asyncio.PriorityQueue(
-            maxsize=capacity
-        )
+        self._starvation_threshold = starvation_threshold
+
+        self._items: list[PrioritizedItem] = []
+        self._cond = asyncio.Condition()
         self._sequence = 0
-        self._lock = asyncio.Lock()
+        self._unfinished_tasks = 0
+        self._is_closed = False
+        self._consecutive_high_dispatches = 0
+        self._last_evicted: Any | None = None
 
         # Telemetry counters
         self._total_enqueued = 0
@@ -49,17 +65,22 @@ class SubscriberQueue:
         """Subscriber or queue name identifier."""
         return self._name
 
+    @property
+    def is_closed(self) -> bool:
+        """Check if queue has been closed for shutdown."""
+        return self._is_closed
+
     def qsize(self) -> int:
         """Current number of items in the queue."""
-        return self._queue.qsize()
+        return len(self._items)
 
     def is_full(self) -> bool:
         """Check if queue is currently at capacity."""
-        return self._queue.full()
+        return len(self._items) >= self._capacity
 
     def is_empty(self) -> bool:
         """Check if queue is currently empty."""
-        return self._queue.empty()
+        return len(self._items) == 0
 
     @property
     def max_observed_depth(self) -> int:
@@ -83,8 +104,19 @@ class SubscriberQueue:
 
     @property
     def total_rejected(self) -> int:
-        """Cumulative count of rejected items (REJECT)."""
+        """Cumulative count of rejected items (REJECT or closed)."""
         return self._total_rejected
+
+    @property
+    def unfinished_tasks(self) -> int:
+        """Current count of unfinished queue tasks."""
+        return self._unfinished_tasks
+
+    def pop_last_evicted(self) -> Any | None:
+        """Retrieve and clear the most recently evicted item, if any."""
+        ev = self._last_evicted
+        self._last_evicted = None
+        return ev
 
     async def put(
         self,
@@ -95,23 +127,35 @@ class SubscriberQueue:
     ) -> DeliveryState:
         """Enqueue an item according to priority and backpressure policy.
 
-        Returns the resulting DeliveryState (QUEUED, REJECTED, or DROPPED).
+        Returns:
+        - DeliveryState (QUEUED, REJECTED, or DROPPED)
+
+        Raises:
+        - QueueClosedError if queue is closed.
+        - QueueFullError if queue is saturated under REJECT or timed-out WAIT policy.
         """
-        async with self._lock:
+        async with self._cond:
+            if self._is_closed:
+                self._total_rejected += 1
+                raise QueueClosedError(f"Cannot enqueue to closed queue '{self._name}'.")
+
             now_ts = time.monotonic()
             self._sequence += 1
             wrapped = PrioritizedItem.wrap(item, priority, self._sequence, now_ts)
 
-            # Check if queue has capacity
-            if not self._queue.full():
-                self._queue.put_nowait(wrapped)
+            # Capacity available
+            if len(self._items) < self._capacity:
+                heapq.heappush(self._items, wrapped)
                 self._total_enqueued += 1
-                current_size = self._queue.qsize()
-                if current_size > self._max_observed_depth:
-                    self._max_observed_depth = current_size
+                self._unfinished_tasks += 1
+                curr_len = len(self._items)
+                if curr_len > self._max_observed_depth:
+                    self._max_observed_depth = curr_len
+                self._last_evicted = None
+                self._cond.notify()
                 return DeliveryState.QUEUED
 
-            # Queue is full — apply configured backpressure policy
+            # Queue is full: apply backpressure policy
             if policy == BackpressurePolicy.REJECT:
                 self._total_rejected += 1
                 raise QueueFullError(
@@ -121,64 +165,141 @@ class SubscriberQueue:
 
             if policy == BackpressurePolicy.DROP_NEWEST:
                 self._total_dropped += 1
+                self._last_evicted = None
                 return DeliveryState.DROPPED
 
             if policy == BackpressurePolicy.DROP_OLDEST:
-                # Evict the lowest-priority or oldest item currently in queue
-                try:
-                    _evicted = self._queue.get_nowait()
-                    self._queue.task_done()
-                    self._total_dropped += 1
-                except (asyncio.QueueEmpty, ValueError):
-                    pass
-                self._queue.put_nowait(wrapped)
+                # True oldest eviction: evict item with smallest sequence number
+                oldest_item = min(self._items, key=lambda x: x.sequence)
+                self._items.remove(oldest_item)
+                heapq.heapify(self._items)
+                self._total_dropped += 1
+                self._last_evicted = oldest_item.item
+                # Task count is balanced because vacated slot is taken by new item
+                heapq.heappush(self._items, wrapped)
                 self._total_enqueued += 1
+                self._cond.notify()
                 return DeliveryState.QUEUED
 
-            # policy == BackpressurePolicy.WAIT
-            # Release lock before awaiting to avoid blocking other operations
-            pass
+            # Policy is WAIT: await capacity or closure
+            wait_deadline = (time.monotonic() + timeout) if (timeout and timeout > 0) else None
 
-        # BackpressurePolicy.WAIT: Wait asynchronously for queue space
-        try:
-            if timeout is not None and timeout > 0:
-                await asyncio.wait_for(self._queue.put(wrapped), timeout=timeout)
-            else:
-                await self._queue.put(wrapped)
-            async with self._lock:
-                self._total_enqueued += 1
-                current_size = self._queue.qsize()
-                if current_size > self._max_observed_depth:
-                    self._max_observed_depth = current_size
-            return DeliveryState.QUEUED
-        except asyncio.TimeoutError as e:
-            async with self._lock:
+            while len(self._items) >= self._capacity and not self._is_closed:
+                if wait_deadline is not None:
+                    remaining = wait_deadline - time.monotonic()
+                    if remaining <= 0:
+                        self._total_rejected += 1
+                        raise QueueFullError(
+                            f"Queue '{self._name}' saturated after {timeout}s under WAIT policy."
+                        )
+                    try:
+                        await asyncio.wait_for(self._cond.wait(), timeout=remaining)
+                    except asyncio.TimeoutError as e:
+                        self._total_rejected += 1
+                        raise QueueFullError(
+                            f"Queue '{self._name}' saturated after {timeout}s under WAIT policy."
+                        ) from e
+                else:
+                    await self._cond.wait()
+
+            if self._is_closed:
                 self._total_rejected += 1
-            raise QueueFullError(
-                f"Queue '{self._name}' saturated after {timeout}s timeout under WAIT policy."
-            ) from e
+                raise QueueClosedError(f"Queue '{self._name}' closed while publisher was waiting.")
+
+            heapq.heappush(self._items, wrapped)
+            self._total_enqueued += 1
+            self._unfinished_tasks += 1
+            curr_len = len(self._items)
+            if curr_len > self._max_observed_depth:
+                self._max_observed_depth = curr_len
+            self._last_evicted = None
+            self._cond.notify()
+            return DeliveryState.QUEUED
 
     async def get(self) -> tuple[EventPriority, Any]:
-        """Dequeue the highest priority item (and oldest among equal priority)."""
-        wrapped = await self._queue.get()
-        async with self._lock:
+        """Dequeue the highest priority item (with starvation prevention for lower priorities).
+
+        Raises QueueClosedError if queue is closed and empty.
+        """
+        async with self._cond:
+            while len(self._items) == 0 and not self._is_closed:
+                await self._cond.wait()
+
+            if len(self._items) == 0 and self._is_closed:
+                raise QueueClosedError(f"Queue '{self._name}' is closed and empty.")
+
+            # Starvation prevention check
+            if self._consecutive_high_dispatches >= self._starvation_threshold:
+                lower_priority_items = [
+                    x for x in self._items if -x.sort_priority < EventPriority.HIGH
+                ]
+                if lower_priority_items:
+                    # Dispatch oldest lower-priority item to prevent starvation
+                    oldest_lower = min(lower_priority_items, key=lambda x: x.sequence)
+                    self._items.remove(oldest_lower)
+                    heapq.heapify(self._items)
+                    self._consecutive_high_dispatches = 0
+                    self._total_dequeued += 1
+                    self._cond.notify()
+                    return EventPriority(-oldest_lower.sort_priority), oldest_lower.item
+
+            # Normal priority dequeue
+            wrapped = heapq.heappop(self._items)
             self._total_dequeued += 1
-        # Reconstruct original priority from sort key
-        priority = EventPriority(-wrapped.sort_priority)
-        return priority, wrapped.item
+            prio = EventPriority(-wrapped.sort_priority)
+            if prio >= EventPriority.HIGH:
+                self._consecutive_high_dispatches += 1
+            else:
+                self._consecutive_high_dispatches = 0
+
+            self._cond.notify()
+            return prio, wrapped.item
 
     def task_done(self) -> None:
         """Signal that a previously dequeued task is complete."""
-        self._queue.task_done()
+        asyncio.create_task(self._task_done_async())
+
+    async def _task_done_async(self) -> None:
+        async with self._cond:
+            if self._unfinished_tasks <= 0:
+                raise ValueError("task_done() called too many times")
+            self._unfinished_tasks -= 1
+            self._cond.notify_all()
+
+    async def task_done_sync(self) -> None:
+        """Synchronously awaited task completion signal."""
+        async with self._cond:
+            if self._unfinished_tasks <= 0:
+                raise ValueError("task_done() called too many times")
+            self._unfinished_tasks -= 1
+            self._cond.notify_all()
+
+    async def join(self) -> None:
+        """Block until all items in the queue have been processed."""
+        async with self._cond:
+            while self._unfinished_tasks > 0:
+                await self._cond.wait()
+
+    def close(self) -> None:
+        """Close the queue, immediately waking all waiting producers and consumers."""
+        self._is_closed = True
+        # Asynchronously notify condition waiters
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self._notify_close())
+        except RuntimeError:
+            pass
+
+    async def _notify_close(self) -> None:
+        async with self._cond:
+            self._cond.notify_all()
 
     def drain(self) -> list[Any]:
-        """Drain all pending items from the queue (used during shutdown)."""
+        """Drain all pending items from the queue (used during shutdown or unsubscription)."""
         drained: list[Any] = []
-        while not self._queue.empty():
-            try:
-                wrapped = self._queue.get_nowait()
-                self._queue.task_done()
-                drained.append(wrapped.item)
-            except (asyncio.QueueEmpty, ValueError):
-                break
+        while self._items:
+            wrapped = heapq.heappop(self._items)
+            drained.append(wrapped.item)
+            if self._unfinished_tasks > 0:
+                self._unfinished_tasks -= 1
         return drained

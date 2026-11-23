@@ -136,7 +136,7 @@ async def test_publish_and_wait() -> None:
 
         assert finished is True
         assert len(outcomes) == 1
-        assert outcomes[0].state == DeliveryState.QUEUED
+        assert outcomes[0].state == DeliveryState.DELIVERED
 
 
 @pytest.mark.asyncio

@@ -79,7 +79,7 @@ async def test_end_to_end_perception_to_emotion_workflow() -> None:
 
         outcomes = await bus.publish_and_wait(obs_event)
         assert len(outcomes) == 1
-        assert outcomes[0].state == DeliveryState.QUEUED
+        assert outcomes[0].state == DeliveryState.DELIVERED
 
         # Allow secondary derived emotion event to be dispatched
         await asyncio.sleep(0.05)

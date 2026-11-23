@@ -121,3 +121,40 @@ stateDiagram-v2
 2. **Prioritization Precedence:** Higher priority events (`CRITICAL`, `HIGH`) preempt lower priority events (`NORMAL`, `LOW`) within subscriber queues.
 3. **No Mutated Envelopes:** Original `EventEnvelope` instances are never mutated during routing or dispatch.
 4. **Failure Isolation:** Each subscriber operates an isolated queue and worker loop. A crash or timeout in one subscriber handler cannot crash the bus or delay other subscribers.
+
+---
+
+## 7. Synchronous Handler Thread Isolation
+
+The Event Bus supports both asynchronous coroutines and synchronous callables as event handlers:
+
+1. **Bounded Thread Pool Execution:** Synchronous handlers are executed within a dedicated, bounded `ThreadPoolExecutor` (configured via `sync_executor_workers`, default: 4 threads). This ensures that blocking I/O or CPU operations in synchronous subscribers never block the primary `asyncio` event loop thread.
+2. **Cancellation Boundaries and Limitations:** Standard Python threads cannot be preempted or forcibly terminated from outside once executing. If an asyncio worker awaiting a synchronous handler is cancelled (e.g. on timeout or bus shutdown), the asyncio task unblocks immediately, but the underlying thread continues running until the handler function returns. Developers of synchronous handlers should implement cooperative flags or bounded timeouts.
+
+---
+
+## 8. Strict Configuration Validation
+
+All configuration parameters for `EventBusConfig`, `SubscriberQueue`, and `EventBus.subscribe()` are strictly validated:
+- `default_queue_capacity`, `publish_timeout_seconds`, `handler_timeout_seconds`, `shutdown_timeout_seconds`, `max_workers_per_subscription`, `sync_executor_workers`, and `starvation_threshold` must be strictly positive (`gt=0`).
+- Falsy or non-positive values (such as `0` or negative numbers) are explicitly rejected with `ValueError` or Pydantic `ValidationError` rather than falling back silently to defaults.
+
+---
+
+## 9. Shutdown and Backpressure Unblocking
+
+1. **Queue Closure Semantics:** When `stop()` is invoked, the event bus transitions to `STOPPING` and immediately marks all subscriber queues as closed (`close()`).
+2. **Immediate Publisher Unblocking:** Closing subscriber queues immediately awakens all publishers awaiting queue space under the `WAIT` backpressure policy, raising `QueueClosedError` to prevent publishers from hanging during shutdown.
+3. **Queue Draining:** Active handlers and in-flight queue items are given up to `shutdown_timeout_seconds` to drain cleanly before worker tasks are cancelled.
+4. **Evacuation:** Any items remaining in queues after worker cancellation are drained and marked with `DeliveryState.CANCELLED`.
+
+---
+
+## 10. Complete Unsubscription Lifecycle
+
+When `unsubscribe(subscription_id)` is invoked:
+1. The subscriber is removed from the `EventRouter` snapshot registry.
+2. The subscriber queue is closed, waking any waiting putters or getters.
+3. Dedicated worker tasks are cancelled and awaited using `asyncio.gather(*workers, return_exceptions=True)`.
+4. Any remaining items in the subscriber queue are drained, counted in `cancelled_deliveries`, and resolved with `DeliveryState.CANCELLED`.
+5. Repeated unsubscription calls for an already removed subscription safely return `False`.
