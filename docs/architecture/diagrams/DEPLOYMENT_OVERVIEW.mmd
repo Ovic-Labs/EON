@@ -1,0 +1,54 @@
+flowchart LR
+    %% OVIC EON — Edge Deployment Overview
+    %% Document ID: EON-ARCH-DIAG-DEPLOY-001
+
+    subgraph ROBOT_COMPUTE["Edge Robot Compute Host (e.g. RK3588 / Jetson / Core Ultra 5)"]
+        subgraph OS_RUNTIME["Linux OS (Ubuntu 22.04 / 24.04 LTS)"]
+            subgraph SYSTEMD["systemd Process Supervision"]
+                EON_DAEMON["eon-service\n(systemd daemon)"]
+            end
+
+            subgraph CGROUPS["Linux cgroups v2 (Resource Isolation)"]
+                direction TB
+                MEM_LIMIT["MemoryMax = 2048 MB"]
+                CPU_QUOTA["CPUQuota = 250%"]
+            end
+
+            subgraph LOCAL_STORAGE["Local Storage (Zero Raw Media)"]
+                CONFIG_FILE["/etc/eon/eon_config.yaml\n(Declarative Settings)"]
+                SECRETS["Linux Keyutils / SQLCipher\n(Encrypted User Memory Keys)"]
+                LOGS["/var/log/eon/eon.json.log\n(Scrubbed Structured JSON)"]
+            end
+
+            subgraph LOCAL_PROCESSES["Co-Located Robot Processes"]
+                ROS2_GRAPH["ROS 2 Computational Graph\n(/eon/observations, /eon/emotions)"]
+                SAFETY_PLC["Robot Certified Safety Controller\n(Independent Collision PLC)"]
+            end
+        end
+
+        subgraph EON_PROCESS["OVIC EON Core Process (ovic_eon)"]
+            CORE_BUS["L5: In-Memory Core Event Bus\n(AsyncIO Event Loop)"]
+            PERC_STACK["L3: Edge CPU Perception\n(Face Mesh, Silero VAD, SER)"]
+            SEVEN_ENGINES["L4: Seven Intelligence Engines\n(ERS, EMS, ERE, PSE, SIE, ERG, HBU)"]
+            ADAPTERS["L7: Local Model Adapters\n(ONNX INT8, llama.cpp, Piper TTS)"]
+        end
+    end
+
+    subgraph SENSORS_ACTUATORS["Physical Robot Hardware (L1)"]
+        CAM["RGB-D Camera"]
+        MIC["Microphone Array"]
+        SPEAKER["Loudspeaker"]
+        MOTORS["Robot Actuators"]
+    end
+
+    %% Connections
+    CAM & MIC -->|V4L2 / ALSA| PERC_STACK
+    PERC_STACK <==>|In-Memory Bus| CORE_BUS
+    CORE_BUS <==>|Event Envelopes| SEVEN_ENGINES
+    SEVEN_ENGINES -->|Inference| ADAPTERS
+    CORE_BUS -->|Advisory Intent| ROS2_GRAPH
+    ROS2_GRAPH -->|Filtered Motion Plan| SAFETY_PLC
+    SAFETY_PLC -->|Certified Motor Commands| MOTORS
+    ADAPTERS -->|PCM Audio Stream| SPEAKER
+    SYSTEMD -.->|Supervises| EON_PROCESS
+    CGROUPS -.->|Constrains| EON_PROCESS

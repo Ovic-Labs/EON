@@ -1,0 +1,52 @@
+flowchart TD
+    %% OVIC EON — Seven Engine Architecture
+    %% Document ID: EON-ARCH-DIAG-ENG-001
+
+    subgraph PERCEPTION["Perception Engines (Layer 4)"]
+        ERS["ERS\nEmotion Recognition System\n(Face, Voice, Multimodal VAD)"]
+        HBU["HBU\nHuman Behaviour Understanding\n(Pose, Gestures, Proxemics)"]
+    end
+
+    subgraph MEMORY["Affective State & Memory (Layer 4 & 6)"]
+        EMS["EMS\nEmotion Modelling System\n(Affective Decay & Interaction Memory)"]
+        L6_MEM["L6 Context & Memory Layer\n(SessionContext, WorkingMemory, Storage SPI)"]
+        EMS <--> L6_MEM
+    end
+
+    subgraph REASONING["Cognitive & Social Deliberation (Layer 4)"]
+        ERE["ERE\nEmpathy Reasoning Engine\n(Scherer CPM Appraisal & Intent)"]
+        PSE["PSE\nPersonality Simulation Engine\n(Style Clamping & Persona Bounds)"]
+        SIE["SIE\nSocial Interaction Engine\n(12 Stages, Turn-Taking, Dialogue Frames)"]
+    end
+
+    subgraph GENERATION["Expressive Actuation Engine (Layer 4)"]
+        ERG["ERG\nEmotion Response Generation\n(Surface NLG, Piper TTS, Visemes, Gestures)"]
+    end
+
+    subgraph CORE_BUS["EON Core Runtime Substrate (Layer 5)"]
+        BUS(("Core Event Bus\n(Async In-Memory Router)"))
+    end
+
+    subgraph ADAPTERS["Model & Algorithm Adapters (Layer 7)"]
+        L7_MODELS["L7 Model Adapters\n(ONNX Runtime, llama.cpp, Piper TTS, Rule Engine)"]
+    end
+
+    subgraph ROBOT_ACTUATION["Robot Hardware Boundary (Advisory Only)"]
+        ROBOT_SAFETY["Robot Certified Safety Controller\n(Independent ISO 13849-1 Motion PLC)"]
+        OUTPUTS["Loudspeaker Audio & Screen Visemes"]
+    end
+
+    %% Event Routing via Core Bus
+    ERS & HBU ==>|Publish Observations| BUS
+    BUS ==>|Route Observations| EMS & SIE & ERE
+    ERE ==>|Publish Response Intent| BUS
+    PSE ==>|Publish Style Vector| BUS
+    SIE ==>|Publish Turn Actions| BUS
+    BUS ==>|Route Intents, Style & Turns| ERG
+    ERG ==>|Publish Advisory Actuation Proposals| BUS
+    BUS -->|Advisory Motion Proposals| ROBOT_SAFETY
+    ERG -->|Streaming PCM Audio & Visemes| OUTPUTS
+
+    %% Model Execution
+    ERS & HBU -->|Inference Calls| L7_MODELS
+    ERG -->|Inference Calls| L7_MODELS

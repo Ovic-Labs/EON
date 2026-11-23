@@ -1,0 +1,30 @@
+sequenceDiagram
+    %% OVIC EON — End-to-End Multimodal Data Flow
+    %% Document ID: EON-ARCH-DIAG-FLOW-001
+
+    autonumber
+    participant Phys as L1: Physical Sensors (Cam/Mic)
+    participant HAL as L2: Device Abstraction (HAL)
+    participant Perc as L3: Perception Layer
+    participant Bus as L5: Core Event Bus
+    participant Engines as L4: Engines (ERS / HBU / SIE / ERE)
+    participant Mem as L6: Context & Memory
+    participant ERG as L4: ERG (Response Gen)
+    participant Host as L8: SDK / Robot Controller
+
+    Phys->>HAL: Raw Video Frames & Audio Stream (V4L2 / ALSA)
+    Note over HAL: Ephemeral In-Memory Ring Buffers (RAM Only)
+    HAL->>Perc: Zero-Copy Frame & Audio Buffers
+    Note over Perc: Feature Extraction & Multimodal Quality Gating
+    Note over Perc: Zero-Wipe Raw Buffers (Privacy Invariant)
+    Perc->>Bus: publish(EventEnvelope[ObservationPayload])
+    Bus->>Engines: Route to Subscribers (ERS, HBU, SIE)
+    Engines->>Mem: Query Session Context & Active History
+    Mem-->>Engines: Return Interaction Context
+    Note over Engines: Affective State Update (ERS/EMS)<br/>Turn-Taking Arbitration (SIE)<br/>Cognitive Appraisal CPM (ERE)
+    Engines->>Bus: publish(EventEnvelope[ResponseIntentPayload])
+    Bus->>ERG: Route Intent, Persona Vector & Context
+    Note over ERG: Local SLM Dialogue / Deterministic Template<br/>Piper Neural TTS Audio Streaming
+    ERG->>Bus: publish(EventEnvelope[ResponseProposalPayload])
+    Bus->>Host: Deliver Proposed Speech Audio & Advisory Gesture
+    Note over Host: Robot Certified Safety Controller Validates Corridors<br/>Loudspeaker Audio Playback & Screen Visemes

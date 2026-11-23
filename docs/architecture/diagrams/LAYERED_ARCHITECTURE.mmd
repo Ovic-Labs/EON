@@ -1,0 +1,37 @@
+flowchart TD
+    %% OVIC EON — Layered System Architecture
+    %% Document ID: EON-ARCH-DIAG-LAYERS-001
+
+    subgraph TIER_INFRA["Infrastructure & Application Plane"]
+        L10["L10 — Deployment & Infrastructure Layer\n(systemd, Docker, OCI Cgroups, Secrets, Logs)"]
+        L9["L9 — API & Application Layer\n(FastAPI, WebSockets, OpenAPI, Auth RBAC)"]
+        L8["L8 — SDK & Integration Layer\n(Python SDK, C++ SDK, ROS 2 Lifecycle Node Bridge)"]
+    end
+
+    subgraph TIER_CORE["Orchestration & Coordination Plane"]
+        L5["L5 — EON Core Runtime Layer\n(EventBus Router, Engine Lifecycle, Health, Priority Queues)"]
+    end
+
+    subgraph TIER_COGNITIVE["Cognitive & Deliberation Plane"]
+        L4["L4 — Intelligence Engine Layer\n(ERS, EMS, ERE, PSE, SIE, ERG, HBU)"]
+        L6["L6 — Context & Memory Layer\n(SessionContext, WorkingMemory, Storage SPI, CryptoShred)"]
+        L7["L7 — Model & Algorithm Adapter Layer\n(ONNX Runtime, llama.cpp, Piper TTS, Deterministic Rules)"]
+    end
+
+    subgraph TIER_PERCEPTION["Perception & Physical Substrate Plane"]
+        L3["L3 — Perception Layer\n(Face Mesh, Silero VAD, SER, Pose, Gated Multimodal Fusion)"]
+        L2["L2 — Device Abstraction Layer (HAL)\n(CameraDevice, AudioDevice, TelemetryDevice, Ring Buffers)"]
+        L1["L1 — Hardware & Device Layer\n(RGB-D Sensors, Mic Arrays, Robot Buses, Edge CPU/SoC)"]
+    end
+
+    %% Inter-Layer Directed Flows
+    L10 -.->|Process Supervision| L9 & L8 & L5
+    L9 -->|Network Requests| L8
+    L8 <-->|Typed Client IPC| L5
+    L5 <==>|Typed Event Envelopes| L4
+    L4 <-->|Query & Update| L6
+    L4 -->|Inference Calls| L7
+    L3 -->|Model Inference| L7
+    L3 ==>|Publish Observation Envelopes| L5
+    L3 -->|Pull Ephemeral Buffers| L2
+    L2 -->|Kernel Driver I/O| L1

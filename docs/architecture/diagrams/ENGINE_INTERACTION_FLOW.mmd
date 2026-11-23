@@ -1,0 +1,38 @@
+sequenceDiagram
+    %% OVIC EON — Seven Engine Interaction and Event Causality Flow
+    %% Document ID: EON-ARCH-DIAG-ENG-FLOW-001
+
+    autonumber
+    participant Sensors as L1/L3: Sensor Ingest
+    participant Bus as L5: Core Event Bus
+    participant ERS_HBU as L4: ERS & HBU
+    participant EMS as L4: EMS (Memory)
+    participant SIE as L4: SIE (Turn Mgr)
+    participant ERE_PSE as L4: ERE & PSE
+    participant ERG as L4: ERG (Response Gen)
+    participant Robot as Host Robot Controller
+
+    Sensors->>Bus: publish(EventEnvelope[ObservationPayload])
+    Bus->>ERS_HBU: Dispatch raw observations
+    Note over ERS_HBU: ERS: Continuous VAD Tracking (Face + Voice)<br/>HBU: 3D Skeletal Pose & Gestures
+    ERS_HBU->>Bus: publish(eon.emotion_estimate & observation.behaviour)
+    
+    par Parallel State Ingestion
+        Bus->>EMS: Deliver Emotion & Behaviour Events
+        Note over EMS: Update affective state & working memory
+        Bus->>SIE: Deliver Emotion & Behaviour Events
+        Note over SIE: Evaluate 12-stage HFSM & multimodal TRP score
+    end
+
+    Note over SIE: User silence detected (>400ms) & TRP > 0.75<br/>SIE arbitrates floor: "take_floor"
+    SIE->>Bus: publish(interaction.turn_action: TAKE_FLOOR)
+
+    Bus->>ERE_PSE: Deliver Emotion State & Turn Authorization
+    Note over ERE_PSE: ERE: Scherer CPM Appraisal & Supportive Strategy<br/>PSE: Resolve & Clamp Personality Style Vector
+    ERE_PSE->>Bus: publish(intent.empathy_reasoned & persona.style_vector)
+
+    Bus->>ERG: Route Intent, Style Vector & Context
+    Note over ERG: Select SLM or Template Route<br/>Synthesize Speech Audio (Piper TTS)<br/>Schedule Screen Visemes & Advisory Gesture
+    ERG->>Bus: publish(ResponseProposalPayload [is_authoritative_stop=False])
+    Bus->>Robot: Deliver Proposed Audio & Advisory Gesture Coordinates
+    Note over Robot: Certified Safety Controller checks motion safety<br/>Loudspeaker plays audio; Motors execute advisory gesture
