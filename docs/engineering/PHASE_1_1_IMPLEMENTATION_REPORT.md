@@ -124,9 +124,9 @@ The multi-version matrix workflow is configured and verified in `.github/workflo
 
 | Target Python | Platform | Job ID | Status | Verification Steps Executed | Bypass Flags |
 |---|---|---|---|---|---|
-| **Python 3.10** | Ubuntu Latest | `137515713442` | **SUCCESS** | `pip install -e ".[dev]"`, `ruff check`, `ruff format`, `mypy`, `pytest`, `build` | None (Direct install) |
-| **Python 3.11** | Ubuntu Latest | `137515713404` | **SUCCESS** | `pip install -e ".[dev]"`, `ruff check`, `ruff format`, `mypy`, `pytest`, `build` | None (Direct install) |
-| **Python 3.12** | Ubuntu Latest | `137515713463` | **SUCCESS** | `pip install -e ".[dev]"`, `ruff check`, `ruff format`, `mypy`, `pytest`, `build` | None (Direct install) |
+| **Python 3.10** | Ubuntu Latest | `137523999979` | **SUCCESS** | `pip install -e ".[dev]"`, `ruff check`, `ruff format`, `mypy`, `pytest`, `build` | None (Direct install) |
+| **Python 3.11** | Ubuntu Latest | `137523999704` | **SUCCESS** | `pip install -e ".[dev]"`, `ruff check`, `ruff format`, `mypy`, `pytest`, `build` | None (Direct install) |
+| **Python 3.12** | Ubuntu Latest | `137523999515` | **SUCCESS** | `pip install -e ".[dev]"`, `ruff check`, `ruff format`, `mypy`, `pytest`, `build` | None (Direct install) |
 
 ### 5.3 Local Windows Python 3.11 Execution
 - **Environment:** Windows 11 x64, Python 3.11.9 (`C:\Users\bkris\AppData\Local\Programs\Python\Python311\python.exe`).
@@ -289,7 +289,7 @@ ovic-eon Dependency not found on PyPI and could not be audited: ovic-eon (0.1.0)
 - **Vulnerabilities Found:** **0** known vulnerabilities across all audited dependencies.
 - **Packages Excluded / Skipped:** `ovic-eon` (version `0.1.0`).
 - **Skip Reason:** `Dependency not found on PyPI and could not be audited: ovic-eon (0.1.0)`.
-- **Rationale:** `ovic-eon` is an internal, active development package and has not yet been published to the public PyPI index.
+- **Rationale & Scope Limitation:** `ovic-eon` is an internal, active development package and has not yet been published to the public PyPI index. `pip-audit` audits published packages against PyPI and OSV databases; it does not and cannot scan the local `ovic-eon` source package itself. No claim is made that the local package has been scanned by `pip-audit`.
 - **Internal Security Qualifiers:**
   - Zero network sockets opened during package import (verified via `test_no_network_connection_on_import`).
   - No credential handling, API keys, or telemetry introduced.
@@ -301,17 +301,17 @@ ovic-eon Dependency not found on PyPI and could not be audited: ovic-eon (0.1.0)
 ## 13. Continuous Integration (CI) Verification
 
 - **Workflow:** `.github/workflows/documentation-qualification.yml`
-- **Triggered Commit:** `71d54b1e4ca9cf640549d431fee0a6995a96053b`
-- **Workflow Run ID:** `45121388703`
-- **Workflow URL:** [GitHub Actions Run 45121388703](https://github.com/Ovic-Labs/EON/actions/runs/45121388703)
+- **Triggered Commit:** `7b81137398d8e017194ea3fc85b701b0988c1871`
+- **Workflow Run ID:** `45123986229`
+- **Workflow URL:** [GitHub Actions Run 45123986229](https://github.com/Ovic-Labs/EON/actions/runs/45123986229)
 
 | Job Name | Job ID | Step Conclusion | Platform | Matrix Version |
 |---|---|---|---|---|
-| Package Test & Quality Gates (Python 3.10) | `137515713442` | **SUCCESS** | Ubuntu Latest | Python 3.10 |
-| Package Test & Quality Gates (Python 3.11) | `137515713404` | **SUCCESS** | Ubuntu Latest | Python 3.11 |
-| Package Test & Quality Gates (Python 3.12) | `137515713463` | **SUCCESS** | Ubuntu Latest | Python 3.12 |
-| Documentation Qualification and Link Validation | `137515713104` | **SUCCESS** | Ubuntu Latest | Python 3.11 |
-| Markdown Linting | `137515713447` | **SUCCESS** | Ubuntu Latest | Node 20 |
+| Package Test & Quality Gates (Python 3.10) | `137523999979` | **SUCCESS** | Ubuntu Latest | Python 3.10 |
+| Package Test & Quality Gates (Python 3.11) | `137523999704` | **SUCCESS** | Ubuntu Latest | Python 3.11 |
+| Package Test & Quality Gates (Python 3.12) | `137523999515` | **SUCCESS** | Ubuntu Latest | Python 3.12 |
+| Documentation Qualification and Link Validation | `137523999733` | **SUCCESS** | Ubuntu Latest | Python 3.11 |
+| Markdown Linting | `137523999302` | **SUCCESS** | Ubuntu Latest | Node 20 |
 
 ---
 
