@@ -1,0 +1,2719 @@
+{
+  "project": "OVIC EON",
+  "organization": "OVIC Labs",
+  "document_id": "EON-RTM-JSON-001",
+  "version": "0.1.0",
+  "milestone": "Phase 0 Final Documentation Qualification",
+  "status": "APPROVED_BASELINE",
+  "metrics": {
+    "total_source_requirements": 290,
+    "functional_requirements_count": 60,
+    "non_functional_requirements_count": 78,
+    "performance_requirements_count": 66,
+    "privacy_safety_requirements_count": 86,
+    "total_srs_requirements": 203,
+    "total_use_cases": 54,
+    "mapped_source_requirements": 290,
+    "mapped_srs_requirements": 203,
+    "derived_requirements_count": 24,
+    "unmapped_requirements": 0,
+    "coverage_percentage": 100.0,
+    "implementation_status": "PENDING_PHASE_1_IMPLEMENTATION",
+    "documentation_verification_status": "VERIFIED_100_PERCENT"
+  },
+  "requirements": {
+    "functional": [
+      {
+        "id": "EON-FR-001",
+        "title": "Platform Initialization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-002",
+        "title": "Platform Shutdown",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-003",
+        "title": "Runtime Status",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-004",
+        "title": "Configuration Loading",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-005",
+        "title": "Engine Registration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-006",
+        "title": "Engine Initialization Management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-007",
+        "title": "Engine Lifecycle Management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-008",
+        "title": "Event Routing",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-009",
+        "title": "Event Identification",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-010",
+        "title": "Dependency Management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-011",
+        "title": "Failure Isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-012",
+        "title": "Timeout Management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-013",
+        "title": "Health Monitoring",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-014",
+        "title": "Runtime Recovery",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-015",
+        "title": "Observation Input Processing",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-016",
+        "title": "Emotion-Related Classification",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-017",
+        "title": "Confidence Representation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-018",
+        "title": "Observation Uncertainty",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-019",
+        "title": "Missing and Invalid Observation Handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-020",
+        "title": "Model Adapter Integration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-021",
+        "title": "Memory Creation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-022",
+        "title": "Memory Retrieval",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-023",
+        "title": "Memory Update",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-024",
+        "title": "Memory Deletion",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-025",
+        "title": "Memory Retention Management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-026",
+        "title": "Memory Classification",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-027",
+        "title": "Context Aggregation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-028",
+        "title": "Contextual Reasoning",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-029",
+        "title": "Uncertainty Propagation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-030",
+        "title": "Policy Evaluation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-031",
+        "title": "Reasoning Explanation Metadata",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-032",
+        "title": "Personality Profile Creation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-033",
+        "title": "Personality Profile Management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-034",
+        "title": "Personality Parameter Validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-035",
+        "title": "Personality Output",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-036",
+        "title": "Interaction Session Creation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-037",
+        "title": "Interaction State Management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-038",
+        "title": "Turn Management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-039",
+        "title": "Interruption Handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-040",
+        "title": "Interaction Session Termination",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-041",
+        "title": "Response Generation Request",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-042",
+        "title": "Context-Aware Response Generation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-043",
+        "title": "Personality-Aware Responses",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-044",
+        "title": "Response Validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-045",
+        "title": "Response Fallback",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-046",
+        "title": "Behavior Observation Input",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-047",
+        "title": "Behavior Pattern Processing",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-048",
+        "title": "Temporal Observation Handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-049",
+        "title": "Behavior Confidence and Uncertainty",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-050",
+        "title": "Standard Engine Contracts",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-051",
+        "title": "Structured Error Reporting",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-052",
+        "title": "External API Access",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-053",
+        "title": "ROS 2 Integration Interface",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-054",
+        "title": "Robot Platform Abstraction",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-055",
+        "title": "SDK Access",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-056",
+        "title": "Authentication and Authorization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-057",
+        "title": "Data Access and Retention Controls",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-058",
+        "title": "Audit Event Recording",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-059",
+        "title": "Diagnostics and Telemetry",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-FR-060",
+        "title": "Configuration Administration",
+        "status": "APPROVED_BASELINE"
+      }
+    ],
+    "non_functional": [
+      {
+        "id": "EON-NFR-001",
+        "title": "Core Event Routing Latency",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-002",
+        "title": "Internal Interaction Processing",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-003",
+        "title": "Engine Processing Metrics",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-004",
+        "title": "Performance Benchmark Reproducibility",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-005",
+        "title": "CPU-First Compatibility",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-006",
+        "title": "Core Runtime Memory",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-007",
+        "title": "Resource Monitoring",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-008",
+        "title": "Resource Limits",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-009",
+        "title": "Idle Resource Efficiency",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-010",
+        "title": "Runtime Stability",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-011",
+        "title": "Engine Failure Isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-012",
+        "title": "Graceful Degradation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-013",
+        "title": "Recovery Procedures",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-014",
+        "title": "Data Consistency",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-015",
+        "title": "Duplicate Operation Protection",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-016",
+        "title": "Runtime Availability",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-017",
+        "title": "Health Monitoring Availability",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-018",
+        "title": "Maintenance Handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-019",
+        "title": "Modular Scaling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-020",
+        "title": "Concurrent Requests",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-021",
+        "title": "Workload Scaling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-022",
+        "title": "Session Isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-023",
+        "title": "Secure Development Practices",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-024",
+        "title": "Authentication Protection",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-025",
+        "title": "Authorization Enforcement",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-026",
+        "title": "Data Encryption in Transit",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-027",
+        "title": "Data Encryption at Rest",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-028",
+        "title": "Secrets Management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-029",
+        "title": "Dependency Security",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-030",
+        "title": "Auditability",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-031",
+        "title": "Security Testing",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-032",
+        "title": "Data Minimization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-033",
+        "title": "Consent and Authorization Boundaries",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-034",
+        "title": "Memory Retention",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-035",
+        "title": "Data Isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-036",
+        "title": "Sensitive Information Redaction",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-037",
+        "title": "Data Deletion Verification",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-038",
+        "title": "Modular Architecture",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-039",
+        "title": "Code Quality",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-040",
+        "title": "Automated Testing",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-041",
+        "title": "Documentation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-042",
+        "title": "Change Management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-043",
+        "title": "Technical Debt Management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-044",
+        "title": "CPU Architecture Portability",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-045",
+        "title": "Operating System Support",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-046",
+        "title": "Container Compatibility",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-047",
+        "title": "Hardware Independence",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-048",
+        "title": "API Version Compatibility",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-049",
+        "title": "Engine Contract Compatibility",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-050",
+        "title": "ROS 2 Compatibility",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-051",
+        "title": "SDK Compatibility",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-052",
+        "title": "Structured Logging",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-053",
+        "title": "Metrics Exposure",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-054",
+        "title": "Distributed Tracing",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-055",
+        "title": "Diagnostic Quality",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-056",
+        "title": "Backup Capability",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-057",
+        "title": "Restoration Capability",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-058",
+        "title": "Recovery Objectives",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-059",
+        "title": "Installation Simplicity",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-060",
+        "title": "Example Projects",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-061",
+        "title": "Error Documentation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-062",
+        "title": "Developer Tooling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-063",
+        "title": "Deployment Documentation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-064",
+        "title": "License Management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-065",
+        "title": "Release Integrity",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-066",
+        "title": "Configuration Profiles",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-067",
+        "title": "Operational Documentation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-068",
+        "title": "Developer Documentation Accessibility",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-069",
+        "title": "Internationalization Readiness",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-070",
+        "title": "Replaceable Model Architecture",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-071",
+        "title": "Model Version Tracking",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-072",
+        "title": "Model Evaluation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-073",
+        "title": "Model Failure Handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-074",
+        "title": "Inference Transparency",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-075",
+        "title": "Safety Architecture Separation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-076",
+        "title": "Uncertainty-Aware Outputs",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-077",
+        "title": "Human Oversight",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-NFR-078",
+        "title": "No Safety Function Substitution",
+        "status": "APPROVED_BASELINE"
+      }
+    ],
+    "performance": [
+      {
+        "id": "EON-PERF-001",
+        "title": "Event Routing Latency",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-002",
+        "title": "Event Throughput",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-003",
+        "title": "Event Queue Management",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-004",
+        "title": "Event Prioritization",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-005",
+        "title": "Event Processing Overhead",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-006",
+        "title": "ERS Processing",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-007",
+        "title": "ERS Workload Control",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-008",
+        "title": "ERS Confidence Processing",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-009",
+        "title": "Memory Retrieval Latency",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-010",
+        "title": "Memory Write Latency",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-011",
+        "title": "Memory Growth",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-012",
+        "title": "Memory Search Scaling",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-013",
+        "title": "Deterministic Reasoning Latency",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-014",
+        "title": "Reasoning Complexity",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-015",
+        "title": "Reasoning Timeout",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-016",
+        "title": "Personality State Update",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-017",
+        "title": "Concurrent Personality Sessions",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-018",
+        "title": "State Consistency",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-019",
+        "title": "Interaction Processing",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-020",
+        "title": "Session Processing",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-021",
+        "title": "Interaction Continuity",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-022",
+        "title": "Response Planning Latency",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-023",
+        "title": "External Generation Latency",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-024",
+        "title": "Response Timeout",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-025",
+        "title": "Behaviour Observation Processing",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-026",
+        "title": "Behavioural History Processing",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-027",
+        "title": "Uncertainty Preservation",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-028",
+        "title": "Cross-Engine Workflow Latency",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-029",
+        "title": "Correlation Overhead",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-030",
+        "title": "Engine Isolation",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-031",
+        "title": "Workflow Timeout",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-032",
+        "title": "Workflow Cancellation",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-033",
+        "title": "API Response Latency",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-034",
+        "title": "API Throughput",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-035",
+        "title": "Request Limits",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-036",
+        "title": "API Backpressure",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-037",
+        "title": "ROS 2 Communication Latency",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-038",
+        "title": "ROS 2 Throughput",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-039",
+        "title": "QoS Configuration",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-040",
+        "title": "Message Handling",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-041",
+        "title": "Robotics Safety Separation",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-042",
+        "title": "Core Runtime Memory",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-043",
+        "title": "Memory Stability",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-044",
+        "title": "Memory Leak Detection",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-045",
+        "title": "Storage Benchmarking",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-046",
+        "title": "Storage Backpressure",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-047",
+        "title": "Core Startup",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-048",
+        "title": "Engine Initialization",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-049",
+        "title": "Graceful Shutdown",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-050",
+        "title": "Shutdown Timing",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-051",
+        "title": "Concurrent Session Testing",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-052",
+        "title": "Concurrent Engine Operations",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-053",
+        "title": "Load Stability",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-054",
+        "title": "Soak Testing",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-055",
+        "title": "Load Recovery",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-056",
+        "title": "Model Inference Isolation",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-057",
+        "title": "Model Adapter Timing",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-058",
+        "title": "CPU Inference",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-059",
+        "title": "Optional Hardware Acceleration",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-060",
+        "title": "Model Warm-up",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-061",
+        "title": "Inference Timeout",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-062",
+        "title": "Inference Resource Isolation",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-063",
+        "title": "Benchmark Baseline",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-064",
+        "title": "Regression Detection",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-065",
+        "title": "Regression Threshold",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      },
+      {
+        "id": "EON-PERF-066",
+        "title": "Release Benchmark Report",
+        "status": "PROVISIONAL_NOT_BENCHMARKED"
+      }
+    ],
+    "privacy_and_safety": [
+      {
+        "id": "EON-PSR-001",
+        "title": "Data Inventory",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-002",
+        "title": "Data Minimization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-003",
+        "title": "Purpose Limitation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-004",
+        "title": "Data Flow Documentation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-005",
+        "title": "Data Ownership and Control",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-006",
+        "title": "Consent Integration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-007",
+        "title": "Consent Withdrawal",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-008",
+        "title": "User Transparency",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-009",
+        "title": "Recording Indicators",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-010",
+        "title": "Consent State Enforcement",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-011",
+        "title": "Configurable Retention",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-012",
+        "title": "Default Retention",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-013",
+        "title": "Deletion Operations",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-014",
+        "title": "Deletion Verification",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-015",
+        "title": "Backup Retention",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-016",
+        "title": "Memory Authorization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-017",
+        "title": "Memory Isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-018",
+        "title": "Memory Transparency",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-019",
+        "title": "Sensitive Memory Protection",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-020",
+        "title": "Memory Correction",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-021",
+        "title": "Memory Purpose Restriction",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-022",
+        "title": "Camera Data Handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-023",
+        "title": "Microphone Data Handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-024",
+        "title": "Local Processing Preference",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-025",
+        "title": "External Transmission Control",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-026",
+        "title": "Raw Data Minimization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-027",
+        "title": "Authentication",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-028",
+        "title": "Authorization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-029",
+        "title": "Least Privilege",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-030",
+        "title": "Tenant Isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-031",
+        "title": "Session Expiration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-032",
+        "title": "Administrative Access",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-033",
+        "title": "Secure Transport",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-034",
+        "title": "Encryption at Rest",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-035",
+        "title": "Secrets Management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-036",
+        "title": "Secret Redaction",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-037",
+        "title": "Input Validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-038",
+        "title": "Dependency Security",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-039",
+        "title": "Security Testing",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-040",
+        "title": "Audit Logging",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-041",
+        "title": "Security Incident Handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-042",
+        "title": "Secure Updates",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-043",
+        "title": "Emotion Inference Uncertainty",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-044",
+        "title": "Behaviour Inference Uncertainty",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-045",
+        "title": "No Medical Diagnosis",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-046",
+        "title": "No Unsupported Intent Claims",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-047",
+        "title": "Model Documentation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-048",
+        "title": "Model Evaluation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-049",
+        "title": "Bias and Fairness Assessment",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-050",
+        "title": "Human Review",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-051",
+        "title": "Model Output Validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-052",
+        "title": "AI Provider Transparency",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-053",
+        "title": "No Uncontrolled Model Authority",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-054",
+        "title": "Personality Transparency",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-055",
+        "title": "Personality Boundaries",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-056",
+        "title": "Manipulative Interaction Prevention",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-057",
+        "title": "Vulnerable User Protection",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-058",
+        "title": "Interaction Escalation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-059",
+        "title": "Response Safety Validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-060",
+        "title": "Independent Safety Controller",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-061",
+        "title": "No Direct Emotion-to-Motion Authorization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-062",
+        "title": "Authorized Action Interface",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-063",
+        "title": "No Safety Limit Modification",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-064",
+        "title": "Safety System Independence",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-065",
+        "title": "Stale Observation Handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-066",
+        "title": "Invalid Output Rejection",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-067",
+        "title": "Physical Action Traceability",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-068",
+        "title": "Emergency Stop Independence",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-069",
+        "title": "Manufacturer Integration Approval",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-070",
+        "title": "Engine Failure Reporting",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-071",
+        "title": "Invalid Data Handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-072",
+        "title": "Timeout Handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-073",
+        "title": "Graceful Degradation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-074",
+        "title": "Fail-Closed Authorization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-075",
+        "title": "No Unsafe Fallback",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-076",
+        "title": "Recovery Verification",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-077",
+        "title": "ROS 2 Interface Validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-078",
+        "title": "QoS and Communication Failure Handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-079",
+        "title": "Command Separation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-080",
+        "title": "Integration Permissions",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-081",
+        "title": "Integration Failure Isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-082",
+        "title": "Privacy Monitoring",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-083",
+        "title": "Security Event Monitoring",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-084",
+        "title": "Incident Logging",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-085",
+        "title": "Incident Escalation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-PSR-086",
+        "title": "Incident Evidence Protection",
+        "status": "APPROVED_BASELINE"
+      }
+    ],
+    "srs": [
+      {
+        "id": "EON-SRS-001",
+        "title": "Modular architecture",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-002",
+        "title": "Engine isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-003",
+        "title": "Contract-based communication",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-004",
+        "title": "Runtime independence",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-005",
+        "title": "Configurable architecture",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-006",
+        "title": "Extensibility",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-007",
+        "title": "Dependency control",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-008",
+        "title": "Deterministic core operations",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-009",
+        "title": "Runtime initialization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-010",
+        "title": "Runtime shutdown",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-011",
+        "title": "Runtime state",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-012",
+        "title": "Startup validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-013",
+        "title": "Readiness reporting",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-014",
+        "title": "Runtime health",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-015",
+        "title": "Engine registration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-016",
+        "title": "Engine metadata",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-017",
+        "title": "Duplicate registration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-018",
+        "title": "Compatibility validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-019",
+        "title": "Engine discovery",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-020",
+        "title": "Engine initialization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-021",
+        "title": "Engine activation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-022",
+        "title": "Engine shutdown",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-023",
+        "title": "Engine restart",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-024",
+        "title": "Lifecycle failure handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-025",
+        "title": "Event publication",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-026",
+        "title": "Event subscription",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-027",
+        "title": "Event validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-028",
+        "title": "Event metadata",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-029",
+        "title": "Invalid event rejection",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-030",
+        "title": "Event ordering",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-031",
+        "title": "Event duplication",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-032",
+        "title": "Event failure handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-033",
+        "title": "Context creation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-034",
+        "title": "Context identification",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-035",
+        "title": "Context isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-036",
+        "title": "Context expiration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-037",
+        "title": "Context validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-038",
+        "title": "Configuration loading",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-039",
+        "title": "Configuration validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-040",
+        "title": "Invalid configuration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-041",
+        "title": "Configuration versioning",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-042",
+        "title": "Configuration audit",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-043",
+        "title": "Secret handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-044",
+        "title": "Structured logging",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-045",
+        "title": "Health metrics",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-046",
+        "title": "Error reporting",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-047",
+        "title": "Trace correlation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-048",
+        "title": "Monitoring independence",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-049",
+        "title": "Input reception",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-050",
+        "title": "Input validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-051",
+        "title": "Observation processing",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-052",
+        "title": "Structured output",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-053",
+        "title": "Confidence information",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-054",
+        "title": "Inconclusive result",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-055",
+        "title": "Model unavailability",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-056",
+        "title": "Model metadata",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-057",
+        "title": "Processing constraints",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-058",
+        "title": "Memory creation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-059",
+        "title": "Memory validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-060",
+        "title": "Memory retrieval",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-061",
+        "title": "Memory update",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-062",
+        "title": "Memory deletion",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-063",
+        "title": "Retention policies",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-064",
+        "title": "Access control",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-065",
+        "title": "Session separation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-066",
+        "title": "Memory provenance",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-067",
+        "title": "Memory minimization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-068",
+        "title": "Memory availability",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-069",
+        "title": "Context evaluation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-070",
+        "title": "Multi-source context",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-071",
+        "title": "Uncertainty handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-072",
+        "title": "Policy evaluation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-073",
+        "title": "Recommendation generation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-074",
+        "title": "Explanation metadata",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-075",
+        "title": "Insufficient information",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-076",
+        "title": "Policy conflict",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-077",
+        "title": "Model dependency",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-078",
+        "title": "Personality configuration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-079",
+        "title": "Personality loading",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-080",
+        "title": "Personality consistency",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-081",
+        "title": "Personality updates",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-082",
+        "title": "Personality versioning",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-083",
+        "title": "Personality validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-084",
+        "title": "Policy precedence",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-085",
+        "title": "Personality fallback",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-086",
+        "title": "Interaction session",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-087",
+        "title": "Interaction state",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-088",
+        "title": "State transitions",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-089",
+        "title": "Conversation turns",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-090",
+        "title": "Interaction interruption",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-091",
+        "title": "Interaction termination",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-092",
+        "title": "Interaction timeout",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-093",
+        "title": "Context isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-094",
+        "title": "Interaction fallback",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-095",
+        "title": "Interaction status",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-096",
+        "title": "Response request",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-097",
+        "title": "Context integration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-098",
+        "title": "Personality integration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-099",
+        "title": "Policy validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-100",
+        "title": "Response structure",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-101",
+        "title": "Invalid output rejection",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-102",
+        "title": "Model adapter support",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-103",
+        "title": "Model failure",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-104",
+        "title": "Output traceability",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-105",
+        "title": "Communication separation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-106",
+        "title": "Observation input",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-107",
+        "title": "Behaviour validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-108",
+        "title": "Behaviour interpretation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-109",
+        "title": "Uncertainty representation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-110",
+        "title": "Context integration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-111",
+        "title": "Unsupported observation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-112",
+        "title": "Model failure",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-113",
+        "title": "Privacy enforcement",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-114",
+        "title": "Processing traceability",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-115",
+        "title": "API authentication",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-116",
+        "title": "API authorization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-117",
+        "title": "Input validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-118",
+        "title": "Error responses",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-119",
+        "title": "API versioning",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-120",
+        "title": "Request tracing",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-121",
+        "title": "Rate limiting",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-122",
+        "title": "Health endpoint",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-123",
+        "title": "Readiness endpoint",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-124",
+        "title": "Documentation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-125",
+        "title": "Model abstraction",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-126",
+        "title": "Model configuration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-127",
+        "title": "Model validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-128",
+        "title": "Model timeout",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-129",
+        "title": "Model failure isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-130",
+        "title": "Optional external connectivity",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-131",
+        "title": "Model provenance",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-132",
+        "title": "Sensitive data protection",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-133",
+        "title": "Deterministic policy enforcement",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-134",
+        "title": "Storage abstraction",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-135",
+        "title": "Data validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-136",
+        "title": "Access control",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-137",
+        "title": "Retention enforcement",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-138",
+        "title": "Deletion",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-139",
+        "title": "Backup policy",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-140",
+        "title": "Data integrity",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-141",
+        "title": "Migration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-142",
+        "title": "Sensitive data protection",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-143",
+        "title": "ROS 2 initialization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-144",
+        "title": "ROS 2 node identity",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-145",
+        "title": "Message validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-146",
+        "title": "Topic configuration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-147",
+        "title": "Service integration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-148",
+        "title": "Action integration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-149",
+        "title": "QoS configuration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-150",
+        "title": "Connection failure",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-151",
+        "title": "Namespace isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-152",
+        "title": "Safety boundary",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-153",
+        "title": "Distribution compatibility",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-154",
+        "title": "Python installation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-155",
+        "title": "Client initialization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-156",
+        "title": "Typed interfaces",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-157",
+        "title": "Error handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-158",
+        "title": "Version compatibility",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-159",
+        "title": "Examples",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-160",
+        "title": "C++ interface",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-161",
+        "title": "Build configuration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-162",
+        "title": "Memory safety",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-163",
+        "title": "Error handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-164",
+        "title": "Compatibility",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-165",
+        "title": "Authentication",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-166",
+        "title": "Authorization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-167",
+        "title": "Least privilege",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-168",
+        "title": "Secret management",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-169",
+        "title": "Transport protection",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-170",
+        "title": "Input security",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-171",
+        "title": "Dependency security",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-172",
+        "title": "Auditability",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-173",
+        "title": "Error disclosure",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-174",
+        "title": "Secure updates",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-175",
+        "title": "Security testing",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-176",
+        "title": "Purpose limitation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-177",
+        "title": "Data minimization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-178",
+        "title": "Permission enforcement",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-179",
+        "title": "Retention",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-180",
+        "title": "Deletion",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-181",
+        "title": "Transparency",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-182",
+        "title": "Local processing",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-183",
+        "title": "External transmission",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-184",
+        "title": "Data isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-185",
+        "title": "Privacy logging",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-186",
+        "title": "No emotion-to-motion authorization",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-187",
+        "title": "Safety controller independence",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-188",
+        "title": "Emergency-stop independence",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-189",
+        "title": "Output validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-190",
+        "title": "Stale observation handling",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-191",
+        "title": "Invalid output rejection",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-192",
+        "title": "Fail-safe fallback",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-193",
+        "title": "Fault isolation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-194",
+        "title": "Human oversight",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-195",
+        "title": "Safety verification",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-196",
+        "title": "Deployment configuration",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-197",
+        "title": "Environment validation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-198",
+        "title": "Resource limits",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-199",
+        "title": "Configuration separation",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-200",
+        "title": "Startup diagnostics",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-201",
+        "title": "Upgrade process",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-202",
+        "title": "Rollback",
+        "status": "APPROVED_BASELINE"
+      },
+      {
+        "id": "EON-SRS-203",
+        "title": "Local operation",
+        "status": "APPROVED_BASELINE"
+      }
+    ],
+    "use_cases": [
+      {
+        "id": "UC-HUM-001",
+        "title": "Context-Aware Human Greeting"
+      },
+      {
+        "id": "UC-HUM-002",
+        "title": "Human Emotion-Cue Interpretation"
+      },
+      {
+        "id": "UC-HUM-003",
+        "title": "Interaction Memory Continuity"
+      },
+      {
+        "id": "UC-HUM-004",
+        "title": "Adaptive Communication Style"
+      },
+      {
+        "id": "UC-HUM-005",
+        "title": "Context-Aware Conversation Continuity"
+      },
+      {
+        "id": "UC-HUM-006",
+        "title": "Respectful Interaction When a Person Appears Distressed"
+      },
+      {
+        "id": "UC-HUM-007",
+        "title": "Configurable Robot Personality"
+      },
+      {
+        "id": "UC-HUM-008",
+        "title": "Human Interaction Preference Management"
+      },
+      {
+        "id": "UC-HUM-009",
+        "title": "Human Interaction Interruption Management"
+      },
+      {
+        "id": "UC-HUM-010",
+        "title": "Multiple Human Interaction Management"
+      },
+      {
+        "id": "UC-SRV-001",
+        "title": "Reception and Visitor Greeting"
+      },
+      {
+        "id": "UC-SRV-002",
+        "title": "Customer Assistance"
+      },
+      {
+        "id": "UC-SRV-003",
+        "title": "Hospitality Interaction"
+      },
+      {
+        "id": "UC-SRV-004",
+        "title": "Queue and Waiting-Area Interaction"
+      },
+      {
+        "id": "UC-SRV-005",
+        "title": "Multilingual Interaction Support"
+      },
+      {
+        "id": "UC-SRV-006",
+        "title": "User Assistance Escalation"
+      },
+      {
+        "id": "UC-SRV-007",
+        "title": "Session-Based Interaction Memory"
+      },
+      {
+        "id": "UC-SRV-008",
+        "title": "Accessibility-Aware Communication"
+      },
+      {
+        "id": "UC-SRV-009",
+        "title": "Customer Feedback Interaction"
+      },
+      {
+        "id": "UC-SRV-010",
+        "title": "Busy-State Communication"
+      },
+      {
+        "id": "UC-SOC-001",
+        "title": "Social Conversation"
+      },
+      {
+        "id": "UC-SOC-002",
+        "title": "Social Cue Interpretation"
+      },
+      {
+        "id": "UC-SOC-003",
+        "title": "Conversation Turn Management"
+      },
+      {
+        "id": "UC-SOC-004",
+        "title": "Interaction Continuity"
+      },
+      {
+        "id": "UC-SOC-005",
+        "title": "Personality Consistency"
+      },
+      {
+        "id": "UC-SOC-006",
+        "title": "Social Interaction Boundary Management"
+      },
+      {
+        "id": "UC-SOC-007",
+        "title": "Group Conversation Support"
+      },
+      {
+        "id": "UC-SOC-008",
+        "title": "Interaction Preference Adaptation"
+      },
+      {
+        "id": "UC-SOC-009",
+        "title": "Social Engagement Session"
+      },
+      {
+        "id": "UC-SOC-010",
+        "title": "Graceful Conversation Recovery"
+      },
+      {
+        "id": "UC-IND-001",
+        "title": "Human\u2013Robot Interaction Awareness"
+      },
+      {
+        "id": "UC-IND-002",
+        "title": "Worker Assistance Communication"
+      },
+      {
+        "id": "UC-IND-003",
+        "title": "Interaction State Management"
+      },
+      {
+        "id": "UC-IND-004",
+        "title": "Human Behaviour Observation"
+      },
+      {
+        "id": "UC-IND-005",
+        "title": "Communication Escalation"
+      },
+      {
+        "id": "UC-IND-006",
+        "title": "Operational Context Communication"
+      },
+      {
+        "id": "UC-IND-007",
+        "title": "Human Preference Support"
+      },
+      {
+        "id": "UC-IND-008",
+        "title": "Interaction Failure Recovery"
+      },
+      {
+        "id": "UC-DEV-001",
+        "title": "Initialize EON Core"
+      },
+      {
+        "id": "UC-DEV-002",
+        "title": "Register an Intelligence Engine"
+      },
+      {
+        "id": "UC-DEV-003",
+        "title": "Integrate a Custom AI Model"
+      },
+      {
+        "id": "UC-DEV-004",
+        "title": "Integrate EON with ROS 2"
+      },
+      {
+        "id": "UC-DEV-005",
+        "title": "Use the Python SDK"
+      },
+      {
+        "id": "UC-DEV-006",
+        "title": "Use the C++ SDK"
+      },
+      {
+        "id": "UC-DEV-007",
+        "title": "Monitor Engine Health"
+      },
+      {
+        "id": "UC-DEV-008",
+        "title": "Configure Engine Policies"
+      },
+      {
+        "id": "UC-DEV-009",
+        "title": "Handle Engine Failure"
+      },
+      {
+        "id": "UC-DEV-010",
+        "title": "Upgrade EON Runtime"
+      },
+      {
+        "id": "UC-RES-001",
+        "title": "Evaluate Emotion-Cue Models"
+      },
+      {
+        "id": "UC-RES-002",
+        "title": "Compare Behaviour Interpretation Approaches"
+      },
+      {
+        "id": "UC-RES-003",
+        "title": "Evaluate Interaction Continuity"
+      },
+      {
+        "id": "UC-RES-004",
+        "title": "Evaluate Response Appropriateness"
+      },
+      {
+        "id": "UC-RES-005",
+        "title": "Evaluate Runtime Performance"
+      },
+      {
+        "id": "UC-RES-006",
+        "title": "Evaluate Engine Interoperability"
+      }
+    ]
+  }
+}

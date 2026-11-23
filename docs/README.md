@@ -43,6 +43,7 @@ The Phase 0 documentation suite comprises 15 foundational documents across three
 | [Test Evidence Register](acceptance/TEST_EVIDENCE_REGISTER.md) | EON-TE-001 | Master register tracking test execution records, artifact links, and qualification evidence |
 | [Defect Register](acceptance/DEFECT_REGISTER.md) | EON-DEF-001 | Repository defect catalog, classification scheme, severity/priority matrices, and lifecycle workflows |
 | [Release Acceptance](acceptance/RELEASE_ACCEPTANCE.md) | EON-ACC-REL-001 | Release governance policies, mandatory milestone release gates, and founder sign-off procedures |
+| [Phase 0 Verification Report](acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md) | EON-REP-P0-FINAL-001 | Final verification, qualification report, requirement audit, and founder approval record |
 
 ---
 
@@ -68,6 +69,7 @@ OVIC EON organizes intelligence processing into seven specialized engines coordi
 3. [Use Cases](product/USE_CASES.md)
 4. [Product Requirements Document (PRD)](product/PRD.md)
 5. [Release Acceptance](acceptance/RELEASE_ACCEPTANCE.md)
+6. [Phase 0 Verification Report](acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md)
 
 ### For Robotics Software Integrators
 1. [Engine Scope](product/ENGINE_SCOPE.md)

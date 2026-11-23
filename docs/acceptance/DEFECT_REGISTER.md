@@ -499,15 +499,19 @@ Medium and low defects may be deferred only with documented justification, owner
 
 # 15. Defect Register
 
-Use this table as the central index.
+Use this table as the central index. The table records verified Phase 0 documentation and qualification defects identified and resolved during qualification audits.
 
 | Defect ID | Title | Category | Severity | Priority | Component | Status | Assigned To |
 |---|---|---|---|---|---|---|---|
-| — | No verified defects registered yet | — | — | — | — | NOT STARTED | — |
+| EON-DEF-0001 | README clone URL pointed to personal user path | Documentation | Low | P1 | Repository Root | CLOSED | Qualification Lead |
+| EON-DEF-0002 | Missing CONTRIBUTING.md and SECURITY.md created broken links | Governance | Medium | P1 | Repository Root | CLOSED | Qualification Lead |
+| EON-DEF-0003 | Performance target tables omitted 6 provisional metrics | Specification | Medium | P0 | PRD, SRS, AC | CLOSED | Systems Architect |
+| EON-DEF-0004 | RTM range groupings misaligned with source sections | Traceability | Low | P1 | RTM | CLOSED | Traceability Lead |
+| EON-DEF-0005 | Missing CI automated documentation validation workflow | Automation | Low | P1 | GitHub Actions | CLOSED | DevOps Engineer |
 
-**Important:** The initial empty register does not mean the product has zero defects. Defects must be discovered through implementation, inspection and testing.
+**Open Defect Summary:** 0 open blocker, critical, major, or minor defects for Phase 0 documentation baseline.
 
-# 16. Defect Reporting Template
+# 16. Defect Reporting Template and Resolved Defect Records
 
 Use this template when reporting a new defect:
 
@@ -539,6 +543,133 @@ Suggested Resolution:
 
 Reported By:
 Date:
+```
+
+### Resolved Defect Records
+
+```text
+Defect ID: EON-DEF-0001
+Title: Incorrect clone URL in README.md
+Category: Documentation
+Severity: Low
+Priority: P1
+Component: README.md
+Engine: N/A
+Environment: GitHub Repository
+Affected Version: 0.1.0
+Affected Commit: 754388b
+
+Description: README.md Section 12 directed users to clone from https://github.com/krishanth7/EON.git instead of official organization repository.
+Expected Behaviour: Clone URL should reference https://github.com/Ovic-Labs/EON.git.
+Actual Behaviour: Pointed to personal repository fork.
+Steps to Reproduce: Inspect README.md line 483.
+Impact: Potential developer friction and incorrect remote configuration.
+Logs or Evidence: python scripts/validate_docs.py check_clone_url
+Resolution: Corrected clone URL to https://github.com/Ovic-Labs/EON.git.
+Regression Test: scripts/validate_docs.py check_clone_url
+Status: CLOSED
+Reported By: Qualification Engineer
+Date: 2026-11-23
+```
+
+```text
+Defect ID: EON-DEF-0002
+Title: Missing CONTRIBUTING.md and SECURITY.md in repository root
+Category: Governance / Documentation
+Severity: Medium
+Priority: P1
+Component: Repository Root
+Engine: N/A
+Environment: GitHub Repository
+Affected Version: 0.1.0
+Affected Commit: 754388b
+
+Description: README.md Section 15 and Section 16 referenced CONTRIBUTING.md and SECURITY.md, but the files did not exist in the root directory.
+Expected Behaviour: Core repository governance documents must exist and outline contribution standards and security disclosure policies.
+Actual Behaviour: Links produced 404 / file not found errors.
+Steps to Reproduce: Run link verification on README.md.
+Impact: Lack of clear contribution guidelines and private security disclosure process.
+Logs or Evidence: Broken link audit reported 2 missing files.
+Resolution: Authored comprehensive CONTRIBUTING.md and SECURITY.md policies tailored to OVIC EON's hybrid AI and robotics safety model.
+Regression Test: scripts/validate_docs.py check_markdown_links
+Status: CLOSED
+Reported By: Qualification Engineer
+Date: 2026-11-23
+```
+
+```text
+Defect ID: EON-DEF-0003
+Title: Inconsistent performance target metrics across PRD, SRS, and Acceptance Criteria
+Category: Specification
+Severity: Medium
+Priority: P0
+Component: PRD, SRS, Acceptance Criteria
+Engine: Cross-engine, ERS, EMS, HBU, API, ROS 2
+Environment: Documentation Suite
+Affected Version: 0.1.0
+Affected Commit: 754388b
+
+Description: PERFORMANCE_REQUIREMENTS.md defined 21 provisional metrics, but PRD.md and SRS.md omitted 6 metrics (e.g. ERS/HBU p95 latency, EMS write latency, ROS 2 delivery, soak qualification), and ACCEPTANCE_CRITERIA.md listed only a partial subset of 6 metrics.
+Expected Behaviour: All 4 documents must present a single reconciled performance baseline, explicitly designated as PROVISIONAL.
+Actual Behaviour: Discrepancy in table rows and target completeness.
+Steps to Reproduce: Compare Section 21 of PERFORMANCE_REQUIREMENTS.md with PRD Section 13.1, SRS Section 21, and AC Section 21.
+Impact: Ambiguity for performance benchmark planning and acceptance gates.
+Logs or Evidence: scratch/compare_perf.py side-by-side analysis.
+Resolution: Reconciled all 4 documents to mirror the complete 21-metric target baseline from PERFORMANCE_REQUIREMENTS.md.
+Regression Test: scripts/validate_docs.py check_performance_reconciliation
+Status: CLOSED
+Reported By: Systems Architect
+Date: 2026-11-23
+```
+
+```text
+Defect ID: EON-DEF-0004
+Title: Requirement Traceability Matrix range groupings misaligned with source specifications
+Category: Traceability
+Severity: Low
+Priority: P1
+Component: REQUIREMENT_TRACEABILITY.md
+Engine: Cross-engine
+Environment: Documentation Suite
+Affected Version: 0.1.0
+Affected Commit: 754388b
+
+Description: RTM Sections 9 and 13 contained provisional range increments (e.g., EON-FR-041-046 as SIE instead of ERG; EON-PSR-001-010 instead of 001-005) with uncompleted placeholders in Sections 11 and 15.
+Expected Behaviour: RTM must accurately map the exact boundaries defined in authoritative requirement documents.
+Actual Behaviour: Placeholder rows ("Pending source import", "To be assigned") remained in RTM.
+Steps to Reproduce: Inspect REQUIREMENT_TRACEABILITY.md Sections 9, 11, 13, 15.
+Impact: Incomplete traceability audit and unverifiable coverage metrics.
+Logs or Evidence: RTM gap audit in scratch/audit_deep.py.
+Resolution: Fully mapped all 60 FRs, 78 NFRs, 66 PERFs, 86 PSRs, and 203 SRS specifications into RTM.
+Regression Test: scripts/validate_docs.py check_no_duplicate_requirement_definitions
+Status: CLOSED
+Reported By: Traceability Lead
+Date: 2026-11-23
+```
+
+```text
+Defect ID: EON-DEF-0005
+Title: Absence of automated documentation linting and link verification in CI
+Category: Automation / DevOps
+Severity: Low
+Priority: P1
+Component: GitHub Actions Workflows
+Engine: N/A
+Environment: CI Pipeline
+Affected Version: 0.1.0
+Affected Commit: 754388b
+
+Description: Repository lacked continuous integration workflows to enforce Markdown standards and prevent broken internal links on pull requests.
+Expected Behaviour: CI workflow runs automated linting and validation on all commits.
+Actual Behaviour: Directory .github/workflows was missing.
+Steps to Reproduce: Check .github/workflows directory existence.
+Impact: Risk of silent link breakage and specification drift.
+Logs or Evidence: Missing CI configuration.
+Resolution: Added .github/workflows/documentation-qualification.yml, .markdownlint-cli2.jsonc, and scripts/validate_docs.py.
+Regression Test: python scripts/validate_docs.py && npx markdownlint-cli2 "**/*.md"
+Status: CLOSED
+Reported By: DevOps Engineer
+Date: 2026-11-23
 ```
 
 # 17. Repository and GitHub Integration

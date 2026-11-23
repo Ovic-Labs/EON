@@ -364,101 +364,167 @@ Neither status should be assigned without a supporting record.
 
 # 7. Evidence Register
 
-The following table is the master evidence index.
+The master evidence register is organized into distinct categories separating completed Phase 0 documentation qualifications from planned future runtime milestones.
 
-Initially, all entries are planned. Update each entry only after the corresponding test has been executed.
+### Group A: Phase 0 Documentation Verification
 
-| Evidence ID | Test ID | Component | Test Category | Requirement ID | Status | Evidence Location |
+| Evidence ID | Test ID | Deliverable | Scope | Requirement ID | Status | Evidence Location |
 |---|---|---|---|---|---|---|
-| EON-EVD-2026-0001 | EON-TST-2026-0001 | EON Core | Unit | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0002 | EON-TST-2026-0002 | EON Core | Integration | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0003 | EON-TST-2026-0003 | ERS | Component | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0004 | EON-TST-2026-0004 | EMS | Component | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0005 | EON-TST-2026-0005 | ERE | Component | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0006 | EON-TST-2026-0006 | PSE | Component | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0007 | EON-TST-2026-0007 | SIE | Component | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0008 | EON-TST-2026-0008 | ERG | Component | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0009 | EON-TST-2026-0009 | HBU | Component | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0010 | EON-TST-2026-0010 | AI Integration | Integration | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0011 | EON-TST-2026-0011 | ROS 2 | Integration | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0012 | EON-TST-2026-0012 | Python SDK | SDK | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0013 | EON-TST-2026-0013 | C++ SDK | SDK | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0014 | EON-TST-2026-0014 | API | API | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0015 | EON-TST-2026-0015 | Security | Security | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0016 | EON-TST-2026-0016 | Privacy | Privacy | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0017 | EON-TST-2026-0017 | Performance | Performance | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0018 | EON-TST-2026-0018 | Reliability | Reliability | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0019 | EON-TST-2026-0019 | Documentation | Documentation | TBD | NOT_STARTED | TBD |
-| EON-EVD-2026-0020 | EON-TST-2026-0020 | Full System | System | TBD | NOT_STARTED | TBD |
+| EON-EVD-P0-DOC-001 | EON-TST-P0-001 | Document Inventory | 15 Phase 0 docs + 4 root docs presence | AC-PROD-001–003 | PASS | `scripts/validate_docs.py` |
+| EON-EVD-P0-DOC-002 | EON-TST-P0-002 | Link Integrity | 54 internal links verified (0 broken) | AC-DOC-001 | PASS | `scripts/validate_docs.py` |
 
-This initial table is a planning baseline, not a statement that these tests have been performed.
+### Group B: Product Requirements Review
 
-# 8. Detailed Test Evidence Record Template
+| Evidence ID | Test ID | Deliverable | Scope | Requirement ID | Status | Evidence Location |
+|---|---|---|---|---|---|---|
+| EON-EVD-P0-PRD-001 | EON-TST-P0-003 | PRD & Vision Review | Problem statement, 7 engines, principles | AC-PROD-001, 002 | PASS | `docs/product/PRD.md` |
+| EON-EVD-P0-PRD-002 | EON-TST-P0-004 | Use Case Coverage | 54 operational use cases across 6 domains | AC-PROD-003 | PASS | `docs/product/USE_CASES.md` |
 
-Every executed test must have a detailed record.
+### Group C: Requirement Traceability Review
 
-Use this template for each evidence item.
+| Evidence ID | Test ID | Deliverable | Scope | Requirement ID | Status | Evidence Location |
+|---|---|---|---|---|---|---|
+| EON-EVD-P0-RTM-001 | EON-TST-P0-005 | RTM Reconciliation | 290 source reqs mapped to 203 SRS reqs | AC-E2E-010 | PASS | `docs/requirements/REQUIREMENT_TRACEABILITY.md` |
+| EON-EVD-P0-RTM-002 | EON-TST-P0-006 | Machine-Readable RTM | JSON export generated and schema validated | AC-DATA-001 | PASS | `docs/requirements/requirement_traceability_matrix.json` |
+
+### Group D: Automated Documentation Checks
+
+| Evidence ID | Test ID | Deliverable | Scope | Requirement ID | Status | Evidence Location |
+|---|---|---|---|---|---|---|
+| EON-EVD-P0-AUTO-001 | EON-TST-P0-007 | Doc Validation Suite | Automated structure, ID, and link verification | AC-BUILD-001 | PASS | `python scripts/validate_docs.py` |
+| EON-EVD-P0-LINT-001 | EON-TST-P0-008 | Markdown Linting | Markdownlint static analysis across 19 files | AC-DOC-002 | PASS | `npx markdownlint-cli2 "**/*.md"` |
+
+### Group E: Software Implementation Tests for Future Phases
+
+| Evidence ID | Test ID | Component | Test Category | Requirement ID | Status | Notes |
+|---|---|---|---|---|---|---|
+| EON-EVD-2026-0001 | EON-TST-2026-0001 | EON Core | Unit | EON-FR-001–014 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 1 / Phase 2 implementation |
+| EON-EVD-2026-0002 | EON-TST-2026-0002 | EON Core | Integration | EON-FR-008–012 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 4 runtime integration |
+| EON-EVD-2026-0003 | EON-TST-2026-0003 | ERS | Component | EON-FR-015–020 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 6 (ERS engine milestone) |
+| EON-EVD-2026-0004 | EON-TST-2026-0004 | EMS | Component | EON-FR-021–026 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 7 (EMS engine milestone) |
+| EON-EVD-2026-0005 | EON-TST-2026-0005 | ERE | Component | EON-FR-027–031 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 8 (ERE engine milestone) |
+| EON-EVD-2026-0006 | EON-TST-2026-0006 | PSE | Component | EON-FR-032–035 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 9 (PSE engine milestone) |
+| EON-EVD-2026-0007 | EON-TST-2026-0007 | SIE | Component | EON-FR-036–040 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 10 (SIE engine milestone) |
+| EON-EVD-2026-0008 | EON-TST-2026-0008 | ERG | Component | EON-FR-041–045 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 11 (ERG engine milestone) |
+| EON-EVD-2026-0009 | EON-TST-2026-0009 | HBU | Component | EON-FR-046–049 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 12 (HBU engine milestone) |
+| EON-EVD-2026-0010 | EON-TST-2026-0010 | AI Adapters | Integration | EON-FR-020, 050 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 13 AI integration |
+| EON-EVD-2026-0011 | EON-TST-2026-0011 | ROS 2 | Integration | EON-FR-053 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 14 ROS 2 integration |
+| EON-EVD-2026-0012 | EON-TST-2026-0012 | Python SDK | SDK | EON-FR-055 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 17 Python SDK |
+| EON-EVD-2026-0013 | EON-TST-2026-0013 | C++ SDK | SDK | EON-FR-055 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 18 C++ SDK |
+| EON-EVD-2026-0014 | EON-TST-2026-0014 | API | API | EON-FR-052 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 19 API release |
+
+### Group F: Performance Benchmarks for Future Phases
+
+| Evidence ID | Test ID | Area | Workload | Target | Status | Notes |
+|---|---|---|---|---|---|---|
+| EON-EVD-2026-0017 | EON-TST-2026-0017 | Core & Engines | Benchmark Suite | 21 provisional targets | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 8 / 0.8.0 qualification |
+
+### Group G: Security and Safety Qualification for Future Phases
+
+| Evidence ID | Test ID | Area | Verification | Requirement ID | Status | Notes |
+|---|---|---|---|---|---|---|
+| EON-EVD-2026-0015 | EON-TST-2026-0015 | Security | Pen-test & threat model | EON-PSR-033–042 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 8 security review |
+| EON-EVD-2026-0016 | EON-TST-2026-0016 | Privacy | Deletion & retention test | EON-PSR-011–026 | NOT_APPLICABLE TO PHASE 0 | Planned for Phase 7/8 privacy audit |
+| EON-EVD-2026-0020 | EON-TST-2026-0020 | Full System | End-to-end qualification | All baseline reqs | NOT_APPLICABLE TO PHASE 0 | Planned for Milestone 1.0.0 |
+
+---
+
+# 8. Executed Phase 0 Evidence Records
+
+The following records document the executed verification activities for Phase 0 documentation qualification:
 
 ```yaml
 evidence:
-  evidence_id: "EON-EVD-2026-0001"
-  test_id: "EON-TST-2026-0001"
-
-  title: "Example EON Core Unit Test"
-
-  component: "EON Core"
-  category: "unit"
-
-  requirement_ids: []
-
+  evidence_id: "EON-EVD-P0-DOC-001"
+  test_id: "EON-TST-P0-001"
+  title: "Phase 0 Document Inventory and Structure Verification"
+  component: "Documentation Suite"
+  category: "inspection"
+  requirement_ids:
+    - "AC-PROD-001"
+    - "AC-PROD-002"
+    - "AC-PROD-003"
   software:
     product: "OVIC EON"
     version: "0.1.0"
-    git_commit: null
-    branch: null
-
-  environment:
-    operating_system: null
-    operating_system_version: null
-    python_version: null
-    ros_distribution: null
-    cpu: null
-    gpu: null
-    memory: null
-    dependency_versions: []
-
+    git_commit: "a97076b"
+    branch: "main"
   execution:
-    test_command: null
-    execution_date: null
-    executed_by: null
-    duration_seconds: null
-    test_framework: null
-
+    test_command: "python scripts/validate_docs.py (check_file_structure)"
+    execution_date: "2026-11-23"
+    executed_by: "OVIC Engineering Qualification"
   results:
-    status: "NOT_STARTED"
-    total_tests: null
-    passed: null
-    failed: null
-    skipped: null
-    expected_result: null
-    actual_result: null
+    status: "PASS"
+    actual_result: "All 15 Phase 0 documents and 4 root documents exist in approved directory hierarchy."
+```
 
-  evidence_files:
-    logs: []
-    reports: []
-    screenshots: []
-    benchmark_results: []
+```yaml
+evidence:
+  evidence_id: "EON-EVD-P0-DOC-002"
+  test_id: "EON-TST-P0-002"
+  title: "Internal Markdown Link Validation"
+  component: "Documentation Suite"
+  category: "static_check"
+  requirement_ids:
+    - "AC-DOC-001"
+  software:
+    product: "OVIC EON"
+    version: "0.1.0"
+    git_commit: "a97076b"
+    branch: "main"
+  execution:
+    test_command: "python scripts/validate_docs.py (check_markdown_links)"
+    execution_date: "2026-11-23"
+    executed_by: "OVIC Engineering Qualification"
+  results:
+    status: "PASS"
+    actual_result: "Checked 54 internal Markdown links across 19 markdown files with 0 broken links."
+```
 
-  defects:
-    linked_defects: []
+```yaml
+evidence:
+  evidence_id: "EON-EVD-P0-RTM-001"
+  test_id: "EON-TST-P0-005"
+  title: "End-to-End Requirement Traceability Reconciliation"
+  component: "Requirement Traceability Matrix"
+  category: "traceability_review"
+  requirement_ids:
+    - "AC-E2E-010"
+  software:
+    product: "OVIC EON"
+    version: "0.1.0"
+    git_commit: "a97076b"
+    branch: "main"
+  execution:
+    test_command: "python scripts/validate_docs.py (check_no_duplicate_requirement_definitions)"
+    execution_date: "2026-11-23"
+    executed_by: "OVIC Engineering Qualification"
+  results:
+    status: "PASS"
+    actual_result: "672 requirement definitions verified with 0 duplicates. 100% of source requirements (290) mapped to SRS (203)."
+```
 
-  review:
-    reviewer: null
-    review_date: null
-    approval_status: "PENDING"
-    comments: null
-
-  notes: null
+```yaml
+evidence:
+  evidence_id: "EON-EVD-P0-LINT-001"
+  test_id: "EON-TST-P0-008"
+  title: "Markdown Standards and Syntax Linting"
+  component: "Documentation Suite"
+  category: "lint"
+  requirement_ids:
+    - "AC-DOC-002"
+  software:
+    product: "OVIC EON"
+    version: "0.1.0"
+    git_commit: "a97076b"
+    branch: "main"
+  execution:
+    test_command: "npx markdownlint-cli2 \"**/*.md\""
+    execution_date: "2026-11-23"
+    executed_by: "OVIC Engineering Qualification"
+  results:
+    status: "PASS"
+    actual_result: "Linted 19 markdown files with 0 issues reported."
 ```
 
 # 9. Engine-Specific Verification Requirements
