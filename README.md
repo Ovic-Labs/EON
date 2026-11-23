@@ -337,14 +337,23 @@ OVIC EON does not claim regulatory compliance, certification, or production safe
 
 ## 9. Project Status
 
-OVIC EON is being developed through controlled, milestone-based engineering.
+OVIC EON is being developed through controlled, milestone-based engineering with strict separation between research, specification, runtime implementation, and production qualification:
 
-- **Phase 0 (Product Foundation & Requirements):** `PRODUCTION-QUALIFIED — PROJECT FOUNDATION`
-- **Phase 1 (Engineering Infrastructure & Core Runtime):** In Progress (Phase 1.1, 1.2, 1.3 Implemented & Qualified; Phase 1.4 NOT Started)
-- **Seven Intelligence Engines:** Fully Specified to Production Standards / Software Runtimes `NOT IMPLEMENTED (0%)`
-- **Physical Motion Authority:** Strictly Non-Authoritative (`is_authoritative_stop=False`) — Host Robot Safety Controller & Hardware E-Stop Authoritative
-- **Performance Targets:** `PROVISIONAL — NOT BENCHMARKED`
-- **Full EON Product Production Readiness:** `NOT QUALIFIED`
+- **Phase 0 (Product Foundation & Requirements):** `PRODUCTION-QUALIFIED — PROJECT FOUNDATION`  
+  All Phase 0 sub-phases (0.1–0.15) are qualified as an implementation-ready product and requirements baseline with 100% specification traceability across 290 source requirements, 203 software requirements, and 179 acceptance criteria. Phase 0 represents 100% specification traceability, not 100% product implementation.
+- **Phase 1 Research & Feasibility:** `QUALIFIED WITH CONDITIONS`  
+  Research scope across all eighteen sub-phases (1.1–1.18) is completed and qualified, subject to documented conditions and outstanding live-hardware verification.
+- **Phase 1 Runtime Foundation:** `IMPLEMENTED & QUALIFIED`  
+  Repository packaging scaffolding (Phase 1.1), foundational data schemas and serialization contracts (Phase 1.2), and the asynchronous in-memory core event bus (Phase 1.3) are implemented with complete regression test evidence.
+- **Seven Intelligence Engines:** `NOT IMPLEMENTED (0%)`  
+  Full software runtimes for ERS, EMS, ERE, PSE, SIE, ERG, and HBU are not yet implemented.
+- **ROS 2 Integration:** `NOT IMPLEMENTED`  
+  ROS 2 integration requirements, architecture, message definitions, and lifecycle node designs are fully documented; full ROS 2 runtime integration is not implemented.
+- **Performance Targets:** `PROVISIONAL — NOT BENCHMARKED`  
+  All unverified performance targets remain provisional until reproducible benchmark results on physical hardware are available.
+- **Physical Motion Authority:** Strictly Non-Authoritative (`is_authoritative_stop=False`) — Host Robot Safety Controller & Hardware E-Stop Authoritative.
+- **Full EON Product Production Readiness:** `NOT QUALIFIED`  
+  OVIC EON is not yet a complete production-ready robot intelligence product.
 
 ### Phase 0 Foundation Deliverables
 The project foundation has achieved formal production qualification across all fifteen sub-phases (0.1–0.15) with 100.0% specification mapping coverage across 290 primary requirements, 203 software requirements, 179 acceptance criteria, and 54 use cases.
@@ -421,9 +430,7 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [Hardware Compatibility Matrix](docs/research/phase-1/HARDWARE_COMPATIBILITY_MATRIX.md)
 - [Edge Deployment Architecture](docs/research/phase-1/EDGE_DEPLOYMENT_ARCHITECTURE.md)
 - [ROS 2 Integration Architecture](docs/research/phase-1/ROS2_INTEGRATION_ARCHITECTURE.md)
-- [Phase 1.1–1.5 Qualification Report](docs/research/phase-1/PHASE_1_1_TO_1_5_QUALIFICATION_REPORT.md)
-- [Phase 1.6–1.11 Qualification Report](docs/research/phase-1/PHASE_1_6_TO_1_11_QUALIFICATION_REPORT.md)
-- [Phase 1 Final Qualification Report](docs/research/phase-1/PHASE_1_FINAL_QUALIFICATION_REPORT.md)
+- [Phase 1 Master Qualification Report](docs/research/phase-1/PHASE_1_FINAL_QUALIFICATION_REPORT.md)
 
 ### Additional documentation
 

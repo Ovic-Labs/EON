@@ -115,9 +115,7 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | [ROS 2 Integration Requirements](research/phase-1/1.16-ros2-integration-requirements.md) | EON-RES-SUB-1.16 | Sub-phase 1.16: ROS 2 Jazzy Jalisco lifecycle nodes, message definitions, and SROS2 safety boundaries |
 | [Comprehensive Technical Feasibility](research/phase-1/1.17-comprehensive-technical-feasibility-report.md) | EON-RES-SUB-1.17 | Sub-phase 1.17: Master technical, commercial, and operational feasibility report with risk register |
 | [Model & Dataset Selection Register](research/phase-1/1.18-model-and-dataset-selection-register.md) | EON-RES-SUB-1.18 | Sub-phase 1.18: Authoritative model, dataset, and algorithm selection register with SHA-256 checksums |
-| [Phase 1.1–1.5 Qualification Report](research/phase-1/PHASE_1_1_TO_1_5_QUALIFICATION_REPORT.md) | EON-QUAL-PHASE1-001 | Sections A–L synthesis for Perception Sub-phases 1.1 through 1.5 |
-| [Phase 1.6–1.11 Qualification Report](research/phase-1/PHASE_1_6_TO_1_11_QUALIFICATION_REPORT.md) | EON-QUAL-PHASE1-002 | Sections 1–20 synthesis for Social Intelligence Sub-phases 1.6 through 1.11 |
-| [Phase 1 Final Qualification Report](research/phase-1/PHASE_1_FINAL_QUALIFICATION_REPORT.md) | EON-QUAL-PHASE1-FINAL | Master Phase 1 Final Technical Qualification Report covering all 18 sub-phases |
+| [Phase 1 Master Qualification Report](research/phase-1/PHASE_1_FINAL_QUALIFICATION_REPORT.md) | EON-QUAL-PHASE1-MASTER | Master Phase 1 Final Technical Qualification Report covering all 18 sub-phases |
 
 ---
 

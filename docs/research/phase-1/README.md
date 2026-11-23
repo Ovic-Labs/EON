@@ -95,10 +95,8 @@ All research evaluations strictly adhere to EON's non-negotiable architectural i
 - **[`1.17-comprehensive-technical-feasibility-report.md`](1.17-comprehensive-technical-feasibility-report.md):** Sub-phase 1.17: Master technical, commercial, and operational feasibility report with risk register.
 - **[`1.18-model-and-dataset-selection-register.md`](1.18-model-and-dataset-selection-register.md):** Sub-phase 1.18: Authoritative model, dataset, and algorithm selection register with SHA-256 checksums.
 
-### Milestone Qualification Reports
-- **[`PHASE_1_1_TO_1_5_QUALIFICATION_REPORT.md`](PHASE_1_1_TO_1_5_QUALIFICATION_REPORT.md):** Formal qualification report for Perception Sub-phases 1.1 through 1.5.
-- **[`PHASE_1_6_TO_1_11_QUALIFICATION_REPORT.md`](PHASE_1_6_TO_1_11_QUALIFICATION_REPORT.md):** Formal qualification report for Social Intelligence Sub-phases 1.6 through 1.11.
-- **[`PHASE_1_FINAL_QUALIFICATION_REPORT.md`](PHASE_1_FINAL_QUALIFICATION_REPORT.md):** Master Phase 1 Final Technical Qualification Report covering all 18 sub-phases.
+### Master Qualification Report
+- **[`PHASE_1_FINAL_QUALIFICATION_REPORT.md`](PHASE_1_FINAL_QUALIFICATION_REPORT.md):** Consolidated Master Phase 1 Technical Qualification Report covering all 18 sub-phases.
 
 ---
 
