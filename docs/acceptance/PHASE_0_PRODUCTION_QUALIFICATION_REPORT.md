@@ -27,7 +27,7 @@ This decision confirms that all fifteen sub-phases (Phase 0.1 through Phase 0.15
 
 ### 1.2 Non-Negotiable Operational & Architectural Boundaries
 1. **Specification Baseline Scope:** Phase 0 represents a complete, mathematically consistent, traceable requirements specification baseline. Phase 0 requirements represent **100.0% specification coverage** and **0.0% implementation coverage**.
-2. **Preservation of Phase 1 Foundation:** Phase 1.1 (Repository Scaffolding & Packaging), Phase 1.2 (Data Schemas & Event Envelopes), and Phase 1.3 (Core Event Bus) remain fully preserved, functional, and verified with **196 passing automated tests**.
+2. **Preservation of Phase 1 Foundation:** Phase 1.1 (Repository Scaffolding & Packaging), Phase 1.2 (Data Schemas & Event Envelopes), and Phase 1.3 (Core Event Bus) remain fully preserved, functional, and verified with **203 passing automated tests** (165 Phase 1 regression tests + 38 Phase 0 validator tests).
 3. **Phase 1.4 Prohibition:** Phase 1.4 (Engine Execution Harness) has **NOT** been started.
 4. **Seven Intelligence Engines Status:** The seven intelligence engines (ERS, EMS, ERE, PSE, SIE, ERG, HBU) are exhaustively defined and bounded in `docs/product/ENGINE_SCOPE.md`, but their software runtimes are **NOT yet implemented**.
 5. **Physical Safety Invariance:** All emotional and behavioural inferences are strictly advisory and probabilistic. OVIC EON exercises **ZERO physical motion authority** (`is_authoritative_stop=False`). The host robot manufacturer's certified safety controller and hardware Emergency Stop (E-Stop) remain strictly authoritative under all circumstances.
@@ -247,30 +247,40 @@ The repository contains verified implementations from previous Phase 1 milestone
 
 ## 9. GitHub Actions CI Execution Evidence
 
-The exact qualification workflow executed on GitHub Actions against the commit baseline:
+The exact qualification workflow executed on GitHub Actions against the final commit baseline:
 
-### 9.1 Documentation Qualification Workflow
+### 9.1 Final Verified Commit
+- **Commit SHA:** `e4ec9dbf98cbbe62cbfb275bc48ecaa643bb222e`
+- **Short SHA:** `e4ec9db`
+- **Branch:** `main`
+
+### 9.2 Documentation Qualification Workflow
 - **Workflow Name:** `Documentation Qualification`
 - **Trigger Event:** `push` on `main`
-- **Workflow Run ID:** `45147403340`
-- **Workflow Run URL:** [https://github.com/Ovic-Labs/EON/actions/runs/45147403340](https://github.com/Ovic-Labs/EON/actions/runs/45147403340)
+- **Workflow Run ID:** `45149095880`
+- **Workflow Run URL:** [https://github.com/Ovic-Labs/EON/actions/runs/45149095880](https://github.com/Ovic-Labs/EON/actions/runs/45149095880)
 - **Overall Conclusion:** `success`
 - **Job Inventory:**
-  1. `Documentation Qualification and Link Validation` (Job ID: `137599998362`) — `success` (5s)
-  2. `Markdown Linting` (Job ID: `137599998744`) — `success` (5s)
-  3. `Package Test & Quality Gates (Python 3.11)` (Job ID: `137599998755`) — `success` (39s)
-  4. `Package Test & Quality Gates (Python 3.10)` (Job ID: `137599998797`) — `success` (44s)
-  5. `Package Test & Quality Gates (Python 3.12)` (Job ID: `137599998958`) — `success` (36s)
+  1. `Documentation Qualification and Link Validation` (Job ID: `137605646918`) — `success` (6s)
+  2. `Markdown Linting` (Job ID: `137605646867`) — `success` (5s)
+  3. `Package Test & Quality Gates (Python 3.11)` (Job ID: `137605646980`) — `success` (39s)
+  4. `Package Test & Quality Gates (Python 3.10)` (Job ID: `137605646848`) — `success` (47s)
+  5. `Package Test & Quality Gates (Python 3.12)` (Job ID: `137605647069`) — `success` (28s)
 
-### 9.2 CodeQL Security Workflow
+### 9.3 CodeQL Security Workflow
 - **Workflow Name:** `CodeQL`
 - **Trigger Event:** `dynamic` push
-- **Workflow Run ID:** `45147403874`
-- **Workflow Run URL:** [https://github.com/Ovic-Labs/EON/actions/runs/45147403874](https://github.com/Ovic-Labs/EON/actions/runs/45147403874)
+- **Workflow Run ID:** `45149095893`
+- **Workflow Run URL:** [https://github.com/Ovic-Labs/EON/actions/runs/45149095893](https://github.com/Ovic-Labs/EON/actions/runs/45149095893)
 - **Overall Conclusion:** `success`
 - **Job Inventory:**
-  1. `Analyze (actions)` (Job ID: `137600006718`) — `success` (42s)
-  2. `Analyze (python)` (Job ID: `137600007228`) — `success` (1m0s)
+  1. `Analyze (actions)` (Job ID: `137605654626`) — `success` (48s)
+  2. `Analyze (python)` (Job ID: `137605654225`) — `success` (1m0s)
+
+### 9.4 Prior Intermediate Baseline Run
+- **Commit SHA:** `931df46f26a002cc36ba7d5e03ec2fe4e389f004`
+- **Documentation Qualification Run ID:** `45147403340` ([URL](https://github.com/Ovic-Labs/EON/actions/runs/45147403340)) — `success`
+- **CodeQL Run ID:** `45147403874` ([URL](https://github.com/Ovic-Labs/EON/actions/runs/45147403874)) — `success`
 
 ---
 
