@@ -3,8 +3,9 @@
 **Emotional Intelligence Infrastructure for Robotics**  
 **Organization:** OVIC Labs  
 **Repository:** [https://github.com/Ovic-Labs/EON.git](https://github.com/Ovic-Labs/EON.git)  
-**Milestone:** Phase 0 — Foundation and Documentation Qualification  
-**Status:** Qualified Baseline — Documentation Verified (Ready for Founder Acceptance)  
+**Milestone:** Phase 0 — Foundation and Documentation Qualification (FOUNDER APPROVED — BASELINE ACCEPTED)  
+**Next Milestone:** Phase 1 — Engineering Infrastructure & Core Runtime Foundation (AUTHORIZED TO BEGIN — NOT YET VERIFIED)  
+**Status:** Phase 0: FOUNDER APPROVED — BASELINE ACCEPTED | Implementation: NOT STARTED (0%) | Production Readiness: NOT QUALIFIED  
 
 Welcome to the central documentation index for **OVIC EON**. This document catalogues all 15 Phase 0 engineering and product specifications, outlines their relationships, and provides structured reading guides for various stakeholders.
 
@@ -43,8 +44,13 @@ The Phase 0 documentation suite comprises 15 foundational documents across three
 | [Test Evidence Register](acceptance/TEST_EVIDENCE_REGISTER.md) | EON-TE-001 | Master register tracking test execution records, artifact links, and qualification evidence |
 | [Defect Register](acceptance/DEFECT_REGISTER.md) | EON-DEF-001 | Repository defect catalog, classification scheme, severity/priority matrices, and lifecycle workflows |
 | [Release Acceptance](acceptance/RELEASE_ACCEPTANCE.md) | EON-ACC-REL-001 | Release governance policies, mandatory milestone release gates, and founder sign-off procedures |
-| [Phase 0 Verification Report](acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md) | EON-REP-P0-FINAL-001 | Final verification, qualification report, requirement audit, and founder approval record |
-| [Phase 0 Founder Approval](acceptance/PHASE_0_FOUNDER_APPROVAL.md) | EON-ACC-FND-001 | Formal founder review, acceptance decision, and Phase 0 sign-off record |
+| [Phase 0 Verification Report](acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md) | EON-REP-P0-FINAL-001 | Final verification, qualification report, requirement audit, and formal founder approval record |
+
+### 1.4 Engineering Roadmap (`docs/roadmap/`)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Phase 1 Execution Plan](roadmap/PHASE_1_EXECUTION_PLAN.md) | EON-PLN-PH1-001 | Phase 1 engineering infrastructure, core runtime, module boundaries, and acceptance criteria |
 
 ---
 
@@ -71,7 +77,7 @@ OVIC EON organizes intelligence processing into seven specialized engines coordi
 4. [Product Requirements Document (PRD)](product/PRD.md)
 5. [Release Acceptance](acceptance/RELEASE_ACCEPTANCE.md)
 6. [Phase 0 Verification Report](acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md)
-7. [Phase 0 Founder Approval](acceptance/PHASE_0_FOUNDER_APPROVAL.md)
+7. [Phase 1 Execution Plan](roadmap/PHASE_1_EXECUTION_PLAN.md)
 
 ### For Robotics Software Integrators
 1. [Engine Scope](product/ENGINE_SCOPE.md)

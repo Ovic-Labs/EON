@@ -643,7 +643,7 @@ Traceability coverage must be measurable.
 | Test coverage (Phase 0 Documentation) | Phase 0 verification procedures with automated tests / Total Phase 0 deliverables × 100 | 100.0% |
 | Verification pass rate (Phase 0) | Passed verified Phase 0 requirements / Total executed requirements × 100 | 100.0% |
 | Evidence coverage (Phase 0) | Passed Phase 0 criteria with valid evidence / Total passed criteria × 100 | 100.0% |
-| Acceptance coverage (Phase 0) | Accepted Phase 0 criteria / Total Phase 0 acceptance criteria × 100 | 100.0% (Ready for Founder Acceptance) |
+| Acceptance coverage (Phase 0) | Accepted Phase 0 criteria / Total Phase 0 acceptance criteria × 100 | 100.0% (FOUNDER APPROVED — BASELINE ACCEPTED) |
 
 ## 19.2 Coverage rules
 

@@ -7,7 +7,7 @@
 **Document ID:** OVIC-EON-AC-001  
 **Version:** 0.1.0  
 **Phase:** 0.15 — Establish Acceptance Criteria  
-**Status:** Qualified Baseline — Documentation Verified (Ready for Founder Acceptance)  
+**Status:** Qualified Baseline — FOUNDER APPROVED — BASELINE ACCEPTED  
 **Classification:** Product and Software Engineering Specification
 
 ---
@@ -1141,4 +1141,4 @@ No implementation or performance guarantee should be inferred from this acceptan
 
 OVIC-EON-AC-001  
 Version 0.1.0  
-Approved by Founder — Documentation Verified (Ready for Founder Acceptance)
+Approved by Founder — Documentation Verified (FOUNDER APPROVED — BASELINE ACCEPTED)

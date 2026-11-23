@@ -339,7 +339,13 @@ OVIC EON does not claim regulatory compliance, certification, or production safe
 
 OVIC EON is being developed through milestone-based engineering.
 
-The product foundation has received founder-level approval. Repository implementation and validation of the Phase 0 documentation remain separate activities and must be verified before being reported as complete.
+- **Phase 0 (Product Foundation & Requirements):** `FOUNDER APPROVED — BASELINE ACCEPTED`
+- **Phase 1 (Engineering Infrastructure & Core Runtime):** `AUTHORIZED TO BEGIN — NOT YET VERIFIED` (See [Phase 1 Execution Plan](docs/roadmap/PHASE_1_EXECUTION_PLAN.md))
+- **Software Implementation:** `NOT STARTED / 0%`
+- **Performance Targets:** `PROVISIONAL — NOT BENCHMARKED`
+- **Production Readiness:** `NOT QUALIFIED`
+
+The product foundation has received formal founder approval across all Phase 0 sub-phases (0.1–0.15). Phase 1 engineering infrastructure is authorized to begin. Software implementation, physical benchmarking, and production qualification remain future milestones.
 
 ### Development roadmap
 
@@ -389,6 +395,11 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [Test Evidence Register](docs/acceptance/TEST_EVIDENCE_REGISTER.md)
 - [Defect Register](docs/acceptance/DEFECT_REGISTER.md)
 - [Release Acceptance](docs/acceptance/RELEASE_ACCEPTANCE.md)
+- [Phase 0 Verification Report](docs/acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md)
+
+### Engineering roadmap
+
+- [Phase 1 Execution Plan](docs/roadmap/PHASE_1_EXECUTION_PLAN.md)
 
 ### Additional documentation
 

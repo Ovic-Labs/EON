@@ -7,7 +7,7 @@
 **Tagline:** Emotional Intelligence Infrastructure for Robotics  
 **Organization:** OVIC Labs  
 **Document Version:** 0.1.0  
-**Document Status:** Qualified Baseline — Documentation Verified (Ready for Founder Acceptance)  
+**Document Status:** Qualified Baseline — FOUNDER APPROVED — BASELINE ACCEPTED  
 **Owner:** Product Founder  
 **Classification:** Internal — Product and Engineering  
 **Applies To:** All OVIC EON releases  
@@ -891,7 +891,7 @@ Do not describe provisional targets as achieved results.
 | Document ID | EON-ACC-REL-001 |
 | Version | 0.1.0 |
 | Owner | Product Founder |
-| Status | Qualified Baseline — Documentation Verified (Ready for Founder Acceptance) |
+| Status | Qualified Baseline — FOUNDER APPROVED — BASELINE ACCEPTED |
 | Review Frequency | At every major release and when release policy changes |
 | Parent Document | ACCEPTANCE_CRITERIA.md |
 | Related Document | DEFECT_REGISTER.md |
@@ -917,7 +917,7 @@ Phase 0.15 release governance documentation is complete when:
 - [ ] Related documents are cross-referenced.
 - [ ] Markdown validation passes.
 - [ ] Requirements traceability is reviewed.
-- [ ] Founder approval is recorded.
+- [x] Founder approval is recorded (Phase 0 formally approved on 2026-11-23).
 
 **Important:** Document approval does not mean a software release has passed. Actual release acceptance requires completed testing, verifiable evidence and recorded approval.
 

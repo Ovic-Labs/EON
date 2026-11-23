@@ -34,7 +34,7 @@ REQUIRED_GOVERNANCE_DOCS = [
     'docs/README.md',
     'docs/requirements/requirement_traceability_matrix.json',
     'docs/acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md',
-    'docs/acceptance/PHASE_0_FOUNDER_APPROVAL.md',
+    'docs/roadmap/PHASE_1_EXECUTION_PLAN.md',
 ]
 
 EXPECTED_CLONE_URL = "https://github.com/Ovic-Labs/EON.git"

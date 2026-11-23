@@ -4,7 +4,9 @@
   "document_id": "EON-RTM-JSON-001",
   "version": "0.1.0",
   "milestone": "Phase 0 Final Documentation Qualification",
-  "status": "APPROVED_BASELINE",
+  "status": "FOUNDER_APPROVED",
+  "phase_0_baseline": "FOUNDER_APPROVED",
+  "phase_1_authorization": "AUTHORIZED",
   "metrics": {
     "total_source_requirements": 290,
     "functional_requirements_count": 60,
@@ -21,7 +23,7 @@
     "coverage_percentage": 100.0,
     "specification_mapping_coverage_percentage": 100.0,
     "implementation_coverage_percentage": 0.0,
-    "implementation_status": "NOT_STARTED_PHASE_1_PENDING",
+    "implementation_status": "NOT_STARTED_PHASE_1",
     "documentation_verification_status": "VERIFIED_100_PERCENT"
   },
   "requirements": {
