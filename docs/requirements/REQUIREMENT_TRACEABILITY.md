@@ -285,23 +285,22 @@ Every requirement must have an explicit lifecycle status.
 
 The functional requirements baseline contains 60 requirements, identified as EON-FR-001 through EON-FR-060.
 
-The following table establishes the initial requirement-group mapping. Exact individual requirement titles and component assignments must be reconciled against the authoritative functional requirements document and repository.
+The following table establishes the reconciled requirement-group mapping against the authoritative functional requirements document (`docs/product/FUNCTIONAL_REQUIREMENTS.md`).
 
 | Requirement Range | Functional Area | Primary Components | Verification |
 |---|---|---|---|
-| EON-FR-001–010 | Initialization, lifecycle, and platform foundation | EON Core | Unit, integration, system |
-| EON-FR-011–016 | Core coordination and communication | EON Core, Event Bus | Unit, contract, integration |
-| EON-FR-017–022 | Emotion Recognition System | ERS | Unit, integration, evaluation |
-| EON-FR-023–028 | Emotional Memory System | EMS | Unit, integration, privacy |
-| EON-FR-029–034 | Empathy Reasoning Engine | ERE | Unit, scenario, policy |
-| EON-FR-035–040 | Personality Simulation Engine | PSE | Unit, configuration |
-| EON-FR-041–046 | Social Interaction Engine | SIE | Unit, integration, scenario |
-| EON-FR-047–052 | Emotional Response Generation | ERG | Unit, integration, policy |
-| EON-FR-053–056 | Human Behaviour Understanding | HBU | Unit, integration, evaluation |
-| EON-FR-057–059 | Data contracts, APIs, and integration | API and contract layer | Contract, integration |
-| EON-FR-060 | Safety and authorization boundary | EON Core and safety integration boundary | Safety, negative, integration |
+| EON-FR-001–014 | Initialization, lifecycle, event routing, error isolation, recovery | EON Core Runtime | Unit, integration, system |
+| EON-FR-015–020 | Observation input, emotion classification, uncertainty, model adapters | Emotion Recognition System (ERS) | Unit, integration, evaluation |
+| EON-FR-021–026 | Memory creation, retrieval, update, deletion, retention policies | Emotional Memory System (EMS) | Unit, integration, privacy |
+| EON-FR-027–031 | Context aggregation, social reasoning, uncertainty propagation, policy | Empathy Reasoning Engine (ERE) | Unit, scenario, policy |
+| EON-FR-032–035 | Personality profiles, consistency, parameter validation, outputs | Personality Simulation Engine (PSE) | Unit, configuration |
+| EON-FR-036–040 | Session creation, interaction state, turn-taking, interruption handling | Social Interaction Engine (SIE) | Unit, integration, scenario |
+| EON-FR-041–045 | Response generation requests, context/personality planning, validation | Emotional Response Generation (ERG) | Unit, integration, policy |
+| EON-FR-046–049 | Behavior observation input, pattern processing, temporal handling | Human Behaviour Understanding (HBU) | Unit, integration, evaluation |
+| EON-FR-050–055 | Standard engine contracts, errors, API access, ROS 2, SDKs | Contracts, API, ROS 2, SDK | Contract, integration |
+| EON-FR-056–060 | Authentication, data access controls, audit logging, diagnostics, config | Security, Governance, Telemetry | Security, inspection, system |
 
-**Reconciliation requirement:** This range grouping is an initial navigation aid, not a substitute for the actual requirement register. Before approving the detailed RTM, verify that every ID exists, its title matches the source, and its allocated group is correct. If the authoritative document assigns different boundaries, update this table.
+**Reconciliation status:** Reconciled with `FUNCTIONAL_REQUIREMENTS.md` v0.1.0 baseline. All 60 functional requirement IDs are mapped to their authoritative subsystem areas.
 
 ---
 
@@ -398,22 +397,25 @@ A target is not achieved merely because it appears in documentation.
 
 The privacy and safety baseline contains 86 requirements, identified as EON-PSR-001 through EON-PSR-086.
 
-The following table provides category-level mapping.
+The following table provides the reconciled category-level mapping against the authoritative specification (`docs/product/PRIVACY_AND_SAFETY_REQUIREMENTS.md`).
 
-| Requirement Category | Requirement Source | Primary Component | Verification |
+| Requirement Category | Requirement Range | Primary Component | Verification |
 |---|---|---|---|
-| Data inventory and minimization | EON-PSR-001–010 | Data governance layer | Inspection, privacy tests |
-| Consent and transparency | EON-PSR-011–020 | Policy and interaction layer | Scenario, negative tests |
-| Retention and deletion | EON-PSR-021–030 | EMS and storage layer | Integration, deletion tests |
-| Sensor and external transmission controls | EON-PSR-031–040 | Sensor and model adapters | Security and privacy tests |
-| Access control and security | EON-PSR-041–050 | Authentication and authorization | Security tests |
-| Audit and incident handling | EON-PSR-051–056 | Audit and monitoring | Inspection, integration |
-| Responsible AI and uncertainty | EON-PSR-057–066 | ERS, HBU, ERE | Evaluation, scenario tests |
-| Human oversight and interaction safeguards | EON-PSR-067–072 | ERE, SIE, ERG | Policy and scenario tests |
-| Physical safety boundaries | EON-PSR-073–080 | EON Core and robotics boundary | Safety and negative tests |
-| Fault handling and integration safeguards | EON-PSR-081–086 | EON Core and integration layer | Fault injection, integration |
+| Data Processing Requirements | EON-PSR-001–005 | Data governance & Core | Inspection, privacy tests |
+| Consent and Transparency Requirements | EON-PSR-006–010 | Policy & interaction layer | Scenario, inspection |
+| Data Retention and Deletion | EON-PSR-011–015 | EMS & storage layer | Integration, deletion tests |
+| Emotional Memory Privacy | EON-PSR-016–021 | EMS & privacy boundaries | Unit, integration, security |
+| Audio, Video and Observation Privacy | EON-PSR-022–026 | Sensor adapters, ERS, HBU | Security, privacy tests |
+| Identity and Access Management | EON-PSR-027–032 | Core security & API layer | Security, authorization tests |
+| Information Security Requirements | EON-PSR-033–042 | Encryption, audit, logging | Security, penetration testing |
+| Responsible AI Requirements | EON-PSR-043–053 | ERS, HBU, ERE, ERG | Evaluation, bias testing |
+| Personality and Interaction Safety | EON-PSR-054–059 | PSE, SIE, ERG | Policy, scenario tests |
+| Robotics Physical Safety Requirements | EON-PSR-060–069 | EON Core & robot boundary | Safety review, simulation |
+| Fault Handling and Safe Degradation | EON-PSR-070–076 | Runtime lifecycle & recovery | Fault injection, recovery |
+| ROS 2 and Robotics Integration Safety | EON-PSR-077–081 | ROS 2 integration adapters | Integration, safety tests |
+| Monitoring and Incident Response | EON-PSR-082–086 | Telemetry, health monitoring | Integration, operational tests |
 
-**Reconciliation requirement:** Verify every range and title against the authoritative privacy and safety requirements document. This category-level grouping must not be treated as verified individual requirement mapping.
+**Reconciliation status:** Reconciled with `PRIVACY_AND_SAFETY_REQUIREMENTS.md` v0.1.0 baseline. All 86 privacy and safety requirements are mapped to their authoritative functional sections and components.
 
 ## 13.1 Critical safety traceability
 

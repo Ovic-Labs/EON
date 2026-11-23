@@ -364,6 +364,8 @@ Versions are roadmap targets, not statements of current release availability.
 
 The documentation is organized around product definition, engineering requirements, architecture, implementation, and qualification.
 
+For a structured index and reading guide across all Phase 0 specifications, see the [Documentation Index](docs/README.md).
+
 ### Product documentation
 
 - [Product Vision](docs/product/PRODUCT_VISION.md)
@@ -480,7 +482,7 @@ The intended development environment includes:
 ### Clone the repository
 
 ```bash
-git clone https://github.com/krishanth7/EON.git
+git clone https://github.com/Ovic-Labs/EON.git
 cd EON
 ```
 

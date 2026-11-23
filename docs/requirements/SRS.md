@@ -1498,29 +1498,35 @@ Safety boundaries MUST be tested through appropriate negative and integration te
 
 # 21. Performance and Resource Requirements
 
-Performance requirements must be reconciled with the approved standalone performance specification.
+Performance requirements are reconciled with the approved standalone performance specification (`docs/product/PERFORMANCE_REQUIREMENTS.md`).
 
-The values below reflect the provisional PRD baseline. They are engineering targets, not measured results.
+The values below define the provisional engineering targets. They are design and qualification targets, not measured results.
 
-| Performance ID | Target | Status |
-|---|---|---|
-| PERF-001 | Core event routing p50 ≤ 10 ms | Provisional |
-| PERF-002 | Core event routing p95 ≤ 20 ms | Provisional |
-| PERF-003 | Core event routing p99 ≤ 50 ms | Provisional |
-| PERF-004 | Lightweight internal event throughput ≥ 1,000 events/sec | Provisional |
-| PERF-005 | Lightweight cross-engine workflow p95 ≤ 100 ms | Provisional |
-| PERF-006 | ERS processing target ≥ 5 observations/sec | Provisional |
-| PERF-007 | EMS local retrieval p95 ≤ 25 ms | Provisional |
-| PERF-008 | ERE deterministic reasoning p95 ≤ 50 ms | Provisional |
-| PERF-009 | PSE state update p95 ≤ 20 ms | Provisional |
-| PERF-010 | SIE deterministic processing p95 ≤ 50 ms | Provisional |
-| PERF-011 | ERG deterministic planning p95 ≤ 50 ms | Provisional |
-| PERF-012 | HBU processing target ≥ 5 observations/sec | Provisional |
-| PERF-013 | API response p95 ≤ 100 ms | Provisional |
-| PERF-014 | Core idle resident memory ≤ 500 MB | Provisional |
-| PERF-015 | Runtime startup readiness ≤ 10 seconds | Provisional |
+| Performance ID | Source ID | Target | Status |
+|---|---|---|---|
+| PERF-001 | EON-PERF-001 | Core event routing p50 ≤ 10 ms | Provisional |
+| PERF-002 | EON-PERF-001 | Core event routing p95 ≤ 20 ms | Provisional |
+| PERF-003 | EON-PERF-001 | Core event routing p99 ≤ 50 ms | Provisional |
+| PERF-004 | EON-PERF-002 | Lightweight internal event throughput ≥ 1,000 events/sec | Provisional |
+| PERF-005 | EON-PERF-028 | Lightweight cross-engine workflow p95 ≤ 100 ms | Provisional |
+| PERF-006 | EON-PERF-006 | ERS lightweight observation rate ≥ 5 observations/sec | Provisional |
+| PERF-007 | EON-PERF-006 | ERS processing latency p95 ≤ 200 ms | Provisional |
+| PERF-008 | EON-PERF-009 | EMS local retrieval p95 ≤ 25 ms | Provisional |
+| PERF-009 | EON-PERF-010 | EMS local write p95 ≤ 50 ms | Provisional |
+| PERF-010 | EON-PERF-013 | ERE deterministic reasoning p95 ≤ 50 ms | Provisional |
+| PERF-011 | EON-PERF-016 | PSE state update p95 ≤ 20 ms | Provisional |
+| PERF-012 | EON-PERF-019 | SIE deterministic processing p95 ≤ 50 ms | Provisional |
+| PERF-013 | EON-PERF-022 | ERG deterministic planning p95 ≤ 50 ms | Provisional |
+| PERF-014 | EON-PERF-025 | HBU lightweight observation rate ≥ 5 observations/sec | Provisional |
+| PERF-015 | EON-PERF-025 | HBU processing latency p95 ≤ 200 ms | Provisional |
+| PERF-016 | EON-PERF-033 | API lightweight operation p95 ≤ 100 ms | Provisional |
+| PERF-017 | EON-PERF-034 | API lightweight throughput goal 100 requests/sec | Provisional |
+| PERF-018 | EON-PERF-037 | ROS 2 local message delivery p95 ≤ 20 ms | Provisional |
+| PERF-019 | EON-PERF-042 | Core idle resident memory ≤ 500 MB | Provisional |
+| PERF-020 | EON-PERF-047 | Runtime startup readiness ≤ 10 seconds | Provisional |
+| PERF-021 | EON-PERF-054 | Extended soak qualification 24 hours | Provisional |
 
-**Important:** These performance IDs are provisional identifiers for this SRS table. They must not be treated as the official `EON-PERF` identifiers until reconciled with `PERFORMANCE_REQUIREMENTS.md`.
+These targets align with `PERFORMANCE_REQUIREMENTS.md` and remain subject to empirical benchmark qualification.
 
 ## 21.1 Benchmark Conditions
 

@@ -729,6 +729,8 @@ The detailed performance specification is maintained separately in:
 
 ## 13.1 Initial Performance Targets
 
+The table below reconciles the initial provisional performance targets with the detailed specification in `docs/product/PERFORMANCE_REQUIREMENTS.md`.
+
 | Metric | Provisional Target |
 |---|---:|
 | Core event routing p50 | ≤ 10 ms |
@@ -737,15 +739,21 @@ The detailed performance specification is maintained separately in:
 | Lightweight internal event throughput | ≥ 1,000 events/sec |
 | Lightweight cross-engine workflow p95 | ≤ 100 ms |
 | ERS lightweight observation rate | 5/sec |
+| ERS processing latency p95 | ≤ 200 ms |
 | EMS local retrieval p95 | ≤ 25 ms |
+| EMS local write p95 | ≤ 50 ms |
 | ERE deterministic reasoning p95 | ≤ 50 ms |
 | PSE state update p95 | ≤ 20 ms |
 | SIE deterministic processing p95 | ≤ 50 ms |
 | ERG deterministic planning p95 | ≤ 50 ms |
 | HBU lightweight observation rate | 5/sec |
+| HBU processing latency p95 | ≤ 200 ms |
 | API lightweight operation p95 | ≤ 100 ms |
+| API lightweight throughput goal | 100 requests/sec |
+| ROS 2 local message delivery p95 | ≤ 20 ms |
 | Core idle resident memory | ≤ 500 MB |
 | Core startup readiness | ≤ 10 seconds |
+| Extended soak qualification | 24 hours |
 
 These are proposed targets for defined test workloads, not validated results or universal guarantees.
 

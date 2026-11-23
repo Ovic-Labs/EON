@@ -868,16 +868,31 @@ Applicable legal and contractual privacy obligations are reviewed before commerc
 
 # 21. Performance Acceptance
 
-The following are provisional engineering targets inherited from the PRD and SRS. They are not achieved performance claims or guaranteed customer specifications.
+The following are provisional engineering targets inherited from and reconciled with `PERFORMANCE_REQUIREMENTS.md`. They are not achieved performance claims or guaranteed customer specifications.
 
-| Metric | Initial target |
-|---|---:|
-| Core event routing p95 | ≤20 ms |
-| Core event routing p99 | ≤50 ms |
-| ERS throughput | ≥5 observations/sec |
-| HBU throughput | ≥5 observations/sec |
-| Internal interaction event p95 | ≤100 ms |
-| Core-only idle memory | ≤500 MB |
+| Metric | Initial Target | Status |
+|---|---:|---|
+| Core event routing p50 | ≤ 10 ms | PROVISIONAL |
+| Core event routing p95 | ≤ 20 ms | PROVISIONAL |
+| Core event routing p99 | ≤ 50 ms | PROVISIONAL |
+| Lightweight internal event throughput | ≥ 1,000 events/sec | PROVISIONAL |
+| Lightweight cross-engine workflow p95 | ≤ 100 ms | PROVISIONAL |
+| ERS throughput | ≥ 5 observations/sec | PROVISIONAL |
+| ERS processing latency p95 | ≤ 200 ms | PROVISIONAL |
+| EMS local retrieval p95 | ≤ 25 ms | PROVISIONAL |
+| EMS local write p95 | ≤ 50 ms | PROVISIONAL |
+| ERE deterministic reasoning p95 | ≤ 50 ms | PROVISIONAL |
+| PSE state update p95 | ≤ 20 ms | PROVISIONAL |
+| SIE deterministic processing p95 | ≤ 50 ms | PROVISIONAL |
+| ERG deterministic planning p95 | ≤ 50 ms | PROVISIONAL |
+| HBU throughput | ≥ 5 observations/sec | PROVISIONAL |
+| HBU processing latency p95 | ≤ 200 ms | PROVISIONAL |
+| API lightweight operation p95 | ≤ 100 ms | PROVISIONAL |
+| API lightweight throughput goal | 100 requests/sec | PROVISIONAL |
+| ROS 2 local message delivery p95 | ≤ 20 ms | PROVISIONAL |
+| Core-only idle resident memory | ≤ 500 MB | PROVISIONAL |
+| Core startup readiness | ≤ 10 seconds | PROVISIONAL |
+| Extended soak qualification | 24 hours | PROVISIONAL |
 
 ### AC-PERF-001 — Reference Hardware
 
