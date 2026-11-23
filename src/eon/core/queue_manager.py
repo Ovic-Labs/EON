@@ -289,14 +289,13 @@ class SubscriberQueue:
             self._finished.set()
 
     async def join(self) -> None:
-        """Block until all items in the queue have been processed or queue is closed."""
-        if self._unfinished_tasks > 0 and not self._is_closed:
+        """Block until all items in the queue have been processed."""
+        if self._unfinished_tasks > 0:
             await self._finished.wait()
 
     def close(self) -> None:
-        """Close the queue, immediately waking waiting producers, consumers, and joiners."""
+        """Close the queue, immediately waking waiting producers and consumers."""
         self._is_closed = True
-        self._finished.set()  # Unblock any join() waiting on queue
         try:
             loop = asyncio.get_running_loop()
             loop.create_task(self._notify_close())
