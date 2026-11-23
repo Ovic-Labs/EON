@@ -337,32 +337,34 @@ OVIC EON does not claim regulatory compliance, certification, or production safe
 
 ## 9. Project Status
 
-OVIC EON is being developed through milestone-based engineering.
+OVIC EON is being developed through controlled, milestone-based engineering.
 
-- **Phase 0 (Product Foundation & Requirements):** `FOUNDER APPROVED — BASELINE ACCEPTED`
-- **Phase 1 (Engineering Infrastructure & Core Runtime):** `AUTHORIZED TO BEGIN — NOT YET VERIFIED` (See [Phase 1 Execution Plan](docs/roadmap/PHASE_1_EXECUTION_PLAN.md))
-- **Software Implementation:** `NOT STARTED / 0%`
+- **Phase 0 (Product Foundation & Requirements):** `PRODUCTION-QUALIFIED — PROJECT FOUNDATION`
+- **Phase 1 (Engineering Infrastructure & Core Runtime):** In Progress (Phase 1.1, 1.2, 1.3 Implemented & Qualified; Phase 1.4 NOT Started)
+- **Seven Intelligence Engines:** Fully Specified to Production Standards / Software Runtimes `NOT IMPLEMENTED (0%)`
+- **Physical Motion Authority:** Strictly Non-Authoritative (`is_authoritative_stop=False`) — Host Robot Safety Controller & Hardware E-Stop Authoritative
 - **Performance Targets:** `PROVISIONAL — NOT BENCHMARKED`
-- **Production Readiness:** `NOT QUALIFIED`
+- **Full EON Product Production Readiness:** `NOT QUALIFIED`
 
-The product foundation has received formal founder approval across all Phase 0 sub-phases (0.1–0.15). Phase 1 engineering infrastructure is authorized to begin. Software implementation, physical benchmarking, and production qualification remain future milestones.
+### Phase 0 Foundation Deliverables
+The project foundation has achieved formal production qualification across all fifteen sub-phases (0.1–0.15) with 100.0% specification mapping coverage across 290 primary requirements, 203 software requirements, 179 acceptance criteria, and 54 use cases.
+
+> **Important Distinction:** Phase 0 production-qualification establishes an implementation-ready, verifiable specification baseline. It does NOT claim that software implementation of the seven intelligence engines, multimodal perception, ROS 2 integration, hardware deployment, or production robot operation are complete.
 
 ### Development roadmap
 
-| Version | Milestone |
-|---|---|
-| 0.1.0 | Core architecture baseline |
-| 0.2.0 | Seven engine interfaces |
-| 0.3.0 | Initial engine implementations |
-| 0.4.0 | Integrated runtime |
-| 0.5.0 | ROS 2 integration |
-| 0.6.0 | Integrated simulation |
-| 0.7.0 | SDK preview |
-| 0.8.0 | Performance and reliability qualification |
-| 0.9.0 | Enterprise evaluation candidate |
-| 1.0.0 | Production release, subject to qualification |
-
-Versions are roadmap targets, not statements of current release availability.
+| Version | Milestone | Status |
+|---|---|---|
+| 0.1.0 | Phase 0 Foundation & Phase 1 Core Infrastructure | **FOUNDATION QUALIFIED** (Core Bus & Schemas Implemented) |
+| 0.2.0 | Seven engine interfaces & execution harness | Planned (Phase 1.4+) |
+| 0.3.0 | Initial engine implementations | Planned (Phase 2) |
+| 0.4.0 | Integrated runtime | Planned |
+| 0.5.0 | ROS 2 integration | Planned |
+| 0.6.0 | Integrated simulation | Planned |
+| 0.7.0 | SDK preview | Planned |
+| 0.8.0 | Performance and reliability qualification | Planned |
+| 0.9.0 | Enterprise evaluation candidate | Planned |
+| 1.0.0 | Production release, subject to qualification | Planned |
 
 ---
 
@@ -382,6 +384,7 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [Non-Functional Requirements](docs/product/NON_FUNCTIONAL_REQUIREMENTS.md)
 - [Performance Requirements](docs/product/PERFORMANCE_REQUIREMENTS.md)
 - [Privacy and Safety Requirements](docs/product/PRIVACY_AND_SAFETY_REQUIREMENTS.md)
+- [Commercial Licensing Strategy](docs/product/COMMERCIAL_LICENSING_STRATEGY.md)
 - [Product Requirements Document](docs/product/PRD.md)
 
 ### Engineering requirements
@@ -396,6 +399,8 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [Defect Register](docs/acceptance/DEFECT_REGISTER.md)
 - [Release Acceptance](docs/acceptance/RELEASE_ACCEPTANCE.md)
 - [Phase 0 Verification Report](docs/acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md)
+- [Phase 0 Production Qualification Report](docs/acceptance/PHASE_0_PRODUCTION_QUALIFICATION_REPORT.md)
+- [Phase 0 Repository Cleanup Report](docs/acceptance/PHASE_0_REPOSITORY_CLEANUP_REPORT.md)
 
 ### Engineering roadmap and implementation
 
@@ -424,107 +429,88 @@ Documentation links must be checked against files actually present in the reposi
 
 ## 11. Repository Structure
 
-The following is a proposed organization. The actual repository structure should be verified before relying on these paths.
+The current repository organization reflects the qualified Phase 0 baseline and Phase 1 runtime foundation:
 
 ```text
 EON/
 ├── README.md
-├── LICENSE
 ├── CONTRIBUTING.md
 ├── SECURITY.md
-├── CHANGELOG.md
+├── pyproject.toml
 ├── docs/
-│   ├── product/
-│   ├── requirements/
-│   ├── architecture/
-│   ├── api/
-│   ├── sdk/
-│   ├── robotics/
-│   ├── deployment/
-│   └── acceptance/
+│   ├── product/           # 10 Phase 0 Product specifications
+│   ├── requirements/      # Software requirements and RTM
+│   ├── acceptance/        # Acceptance criteria, registers, and qualification reports
+│   ├── architecture/      # Core event bus and schema specifications
+│   ├── developer/         # Developer installation and contract guides
+│   ├── engineering/       # Phase 1.1-1.3 implementation qualification reports
+│   └── roadmap/           # Phase 1 execution plan
 ├── src/
 │   └── eon/
-│       ├── core/
-│       ├── engines/
-│       │   ├── ers/
-│       │   ├── ems/
-│       │   ├── ere/
-│       │   ├── pse/
-│       │   ├── sie/
-│       │   ├── erg/
-│       │   └── hbu/
-│       ├── contracts/
-│       ├── adapters/
-│       ├── security/
-│       └── monitoring/
-├── sdk/
-│   ├── python/
-│   └── cpp/
-├── integrations/
-│   └── ros2/
-├── examples/
+│       ├── core/          # In-memory async core event bus & priority queues
+│       └── schemas/       # EventEnvelope[T], base models, SemVer contracts
 ├── tests/
-│   ├── unit/
-│   ├── integration/
-│   ├── contract/
-│   ├── system/
-│   └── performance/
-├── benchmarks/
+│   ├── unit/              # Unit tests (schemas, core, package, validator)
+│   ├── integration/       # Multi-subscriber and lifecycle integration tests
+│   ├── contract/          # Schema compatibility and causality contracts
+│   └── benchmarks/        # Event bus latency and throughput benchmarks
 ├── scripts/
+│   └── validate_docs.py   # 15-Gate deterministic documentation validation suite
 └── .github/
-    └── workflows/
+    └── workflows/         # CI quality gates and documentation audit
 ```
 
 ---
 
 ## 12. Installation
 
-Installation instructions will be finalized when the initial installable package and supported release artifacts are available.
+OVIC EON requires Python >=3.10,<3.13 on Linux, macOS, or Windows (WSL recommended for robotics integration).
 
 ### Prerequisites
 
-The intended development environment includes:
+- Python 3.10, 3.11, or 3.12
+- Git
+- Multi-core CPU (ARM64 or x86_64; GPU optional)
 
-- Ubuntu or a supported Linux distribution.
-- Python version specified by the project configuration.
-- Git.
-- ROS 2 for robotics integration development.
-- A C++ toolchain for C++ components.
-- Optional acceleration hardware for supported workloads.
-
-### Clone the repository
+### Clone and install in editable mode
 
 ```bash
+# Clone the repository
 git clone https://github.com/Ovic-Labs/EON.git
 cd EON
+
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install package in editable mode with development dependencies
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
 ```
-
-### Inspect the project
-
-```bash
-git status
-ls -la
-```
-
-### Install dependencies
-
-Use the installation instructions and dependency files supplied by the actual release.
-
-Do not assume that a Python package, ROS 2 workspace, SDK, or runtime is installable until the corresponding implementation and installation tests have passed.
 
 ---
 
-## 13. Development
+## 13. Development & Verification Suite
 
-Development should follow the project's engineering requirements and contribution guidelines.
-
-Typical development checks may include:
+OVIC EON enforces rigorous local and CI quality gates:
 
 ```bash
-git status
-```
+# 1. Execute the Phase 0 15-gate documentation audit suite
+python scripts/validate_docs.py
 
-Run the actual test and lint commands defined by the repository's configuration. Do not assume command names until the project scripts and CI workflows have been established.
+# 2. Run the full automated test suite (203 tests)
+python -m pytest
+
+# 3. Static type analysis (mypy strict)
+python -m mypy src/eon scripts
+
+# 4. Code formatting and linting (ruff)
+python -m ruff check .
+python -m ruff format --check .
+
+# 5. Markdown formatting and link linting
+npx markdownlint-cli2 "**/*.md"
+```
 
 ### Engineering expectations
 

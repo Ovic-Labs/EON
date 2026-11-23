@@ -47,6 +47,7 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | [Release Acceptance](acceptance/RELEASE_ACCEPTANCE.md) | EON-ACC-REL-001 | Release governance policies, mandatory milestone release gates, and founder sign-off procedures |
 | [Phase 0 Verification Report](acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md) | EON-REP-P0-FINAL-001 | Final verification, qualification report, requirement audit, and formal founder approval record |
 | [Phase 0 Production Qualification Report](acceptance/PHASE_0_PRODUCTION_QUALIFICATION_REPORT.md) | EON-REP-P0-PROD-001 | Final production implementation, hardening, and qualification report |
+| [Phase 0 Repository Cleanup Report](acceptance/PHASE_0_REPOSITORY_CLEANUP_REPORT.md) | EON-REP-P0-CLN-001 | Repository cleanup audit, preservation ledger, and verification record |
 
 ### 1.4 Engineering Roadmap (`docs/roadmap/`)
 
