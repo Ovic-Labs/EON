@@ -30,14 +30,13 @@ async def test_true_oldest_eviction_mixed_priorities() -> None:
     # Oldest item is Item 1 ("item1_high", seq 1)
     # Even though "item3_critical" or "item1_high" has higher priority than "item2_low",
     # the OLDEST sequence is "item1_high"!
-    state = await q.put(
+    res = await q.put(
         "item4_normal", priority=EventPriority.NORMAL, policy=BackpressurePolicy.DROP_OLDEST
     )
-    assert state == DeliveryState.QUEUED
-
-    # Pop last evicted item
-    evicted = q.pop_last_evicted()
-    assert evicted == "item1_high", f"Expected oldest item 'item1_high' evicted, got {evicted}"
+    assert res.state == DeliveryState.QUEUED
+    assert res.evicted_item == "item1_high", (
+        f"Expected 'item1_high' evicted, got {res.evicted_item}"
+    )
 
     # Verify task accounting is balanced
     assert q.unfinished_tasks == 3

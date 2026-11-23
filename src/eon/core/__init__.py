@@ -40,7 +40,7 @@ from eon.core.metrics import (
     EventBusMetricsSnapshot,
 )
 from eon.core.priority import EventPriority, PrioritizedItem
-from eon.core.queue_manager import SubscriberQueue
+from eon.core.queue_manager import EnqueueResult, SubscriberQueue
 from eon.core.subscription import (
     EventHandler,
     Subscription,
@@ -72,6 +72,7 @@ __all__: Final[list[str]] = [
     "generate_subscription_id",
     # Queue
     "SubscriberQueue",
+    "EnqueueResult",
     # Router
     "EventRouter",
     "WILDCARD_EVENT_TYPE",

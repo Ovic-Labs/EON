@@ -28,6 +28,9 @@ When `publish()` or `publish_and_wait()` is called:
 2. If a subscriber handler unregisters itself or adds a new subscriber during active dispatch, the current dispatch iteration remains unaffected.
 3. If no matching subscribers exist, the event is marked `ACCEPTED`, telemetry counters are updated, and the publisher returns without blocking.
 
+### 1.4 Concurrency and Thread Safety
+`EventRouter` synchronizes all internal subscription maps, index mutations, and snapshot queries (`register`, `unregister`, `get_subscribers`, `get_all_subscribers`, `clear`, `get_subscription`, `subscription_count`, `event_types_registered`) using a reentrant lock (`threading.RLock()`). This guarantees genuine thread safety across multithreaded producers and concurrent asyncio tasks, eliminating race conditions during dynamic subscription changes.
+
 ---
 
 ## 2. Delivery States and Outcome Tracking

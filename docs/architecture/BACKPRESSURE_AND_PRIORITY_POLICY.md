@@ -55,13 +55,24 @@ flowchart TD
 4. **`DROP_OLDEST` (True Oldest Eviction Sliding Window Policy):**
    - If the queue is at capacity, the queue scans its items to identify the item with the smallest monotonic sequence number (the true oldest item), removes it, and reheapifies the remaining items.
    - Importantly, it does NOT pop the min-heap head (which would mistakenly evict the highest-priority item).
+   - The queue `put()` method returns an explicit `EnqueueResult(state, evicted_item)` object, associating any evicted item directly with the enqueue operation without shared mutable state.
    - The evicted event ID is recorded, and its outcome is resolved as `DeliveryState.DROPPED`.
    - The incoming event is enqueued into the vacated slot, preserving exact queue task accounting.
    - Increments the `dropped_events` telemetry counter.
 
 ---
 
-## 2. Event Priority Scheduling
+## 2. Deterministic Queue Task Accounting
+
+`SubscriberQueue` provides deterministic task accounting following Python `asyncio.Queue` semantics:
+1. **Task Tracking:** Each accepted item increments internal `_unfinished_tasks`.
+2. **Completion Signaling:** Workers call `task_done()` synchronously upon finishing an item. This decrements `_unfinished_tasks`.
+3. **Underflow Prevention:** Calling `task_done()` more times than accepted items immediately raises `ValueError("task_done() called too many times")`.
+4. **Unblocked Join:** `join()` awaits `_finished.wait()`. When all accepted tasks are completed, or when `close()` is called on queue shutdown, `_finished.set()` is signaled, ensuring `join()` can never hang indefinitely.
+
+---
+
+## 3. Event Priority Scheduling
 
 ### 2.1 Priority Enumeration
 
@@ -89,7 +100,7 @@ Priority scheduling governs execution precedence within the Python asyncio event
 
 ---
 
-## 3. Starvation Prevention and Fairness
+## 4. Starvation Prevention and Fairness
 
 ### 3.1 Starvation Prevention Guarantee
 Under heavy load, a continuous flood of `CRITICAL` or `HIGH` priority events could indefinitely starve lower-priority events (`NORMAL`, `LOW`). To prevent indefinite starvation:

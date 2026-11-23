@@ -153,6 +153,10 @@ class EventBus:
                 raise InvalidLifecycleTransitionError(
                     "Cannot start Event Bus while it is currently STOPPING."
                 )
+            if self._state == EventBusLifecycleState.STOPPED:
+                raise InvalidLifecycleTransitionError(
+                    "Cannot start Event Bus: STOPPED state is terminal."
+                )
 
             self._state = EventBusLifecycleState.RUNNING
 
@@ -165,6 +169,9 @@ class EventBus:
 
         Idempotent: Calling stop() on an already STOPPED bus is a safe no-op.
         """
+        if timeout is not None and timeout < 0.0:
+            raise ValueError(f"Shutdown timeout must be non-negative (>= 0.0), got {timeout}")
+
         async with self._state_lock:
             if self._state == EventBusLifecycleState.STOPPED:
                 return
@@ -176,10 +183,11 @@ class EventBus:
             self._state = EventBusLifecycleState.STOPPING
 
         shutdown_timeout = timeout if timeout is not None else self._config.shutdown_timeout_seconds
+        deadline = time.monotonic() + shutdown_timeout if shutdown_timeout > 0 else None
         all_subs = self._router.get_all_subscribers()
 
-        # Step 1: Explicitly close each subscriber queue.
-        # This immediately unblocks any publishers waiting on WAIT policy.
+        # Step 1: Explicitly close each subscriber queue immediately.
+        # This immediately unblocks any publishers waiting on WAIT policy and joiners.
         for sub in all_subs:
             sub.queue.close()
 
@@ -187,11 +195,13 @@ class EventBus:
         if all_subs:
             drain_tasks = [sub.queue.join() for sub in all_subs]
             try:
-                if shutdown_timeout > 0:
-                    await asyncio.wait_for(
-                        asyncio.gather(*drain_tasks, return_exceptions=True),
-                        timeout=shutdown_timeout,
-                    )
+                if deadline is not None:
+                    remaining = max(0.0, deadline - time.monotonic())
+                    if remaining > 0:
+                        await asyncio.wait_for(
+                            asyncio.gather(*drain_tasks, return_exceptions=True),
+                            timeout=remaining,
+                        )
                 else:
                     await asyncio.gather(*drain_tasks, return_exceptions=True)
             except asyncio.TimeoutError:
@@ -203,7 +213,18 @@ class EventBus:
                 worker.cancel()
 
         if self._workers:
-            await asyncio.gather(*self._workers, return_exceptions=True)
+            try:
+                if deadline is not None:
+                    remaining = max(0.0, deadline - time.monotonic())
+                    if remaining > 0:
+                        await asyncio.wait_for(
+                            asyncio.gather(*self._workers, return_exceptions=True),
+                            timeout=remaining,
+                        )
+                else:
+                    await asyncio.gather(*self._workers, return_exceptions=True)
+            except asyncio.TimeoutError:
+                pass
         self._workers.clear()
 
         # Step 4: Evacuate any remaining items in queues, mark them cancelled, and resolve waiters
@@ -591,14 +612,15 @@ class EventBus:
         if not has_waiting_sub:
             for sub in subscribers:
                 try:
-                    state = await sub.queue.put(
+                    put_res = await sub.queue.put(
                         item=event,
                         priority=priority,
                         policy=sub.backpressure_policy,
                         timeout=self._config.publish_timeout_seconds,
                     )
-                    evicted = sub.queue.pop_last_evicted()
-                    self._record_publish_outcome(event_id_str, sub, state, evicted, None, outcomes)
+                    self._record_publish_outcome(
+                        event_id_str, sub, put_res.state, put_res.evicted_item, None, outcomes
+                    )
                 except Exception as pub_exc:
                     self._record_publish_outcome(
                         event_id_str, sub, DeliveryState.REJECTED, None, pub_exc, outcomes
@@ -609,14 +631,13 @@ class EventBus:
                 sub: Subscription,
             ) -> tuple[Subscription, DeliveryState, Any | None, Exception | None]:
                 try:
-                    state = await sub.queue.put(
+                    put_res = await sub.queue.put(
                         item=event,
                         priority=priority,
                         policy=sub.backpressure_policy,
                         timeout=self._config.publish_timeout_seconds,
                     )
-                    evicted = sub.queue.pop_last_evicted()
-                    return (sub, state, evicted, None)
+                    return (sub, put_res.state, put_res.evicted_item, None)
                 except Exception as e:
                     return (sub, DeliveryState.REJECTED, None, e)
 

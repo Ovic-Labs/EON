@@ -111,7 +111,7 @@ stateDiagram-v2
 - **`CREATED`:** Initialized with configuration. Subscriptions can be registered. Publishing is rejected (`EventBusNotRunningError`).
 - **`RUNNING`:** Background worker tasks are running. Events are routed, enqueued, and dispatched asynchronously.
 - **`STOPPING`:** Shutting down. New events are rejected. Queues are drained up to `shutdown_timeout_seconds`. Remaining workers are cancelled cleanly.
-- **`STOPPED`:** Terminal clean state. No background tasks or lingering coroutines remain.
+- **`STOPPED`:** Terminal clean state. Once stopped, calling `start()` is strictly rejected with `InvalidLifecycleTransitionError` ("Cannot start Event Bus: STOPPED state is terminal."). Calling `stop()` when stopped is an idempotent no-op. No background tasks or lingering coroutines remain.
 
 ---
 
@@ -121,6 +121,9 @@ stateDiagram-v2
 2. **Prioritization Precedence:** Higher priority events (`CRITICAL`, `HIGH`) preempt lower priority events (`NORMAL`, `LOW`) within subscriber queues.
 3. **No Mutated Envelopes:** Original `EventEnvelope` instances are never mutated during routing or dispatch.
 4. **Failure Isolation:** Each subscriber operates an isolated queue and worker loop. A crash or timeout in one subscriber handler cannot crash the bus or delay other subscribers.
+5. **Thread-Safe Routing:** `EventRouter` is synchronized with `threading.RLock()`, guaranteeing thread safety across concurrent subscription registrations, unregistrations, and routing snapshot lookups.
+6. **Thread-Safe Observability:** `EventBusMetrics` is synchronized with `threading.Lock()`, guaranteeing atomic counter mutations and internally consistent metrics snapshots across all worker and publisher threads.
+7. **Deterministic Queue Task Accounting:** `SubscriberQueue` manages task progress using synchronous task accounting with `_unfinished_tasks` and `_finished = asyncio.Event()`, raising `ValueError` on underflow or double completion, and ensuring `join()` unblocks immediately upon queue closure or complete task drain.
 
 ---
 
@@ -138,6 +141,7 @@ The Event Bus supports both asynchronous coroutines and synchronous callables as
 All configuration parameters for `EventBusConfig`, `SubscriberQueue`, and `EventBus.subscribe()` are strictly validated:
 - `default_queue_capacity`, `publish_timeout_seconds`, `handler_timeout_seconds`, `shutdown_timeout_seconds`, `max_workers_per_subscription`, `sync_executor_workers`, and `starvation_threshold` must be strictly positive (`gt=0`).
 - Falsy or non-positive values (such as `0` or negative numbers) are explicitly rejected with `ValueError` or Pydantic `ValidationError` rather than falling back silently to defaults.
+- Shutdown timeouts in `stop(timeout)` are validated to ensure `timeout >= 0.0`, rejecting negative numbers with `ValueError`.
 
 ---
 
@@ -145,7 +149,7 @@ All configuration parameters for `EventBusConfig`, `SubscriberQueue`, and `Event
 
 1. **Queue Closure Semantics:** When `stop()` is invoked, the event bus transitions to `STOPPING` and immediately marks all subscriber queues as closed (`close()`).
 2. **Immediate Publisher Unblocking:** Closing subscriber queues immediately awakens all publishers awaiting queue space under the `WAIT` backpressure policy, raising `QueueClosedError` to prevent publishers from hanging during shutdown.
-3. **Queue Draining:** Active handlers and in-flight queue items are given up to `shutdown_timeout_seconds` to drain cleanly before worker tasks are cancelled.
+3. **Strict Shutdown Time Boundaries:** Active handlers and in-flight queue items are given a strict monotonically enforced deadline (`monotonic() + timeout`). The timeout is subdivided across queue draining and worker task cancellation, ensuring the total shutdown duration never overruns the configured timeout.
 4. **Evacuation:** Any items remaining in queues after worker cancellation are drained and marked with `DeliveryState.CANCELLED`.
 
 ---

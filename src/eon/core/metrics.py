@@ -1,6 +1,6 @@
 """Lightweight in-process metrics and operational observability for OVIC EON Event Bus."""
 
-import asyncio
+import threading
 from collections import deque
 from typing import Final
 
@@ -69,10 +69,17 @@ class EventBusMetricsSnapshot(EonBaseModel):
 
 
 class EventBusMetrics:
-    """Concurrency-safe metrics collector for the Event Bus."""
+    """Thread-safe and event-loop-safe operational metrics collector for OVIC EON Event Bus.
+
+    Concurrency Model:
+    Synchronized via a standard library threading.Lock protecting all counter mutations,
+    rolling latency reservoirs, and snapshot captures. This ensures atomic, internally
+    consistent metrics snapshots even when handlers or publishers record telemetry
+    from concurrent worker threads or asynchronous event-loop tasks.
+    """
 
     def __init__(self) -> None:
-        self._lock = asyncio.Lock()
+        self._lock = threading.Lock()
         self._total_published = 0
         self._accepted_events = 0
         self._delivered_events = 0
@@ -88,37 +95,46 @@ class EventBusMetrics:
         self._handler_durations: deque[float] = deque(maxlen=MAX_LATENCY_SAMPLES)
 
     def record_published(self) -> None:
-        self._total_published += 1
+        with self._lock:
+            self._total_published += 1
 
     def record_accepted(self) -> None:
-        self._accepted_events += 1
+        with self._lock:
+            self._accepted_events += 1
 
     def record_delivered(self, duration_ms: float = 0.0) -> None:
-        self._delivered_events += 1
-        if duration_ms >= 0:
-            self._handler_durations.append(duration_ms)
+        with self._lock:
+            self._delivered_events += 1
+            if duration_ms >= 0:
+                self._handler_durations.append(duration_ms)
 
     def record_rejected(self) -> None:
-        self._rejected_events += 1
+        with self._lock:
+            self._rejected_events += 1
 
     def record_dropped(self) -> None:
-        self._dropped_events += 1
+        with self._lock:
+            self._dropped_events += 1
 
     def record_failed(self, is_timeout: bool = False) -> None:
-        self._failed_deliveries += 1
-        if is_timeout:
-            self._handler_timeout_count += 1
+        with self._lock:
+            self._failed_deliveries += 1
+            if is_timeout:
+                self._handler_timeout_count += 1
 
     def record_cancelled(self) -> None:
-        self._cancelled_deliveries += 1
+        with self._lock:
+            self._cancelled_deliveries += 1
 
     def record_publish_latency(self, latency_ms: float) -> None:
-        if latency_ms >= 0:
-            self._publish_latencies.append(latency_ms)
+        with self._lock:
+            if latency_ms >= 0:
+                self._publish_latencies.append(latency_ms)
 
     def update_max_queue_depth(self, current_depth: int) -> None:
-        if current_depth > self._max_queue_depth:
-            self._max_queue_depth = current_depth
+        with self._lock:
+            if current_depth > self._max_queue_depth:
+                self._max_queue_depth = current_depth
 
     @staticmethod
     def _compute_percentile(samples: list[float], percentile: float) -> float:
@@ -135,29 +151,31 @@ class EventBusMetrics:
         active_workers: int = 0,
         current_queue_depth: int = 0,
     ) -> EventBusMetricsSnapshot:
-        """Generate an immutable snapshot of current metrics."""
-        self.update_max_queue_depth(current_queue_depth)
+        """Generate an immutable, internally consistent snapshot of current metrics."""
+        with self._lock:
+            if current_queue_depth > self._max_queue_depth:
+                self._max_queue_depth = current_queue_depth
 
-        pub_samples = list(self._publish_latencies)
-        hand_samples = list(self._handler_durations)
+            pub_samples = list(self._publish_latencies)
+            hand_samples = list(self._handler_durations)
 
-        return EventBusMetricsSnapshot(
-            total_published=self._total_published,
-            accepted_events=self._accepted_events,
-            delivered_events=self._delivered_events,
-            rejected_events=self._rejected_events,
-            dropped_events=self._dropped_events,
-            failed_deliveries=self._failed_deliveries,
-            cancelled_deliveries=self._cancelled_deliveries,
-            active_subscriptions=active_subscriptions,
-            active_workers=active_workers,
-            current_queue_depth=current_queue_depth,
-            max_queue_depth=self._max_queue_depth,
-            publish_latency_p50_ms=self._compute_percentile(pub_samples, 50.0),
-            publish_latency_p95_ms=self._compute_percentile(pub_samples, 95.0),
-            publish_latency_p99_ms=self._compute_percentile(pub_samples, 99.0),
-            handler_execution_p50_ms=self._compute_percentile(hand_samples, 50.0),
-            handler_execution_p95_ms=self._compute_percentile(hand_samples, 95.0),
-            handler_execution_p99_ms=self._compute_percentile(hand_samples, 99.0),
-            handler_timeout_count=self._handler_timeout_count,
-        )
+            return EventBusMetricsSnapshot(
+                total_published=self._total_published,
+                accepted_events=self._accepted_events,
+                delivered_events=self._delivered_events,
+                rejected_events=self._rejected_events,
+                dropped_events=self._dropped_events,
+                failed_deliveries=self._failed_deliveries,
+                cancelled_deliveries=self._cancelled_deliveries,
+                active_subscriptions=active_subscriptions,
+                active_workers=active_workers,
+                current_queue_depth=current_queue_depth,
+                max_queue_depth=self._max_queue_depth,
+                publish_latency_p50_ms=self._compute_percentile(pub_samples, 50.0),
+                publish_latency_p95_ms=self._compute_percentile(pub_samples, 95.0),
+                publish_latency_p99_ms=self._compute_percentile(pub_samples, 99.0),
+                handler_execution_p50_ms=self._compute_percentile(hand_samples, 50.0),
+                handler_execution_p95_ms=self._compute_percentile(hand_samples, 95.0),
+                handler_execution_p99_ms=self._compute_percentile(hand_samples, 99.0),
+                handler_timeout_count=self._handler_timeout_count,
+            )
