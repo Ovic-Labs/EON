@@ -1,10 +1,9 @@
 """Unit tests for package scaffolding and metadata verification."""
 
 import importlib
-import socket
+import subprocess
 import sys
-
-import pytest
+import tempfile
 
 import eon
 
@@ -49,28 +48,84 @@ def test_expected_module_boundaries_exist() -> None:
 
 
 def test_cpu_only_operation_no_gpu_required() -> None:
-    """AC-PH1.1-13: Verify that package import does not require CUDA or GPU libraries."""
-    assert "torch" not in sys.modules
-    assert "tensorflow" not in sys.modules
-    assert eon.__version__ is not None
+    """AC-PH1.1-13: Verify that package import does not require CUDA or GPU libraries.
+
+    Runs in an isolated subprocess to guarantee that neither torch, tensorflow,
+    nor jax are imported during base package import.
+    """
+    code = (
+        "import sys\n"
+        "import eon\n"
+        "for forbidden in ['torch', 'tensorflow', 'jax']:\n"
+        "    assert forbidden not in sys.modules, f'Unexpected GPU module imported: {forbidden}'\n"
+        "print('CPU_ONLY_OK')\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "CPU_ONLY_OK" in result.stdout
 
 
 def test_no_ros2_dependency_required_for_base_import() -> None:
-    """AC-PH1.1-13: Verify that base eon package does not require rclpy for importation."""
-    assert eon.__title__ == "ovic-eon"
-    # Base package must be importable without any ROS 2 environment active
-    assert "eon" in sys.modules
+    """AC-PH1.1-13: Verify that base eon package does not require ROS 2 (rclpy/rospy).
+
+    Runs in an isolated subprocess where rclpy and rospy are blocked from importing.
+    """
+    code = (
+        "import sys\n"
+        "sys.modules['rclpy'] = None\n"
+        "sys.modules['rospy'] = None\n"
+        "import eon\n"
+        "assert eon.__title__ == 'ovic-eon'\n"
+        "assert 'rclpy' not in sys.modules or sys.modules['rclpy'] is None\n"
+        "print('ROS2_INDEPENDENT_OK')\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "ROS2_INDEPENDENT_OK" in result.stdout
 
 
-def test_no_network_connection_on_import(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Verify that importing eon does not initiate external network socket connections."""
-    network_attempted = False
+def test_no_network_connection_on_import() -> None:
+    """Verify that importing eon does not initiate external network socket connections.
 
-    def guarded_connect(*_args: object, **_kwargs: object) -> None:
-        nonlocal network_attempted
-        network_attempted = True
-        raise RuntimeError("Unexpected network socket connection attempted during package import!")
+    Runs in a fresh isolated subprocess where network socket calls are trapped before import.
+    """
+    code = (
+        "import socket\n"
+        "import sys\n"
+        "def guarded_connect(*_args, **_kwargs):\n"
+        "    raise RuntimeError('Unexpected socket connection attempt!')\n"
+        "socket.socket.connect = guarded_connect\n"
+        "socket.socket.connect_ex = guarded_connect\n"
+        "socket.create_connection = guarded_connect\n"
+        "import eon\n"
+        "assert eon.__version__ == '0.1.0'\n"
+        "print('NETWORK_ISOLATED_OK')\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "NETWORK_ISOLATED_OK" in result.stdout
 
-    monkeypatch.setattr(socket.socket, "connect", guarded_connect)
-    importlib.reload(eon)
-    assert not network_attempted
+
+def test_import_from_arbitrary_working_directory() -> None:
+    """AC-PH1.1-04: Verify that eon is importable from outside the repository root."""
+    code = "import eon\nprint(eon.__version__)\n"
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=tempfile.gettempdir(),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == "0.1.0"

@@ -119,6 +119,20 @@ python -m build
 ```
 Built artifacts are placed in the `dist/` directory (ignored by `.gitignore`).
 
+### 3.5 Security Audit with pip-audit
+Verify that no installed runtime or development dependencies have known vulnerabilities:
+```bash
+python -m pip_audit
+```
+Note: `ovic-eon` itself will be reported as skipped because it is a local package not yet published on PyPI.
+
+### 3.6 Governance and Documentation Audit
+Run the automated documentation qualification suite:
+```bash
+python scripts/validate_docs.py
+npx --yes markdownlint-cli2 "**/*.md"
+```
+
 ---
 
 ## 4. Troubleshooting and Common Errors
