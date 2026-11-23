@@ -381,18 +381,22 @@ def check_rtm_metrics(base_dir: str = ".") -> bool:
         return False
 
     metrics = data.get("metrics", {})
-    if metrics.get("total_source_requirements") != 290:
-        found_cnt = metrics.get("total_source_requirements")
-        print(f"FAILED: Expected 290 source requirements, found {found_cnt}")
-        return False
-    if metrics.get("total_srs_requirements") != 203:
-        found_srs = metrics.get("total_srs_requirements")
-        print(f"FAILED: Expected 203 SRS requirements, found {found_srs}")
-        return False
-    if metrics.get("total_acceptance_criteria") != 179:
-        found_ac = metrics.get("total_acceptance_criteria")
-        print(f"FAILED: Expected 179 acceptance criteria, found {found_ac}")
-        return False
+    sub_metrics = [
+        ("total_source_requirements", 290),
+        ("functional_requirements_count", 60),
+        ("non_functional_requirements_count", 78),
+        ("performance_requirements_count", 66),
+        ("privacy_safety_requirements_count", 86),
+        ("total_srs_requirements", 203),
+        ("total_acceptance_criteria", 179),
+        ("total_use_cases", 54),
+    ]
+    for metric_name, expected_val in sub_metrics:
+        val = metrics.get(metric_name)
+        if val != expected_val:
+            print(f"FAILED: Metric '{metric_name}' expected {expected_val}, found {val}")
+            return False
+
     if (
         metrics.get("coverage_percentage") != 100.0
         or metrics.get("specification_mapping_coverage_percentage") != 100.0
@@ -460,9 +464,74 @@ def check_traceability_completeness(base_dir: str = ".") -> bool:
         )
         return False
 
+    # ID-level and schema validation
+    expected_id_sets = {
+        "functional": {f"EON-FR-{i:03d}" for i in range(1, 61)},
+        "non_functional": {f"EON-NFR-{i:03d}" for i in range(1, 79)},
+        "performance": {f"EON-PERF-{i:03d}" for i in range(1, 67)},
+        "privacy_and_safety": {f"EON-PSR-{i:03d}" for i in range(1, 87)},
+        "srs": {f"EON-SRS-{i:03d}" for i in range(1, 204)},
+    }
+    allowed_statuses = {
+        "APPROVED_BASELINE",
+        "APPROVED",
+        "SPECIFIED",
+        "PROVISIONAL_NOT_BENCHMARKED",
+    }
+
+    for cat, expected_set in expected_id_sets.items():
+        actual_items = reqs.get(cat, [])
+        actual_ids: set[str] = set()
+        for item in actual_items:
+            if not isinstance(item, dict):
+                print(f"FAILED: Malformed requirement record in {cat}: {item}")
+                return False
+            req_id = item.get("id")
+            if not req_id:
+                print(f"FAILED: Missing requirement ID in {cat}: {item}")
+                return False
+            if req_id in actual_ids:
+                print(f"FAILED: Duplicate requirement ID in {cat}: {req_id}")
+                return False
+            actual_ids.add(req_id)
+
+            if not item.get("title"):
+                print(f"FAILED: Missing title in {cat} item: {req_id}")
+                return False
+
+            status = item.get("status")
+            if status not in allowed_statuses:
+                print(f"FAILED: Invalid requirement status '{status}' for {req_id}")
+                return False
+
+        diff = actual_ids ^ expected_set
+        if diff:
+            print(f"FAILED: Requirement ID mismatch in {cat}: {diff}")
+            return False
+
+    # Cross-reference with markdown specification headers if present
+    md_map = {
+        "functional": ("docs/product/FUNCTIONAL_REQUIREMENTS.md", "EON-FR"),
+        "non_functional": ("docs/product/NON_FUNCTIONAL_REQUIREMENTS.md", "EON-NFR"),
+        "performance": ("docs/product/PERFORMANCE_REQUIREMENTS.md", "EON-PERF"),
+        "privacy_and_safety": ("docs/product/PRIVACY_AND_SAFETY_REQUIREMENTS.md", "EON-PSR"),
+        "srs": ("docs/requirements/SRS.md", "EON-SRS"),
+    }
+    for cat, (rel_path, prefix) in md_map.items():
+        md_file = os.path.normpath(os.path.join(base_dir, rel_path))
+        if os.path.exists(md_file):
+            with open(md_file, encoding="utf-8") as f:
+                content = f.read()
+            header_ids = set(re.findall(rf"^#+\s+({prefix}-\d{{3}})", content, re.MULTILINE))
+            json_ids = {r["id"] for r in reqs[cat]}
+            if header_ids != json_ids:
+                diff_ids = header_ids ^ json_ids
+                print(f"FAILED: Headers in {rel_path} do not match JSON IDs: {diff_ids}")
+                return False
+
     print(
         "SUCCESS: Traceability complete: 290 source requirements "
-        "(60 FR, 78 NFR, 66 PERF, 86 PSR), 203 SRS, 54 Use Cases."
+        "(60 FR, 78 NFR, 66 PERF, 86 PSR), 203 SRS, 54 Use Cases verified by exact IDs."
     )
     return True
 

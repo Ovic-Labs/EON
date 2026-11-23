@@ -202,10 +202,10 @@ SUCCESS: All 16 Phase 0 documents contain complete governance metadata headers.
 ```
 
 ### 6.1 Validator Automated Test Suite
-The validator script is itself tested by a dedicated unit test suite ([tests/unit/test_validate_docs.py](../../tests/unit/test_validate_docs.py)) containing **31 automated tests**:
+The validator script is itself tested by a dedicated unit test suite ([tests/unit/test_validate_docs.py](../../tests/unit/test_validate_docs.py)) containing **38 automated tests**:
 - **16 Positive Tests:** Validating the live repository state against all 15 gates and full suite.
-- **15 Negative Tests:** Testing each gate against isolated mock directories containing missing files, bad URLs, broken links, duplicate requirement IDs, malformed JSON metrics, premature runtime passes, and missing safety invariants.
-- **Result:** `31 passed in 0.81s` (100% pass rate).
+- **22 Negative Tests:** Testing each gate against isolated mock directories containing missing files, bad URLs, broken links, duplicate requirement IDs, malformed JSON metrics, missing titles, invalid statuses, requirement count mismatches, premature runtime passes, and missing safety invariants.
+- **Result:** `38 passed in 0.72s` (100% pass rate).
 
 ---
 
@@ -225,27 +225,60 @@ All identified documentation defects have been tracked in [DEFECT_REGISTER.md](D
 
 ---
 
-## 8. Phase 1 Implementation Preservation Audit
+## 8. Reconciled Test Inventory & Regression Preservation Audit
 
-The repository contains verified implementations from previous Phase 1 milestones that have been carefully audited and preserved without regression:
+The repository contains verified implementations from previous Phase 1 milestones that have been carefully audited and preserved without regression. The test suite strictly distinguishes Phase 1 runtime regression tests from Phase 0 documentation validator tests to eliminate any double-counting:
 
-| Milestone | Scope & Deliverables | Implementation Status | Test Count | Audit Finding |
-|---|---|---|---|---|
-| **Phase 1.1** | Repository Scaffolding, Python Package Config, CI Matrix (Python 3.10, 3.11, 3.12) | Implemented & Built | 8 Tests | Clean build, PyPI-ready sdist & wheel packaging, zero-dependency base import verified. |
-| **Phase 1.2** | Data Schemas, `EventEnvelope[T]`, Pydantic v2 Models, SemVer Compatibility | Implemented & Typed | 27 Tests | Strict schema validation, ISO 8601 UTC timestamps, immutability, polymorphism verified. |
-| **Phase 1.3** | Core Event Bus, Bounded Async Queues, Backpressure Policies, Dead-Letter Exchange | Implemented & Benchmarked | 130 Tests | In-memory pub/sub, exact/wildcard routing, backpressure, priority queues, synchronous executor isolation verified. |
-| **Documentation Validation** | 15-Gate Validation Suite (`scripts/validate_docs.py`) & Tests | Implemented & Tested | 31 Tests | Both positive live checks and negative mock tests passing cleanly. |
-| **Total Test Suite** | **Entire Automated Test Suite** | **Fully Operational** | **196 Tests** | **196 passed in 13.40s (100% pass rate)** |
+| Test Category | Target Subsystem | Test Path / Modules | Test Count | Classification | Pass Status |
+|---|---|---|---|---|---|
+| **Phase 1.1 Packaging Scaffolding** | Packaging, build metadata, imports, CLI | `tests/unit/test_package.py`<br>`tests/integration/test_packaging.py`<br>`tests/integration/test_scaffolding.py` | 15 Tests | Regression Baseline | **PASSED** (100%) |
+| **Phase 1.2 Data Schemas & Contracts** | Event envelopes, Pydantic v2, serialization, SemVer | `tests/unit/schemas/` (12 modules)<br>`tests/contract/` (3 modules) | 69 Tests | Regression Baseline | **PASSED** (100%) |
+| **Phase 1.3 Core Event Bus** | Async priority queue, routing, backpressure, dead-letter | `tests/unit/core/` (22 modules)<br>`tests/integration/test_*.py` (5 modules)<br>`tests/benchmarks/` (3 benchmarks) | 81 Tests | Regression Baseline | **PASSED** (100%) |
+| **Subtotal Phase 1.1–1.3** | **Core Runtime Infrastructure** | **All Phase 1 Implementation Tests** | **165 Tests** | **Regression Baseline** | **PASSED** (100%) |
+| **Phase 0 Documentation Validation** | 15-Gate audit engine (16 positive + 22 negative tests) | `tests/unit/test_validate_docs.py` | 38 Tests | Specification Verification | **PASSED** (100%) |
+| **Grand Total Pytest Inventory** | **Complete Repository Test Suite** | **Collected and executed via Pytest** | **203 Tests** | **Full CI Suite** | **PASSED** (100%) |
 
-*Explicit Affirmation:* **Phase 1.4 has NOT been started.** The seven intelligence engines remain in the specification stage.
+*Explicit Affirmation:*
+1. **Zero Double-Counting:** The 165 Phase 1 regression tests and 38 Phase 0 validator tests constitute the exact 203 collected items (`pytest --collect-only -q`).
+2. **Phase 1.4 Not Started:** Phase 1.4 (Engine Execution Harness) has **NOT** been started.
+3. **Seven Engines Specified Only:** The seven intelligence engines remain strictly in the specification stage (0.0% implementation coverage).
 
 ---
 
-## 9. Deliverable File Inventory
+## 9. GitHub Actions CI Execution Evidence
+
+The exact qualification workflow executed on GitHub Actions against the commit baseline:
+
+### 9.1 Documentation Qualification Workflow
+- **Workflow Name:** `Documentation Qualification`
+- **Trigger Event:** `push` on `main`
+- **Workflow Run ID:** `45147403340`
+- **Workflow Run URL:** [https://github.com/Ovic-Labs/EON/actions/runs/45147403340](https://github.com/Ovic-Labs/EON/actions/runs/45147403340)
+- **Overall Conclusion:** `success`
+- **Job Inventory:**
+  1. `Documentation Qualification and Link Validation` (Job ID: `137599998362`) — `success` (5s)
+  2. `Markdown Linting` (Job ID: `137599998744`) — `success` (5s)
+  3. `Package Test & Quality Gates (Python 3.11)` (Job ID: `137599998755`) — `success` (39s)
+  4. `Package Test & Quality Gates (Python 3.10)` (Job ID: `137599998797`) — `success` (44s)
+  5. `Package Test & Quality Gates (Python 3.12)` (Job ID: `137599998958`) — `success` (36s)
+
+### 9.2 CodeQL Security Workflow
+- **Workflow Name:** `CodeQL`
+- **Trigger Event:** `dynamic` push
+- **Workflow Run ID:** `45147403874`
+- **Workflow Run URL:** [https://github.com/Ovic-Labs/EON/actions/runs/45147403874](https://github.com/Ovic-Labs/EON/actions/runs/45147403874)
+- **Overall Conclusion:** `success`
+- **Job Inventory:**
+  1. `Analyze (actions)` (Job ID: `137600006718`) — `success` (42s)
+  2. `Analyze (python)` (Job ID: `137600007228`) — `success` (1m0s)
+
+---
+
+## 10. Deliverable File Inventory
 
 The complete Phase 0 specification baseline consists of 16 product/requirements specifications and 19 governance files:
 
-### 9.1 Phase 0 Product & Requirements Specifications (16 Documents)
+### 10.1 Phase 0 Product & Requirements Specifications (16 Documents)
 1. `docs/product/PRODUCT_VISION.md`
 2. `docs/product/ENGINE_SCOPE.md`
 3. `docs/product/CUSTOMER_SEGMENTS.md`
@@ -263,7 +296,7 @@ The complete Phase 0 specification baseline consists of 16 product/requirements 
 15. `docs/acceptance/DEFECT_REGISTER.md`
 16. `docs/acceptance/RELEASE_ACCEPTANCE.md`
 
-### 9.2 Key Governance & Traceability Files
+### 10.2 Key Governance & Traceability Files
 - `docs/requirements/requirement_traceability_matrix.json` (Machine-readable RTM)
 - `docs/acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md` (Prior Verification Report)
 - `docs/acceptance/PHASE_0_PRODUCTION_QUALIFICATION_REPORT.md` (This Production Report)
@@ -272,16 +305,16 @@ The complete Phase 0 specification baseline consists of 16 product/requirements 
 
 ---
 
-## 10. Final Authorization Statement
+## 11. Final Authorization Statement
 
 **Lead Auditor Statement:**  
-I hereby certify that OVIC EON Phase 0 has undergone thorough architectural review, requirements audit, boundary hardening, and automated qualification. All fifteen sub-phases are fully specified, reconciled, and validated. All 15 automated validation gates and all 196 unit and integration tests pass without error.
+I hereby certify that OVIC EON Phase 0 has undergone thorough architectural review, requirements audit, boundary hardening, and automated qualification. All fifteen sub-phases are fully specified, reconciled, and validated. All 15 automated validation gates and all 203 unit, integration, and validator tests pass without error.
 
 **Formal Qualification Decision:**  
 **`PRODUCTION-QUALIFIED — PROJECT FOUNDATION`**
 
 **Executive Founder Endorsement:**  
-Phase 0 is formally approved as the production-qualified foundation for OVIC EON. Future development may proceed into subsequent implementation milestones in accordance with the established architectural constraints and safety invariants.
+Phase 0 is formally approved as the production-qualified foundation for OVIC EON. Future development may proceed into subsequent implementation milestones in accordance with the established architectural constraints, non-authoritative actuation invariants (`is_authoritative_stop=False`), and safety boundaries.
 
 **Signed:**  
 *Product Founder & Technical Lead Architect*  

@@ -214,20 +214,70 @@ def test_gate9_defect_register_open_critical_fails(tmp_path: Path) -> None:
     assert check_defect_register_integrity(str(tmp_path)) is False
 
 
+def _make_valid_rtm_dict() -> dict:
+    """Helper to produce a valid in-memory RTM dictionary structure."""
+    return {
+        "metrics": {
+            "total_source_requirements": 290,
+            "functional_requirements_count": 60,
+            "non_functional_requirements_count": 78,
+            "performance_requirements_count": 66,
+            "privacy_safety_requirements_count": 86,
+            "total_srs_requirements": 203,
+            "total_acceptance_criteria": 179,
+            "total_use_cases": 54,
+            "coverage_percentage": 100.0,
+            "specification_mapping_coverage_percentage": 100.0,
+            "implementation_coverage_percentage": 0.0,
+        },
+        "requirements": {
+            "functional": [
+                {"id": f"EON-FR-{i:03d}", "title": f"FR {i}", "status": "APPROVED_BASELINE"}
+                for i in range(1, 61)
+            ],
+            "non_functional": [
+                {"id": f"EON-NFR-{i:03d}", "title": f"NFR {i}", "status": "APPROVED_BASELINE"}
+                for i in range(1, 79)
+            ],
+            "performance": [
+                {
+                    "id": f"EON-PERF-{i:03d}",
+                    "title": f"PERF {i}",
+                    "status": "PROVISIONAL_NOT_BENCHMARKED",
+                }
+                for i in range(1, 67)
+            ],
+            "privacy_and_safety": [
+                {"id": f"EON-PSR-{i:03d}", "title": f"PSR {i}", "status": "APPROVED_BASELINE"}
+                for i in range(1, 87)
+            ],
+            "srs": [
+                {"id": f"EON-SRS-{i:03d}", "title": f"SRS {i}", "status": "APPROVED_BASELINE"}
+                for i in range(1, 204)
+            ],
+            "use_cases": [{"id": f"UC-CASE-{i:03d}", "title": f"UC {i}"} for i in range(1, 55)],
+        },
+    }
+
+
 def test_gate10_rtm_metrics_premature_implementation_fails(tmp_path: Path) -> None:
     """Gate 10 fails if RTM JSON reports non-zero implementation for Phase 0."""
     req_dir = tmp_path / "docs" / "requirements"
     req_dir.mkdir(parents=True)
     rtm_file = req_dir / "requirement_traceability_matrix.json"
-    data = {
-        "metrics": {
-            "total_requirements": 290,
-            "srs_requirements": 203,
-            "acceptance_criteria": 179,
-            "specification_coverage_pct": 100.0,
-            "implementation_coverage_pct": 50.0,  # Invalid: Phase 0 is spec baseline
-        }
-    }
+    data = _make_valid_rtm_dict()
+    data["metrics"]["implementation_coverage_percentage"] = 50.0
+    rtm_file.write_text(json.dumps(data), encoding="utf-8")
+    assert check_rtm_metrics(str(tmp_path)) is False
+
+
+def test_gate10_rtm_metrics_incorrect_totals_fails(tmp_path: Path) -> None:
+    """Gate 10 fails when metric counts do not match expected totals."""
+    req_dir = tmp_path / "docs" / "requirements"
+    req_dir.mkdir(parents=True)
+    rtm_file = req_dir / "requirement_traceability_matrix.json"
+    data = _make_valid_rtm_dict()
+    data["metrics"]["functional_requirements_count"] = 59
     rtm_file.write_text(json.dumps(data), encoding="utf-8")
     assert check_rtm_metrics(str(tmp_path)) is False
 
@@ -248,6 +298,74 @@ def test_gate11_traceability_completeness_count_mismatch_fails(tmp_path: Path) -
         }
     }
     rtm_file.write_text(json.dumps(data), encoding="utf-8")
+    assert check_traceability_completeness(str(tmp_path)) is False
+
+
+def test_gate11_missing_id_in_category_fails(tmp_path: Path) -> None:
+    """Gate 11 fails when an expected requirement ID is missing or replaced."""
+    req_dir = tmp_path / "docs" / "requirements"
+    req_dir.mkdir(parents=True)
+    rtm_file = req_dir / "requirement_traceability_matrix.json"
+    data = _make_valid_rtm_dict()
+    data["requirements"]["functional"][-1]["id"] = "EON-FR-999"
+    rtm_file.write_text(json.dumps(data), encoding="utf-8")
+    assert check_traceability_completeness(str(tmp_path)) is False
+
+
+def test_gate11_duplicate_id_in_json_fails(tmp_path: Path) -> None:
+    """Gate 11 fails when duplicate requirement IDs exist within a category."""
+    req_dir = tmp_path / "docs" / "requirements"
+    req_dir.mkdir(parents=True)
+    rtm_file = req_dir / "requirement_traceability_matrix.json"
+    data = _make_valid_rtm_dict()
+    data["requirements"]["functional"][1]["id"] = "EON-FR-001"
+    rtm_file.write_text(json.dumps(data), encoding="utf-8")
+    assert check_traceability_completeness(str(tmp_path)) is False
+
+
+def test_gate11_malformed_record_in_json_fails(tmp_path: Path) -> None:
+    """Gate 11 fails when an item record is not a dictionary."""
+    req_dir = tmp_path / "docs" / "requirements"
+    req_dir.mkdir(parents=True)
+    rtm_file = req_dir / "requirement_traceability_matrix.json"
+    data = _make_valid_rtm_dict()
+    data["requirements"]["functional"][0] = "malformed-string"
+    rtm_file.write_text(json.dumps(data), encoding="utf-8")
+    assert check_traceability_completeness(str(tmp_path)) is False
+
+
+def test_gate11_missing_title_in_json_fails(tmp_path: Path) -> None:
+    """Gate 11 fails when a requirement record lacks a title."""
+    req_dir = tmp_path / "docs" / "requirements"
+    req_dir.mkdir(parents=True)
+    rtm_file = req_dir / "requirement_traceability_matrix.json"
+    data = _make_valid_rtm_dict()
+    del data["requirements"]["functional"][0]["title"]
+    rtm_file.write_text(json.dumps(data), encoding="utf-8")
+    assert check_traceability_completeness(str(tmp_path)) is False
+
+
+def test_gate11_invalid_status_in_json_fails(tmp_path: Path) -> None:
+    """Gate 11 fails when a requirement has an unauthorized lifecycle status."""
+    req_dir = tmp_path / "docs" / "requirements"
+    req_dir.mkdir(parents=True)
+    rtm_file = req_dir / "requirement_traceability_matrix.json"
+    data = _make_valid_rtm_dict()
+    data["requirements"]["functional"][0]["status"] = "UNAUTHORIZED_PRODUCTION"
+    rtm_file.write_text(json.dumps(data), encoding="utf-8")
+    assert check_traceability_completeness(str(tmp_path)) is False
+
+
+def test_gate11_markdown_json_id_mismatch_fails(tmp_path: Path) -> None:
+    """Gate 11 fails when markdown headers do not match JSON requirement IDs."""
+    req_dir = tmp_path / "docs" / "requirements"
+    prod_dir = tmp_path / "docs" / "product"
+    req_dir.mkdir(parents=True)
+    prod_dir.mkdir(parents=True)
+    rtm_file = req_dir / "requirement_traceability_matrix.json"
+    fr_file = prod_dir / "FUNCTIONAL_REQUIREMENTS.md"
+    rtm_file.write_text(json.dumps(_make_valid_rtm_dict()), encoding="utf-8")
+    fr_file.write_text("## EON-FR-999 — Mismatched\n", encoding="utf-8")
     assert check_traceability_completeness(str(tmp_path)) is False
 
 
