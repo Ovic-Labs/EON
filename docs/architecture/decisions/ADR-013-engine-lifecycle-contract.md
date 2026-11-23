@@ -16,7 +16,7 @@ How can OVIC EON govern engine lifecycles through a single, consistent protocol 
 
 ## 3. Decision
 Adopt a **Unified 11-State Engine Lifecycle Contract (`EonEngineContract`)**:
-1. **11-State Formal State Machine:** Standardize engine state transitions: `DISCOVERED` -> `REGISTERED` -> `VALIDATING` -> `INITIALIZING` -> `INITIALIZED` -> `STARTING` -> `RUNNING` -> `DEGRADED` -> `PAUSED` -> `STOPPING` -> `STOPPED` (or `FAILED`).
+1. **11-State Formal State Machine & 7-State Operational Health Projection:** Standardize internal engine state transitions (`DISCOVERED` -> `REGISTERED` -> `VALIDATING` -> `INITIALIZING` -> `INITIALIZED` -> `STARTING` -> `RUNNING` -> `DEGRADED` -> `PAUSED` -> `STOPPING` -> `STOPPED` with terminal `FAILED`), and project external health onto a 7-state operational view (`UNINITIALIZED`, `INITIALIZING`, `ACTIVE`, `PAUSED`, `DEGRADED`, `STOPPED`, `FAULTED`) for external APIs and the Python SDK.
 2. **Topological Startup & Reverse Shutdown:** Core starts engines in forward topological order (Tier 1: HBU/ERS -> Tier 2: EMS/SIE -> Tier 3: ERE/PSE -> Tier 4: ERG) and shuts them down in exact reverse order, preventing broken event pipelines.
 3. **Automated Exponential Backoff Recovery:** An engine entering `DEGRADED` or `FAILED` is granted up to 3 automated recovery attempts before being permanently quarantined, preserving platform stability.
 4. **Explicit Resource Declarations:** Engines must declare thread limits, memory budgets, queue capacities, and backpressure policies at registration time.

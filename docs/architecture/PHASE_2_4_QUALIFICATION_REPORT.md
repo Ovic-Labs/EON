@@ -33,7 +33,15 @@ Sub-phase 2.4 satisfies 100% of the mandatory architectural specifications, 11-s
 
 ---
 
-## 3. Acceptance Criteria Verification
+## 3. Authoritative Lifecycle Model Reconciliation
+
+- **Authoritative Internal FSM:** Exactly 11 operational lifecycle states (`DISCOVERED`, `REGISTERED`, `VALIDATING`, `INITIALIZING`, `INITIALIZED`, `STARTING`, `RUNNING`, `DEGRADED`, `PAUSED`, `STOPPING`, `STOPPED`) plus `FAILED` terminal fault state.
+- **External 7-State Operational Health Projection:** Coarse-grained projection for API/telemetry/SDK callers (`UNINITIALIZED`, `INITIALIZING`, `ACTIVE`, `PAUSED`, `DEGRADED`, `STOPPED`, `FAULTED`).
+- **Discrepancy Resolution:** Earlier drafting text referring to the operational model as "six states but listing seven" was corrected; the external projection defines exactly seven states, mapped bijectively to internal FSM phases.
+
+---
+
+## 4. Acceptance Criteria Verification
 
 - [x] All seven engines have a common lifecycle contract (`EonEngineContract`).
 - [x] Every lifecycle transition has a defined trigger and guard condition.

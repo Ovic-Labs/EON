@@ -23,7 +23,7 @@ Sub-phase 2.9 satisfies 100% of the mandatory architectural specifications, endp
 | Deliverable Path | Document ID | Description |
 |---|---|---|
 | `docs/architecture/API_ARCHITECTURE.md` | `EON-ARCH-API-001` | Master API architecture and technology selections |
-| `docs/architecture/API_ENDPOINT_CATALOG.md` | `EON-SPEC-API-001` | Catalog of 12 REST endpoints and WebSocket channels |
+| `docs/architecture/API_ENDPOINT_CATALOG.md` | `EON-SPEC-API-001` | Catalog of 11 REST endpoints and 1 WebSocket channel (12 total) |
 | `docs/architecture/API_AUTHENTICATION_AND_AUTHORIZATION.md` | `EON-SPEC-API-002` | API keys, JWT tokens, and 3-tier RBAC matrix |
 | `docs/architecture/API_SECURITY.md` | `EON-POL-API-001` | Rate limiting, input validation, and DoS defenses |
 | `docs/architecture/API_VERSIONING_AND_COMPATIBILITY.md` | `EON-SPEC-API-003` | URL versioning, OpenAPI generation, and deprecation |
@@ -35,7 +35,15 @@ Sub-phase 2.9 satisfies 100% of the mandatory architectural specifications, endp
 
 ---
 
-## 3. Acceptance Criteria Verification
+## 3. API Endpoint Inventory Reconciliation
+
+- **Authoritative Verified Inventory:** Exactly **11 REST endpoints and 1 WebSocket stream** (total: 12 API interfaces) as specified in `EON-SPEC-API-001` v2.0.0.
+- **Discrepancy Resolution:** Earlier consolidated summary statements referencing 24 REST endpoints and 4 WebSocket streams were found to be an ungrounded projection. The inventory has been rigorously reconciled against the specification.
+- **Implementation Status:** Every endpoint is formally classified as `DESIGNED — NOT IMPLEMENTED (Phase 2 Architecture Specification Baseline)`. Production runtime endpoints are deferred to subsequent implementation phases.
+
+---
+
+## 4. Acceptance Criteria Verification
 
 - [x] API boundaries separate internal services from public endpoints.
 - [x] Endpoint contracts are sufficiently detailed for future implementation.

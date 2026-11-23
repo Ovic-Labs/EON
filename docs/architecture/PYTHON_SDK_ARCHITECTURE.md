@@ -92,7 +92,7 @@ The EON Python SDK supports two operational execution modes through a unified cl
 In **Local In-Process Mode**, the SDK binds directly to the running EON Core runtime within the same Python interpreter or native host process:
 - **Use Case:** Robot onboard compute (e.g., NVIDIA Jetson AGX Orin, Advantech edge nodes) where minimal latency and zero serialization overhead are mandatory.
 - **Mechanism:** Direct Python module references and memory pointers to `eon.core.kernel.Kernel`, `eon.core.context.ContextManager`, and `eon.core.broker.EventBroker`.
-- **Latency Target:** $< 0.5\text{ ms}$ call latency for context lookups and synchronous event dispatching.
+- **Latency Target:** $< 0.5\text{ ms}$ call latency for context lookups and synchronous event dispatching (**PROVISIONAL — NOT RUNTIME BENCHMARKED**; subject to Section 8 benchmark protocol).
 - **Concurrency:** Leverages Python `asyncio` loop running alongside core task supervisors; inter-engine threading managed via OS-native worker threads.
 
 ### 3.2 Remote Client Mode
@@ -489,7 +489,30 @@ if __name__ == "__main__":
 
 ---
 
-## 7. Architectural Compliance & Traceability
+## 8. Future Hardware Benchmark Protocol
+
+To transition provisional performance targets (`< 0.5 ms` in-process dispatch) to empirically verified standards, the following standardized benchmark protocol is established for execution during physical hardware integration milestones:
+
+```text
++===================================================================================================+
+| Benchmark Parameter   | Specification / Requirement                                               |
++===================================================================================================+
+| Target Reference HW   | NVIDIA Jetson AGX Orin Developer Kit (64GB) / Intel Core Ultra 5 125H     |
+| Operating System      | Ubuntu 22.04.4 LTS (Linux kernel 5.15.136-tegra or 6.5.0-lowlatency)      |
+| Python Environment    | CPython 3.11.9 (standard distribution with optimizations enabled)         |
+| Harness Tooling       | pytest-benchmark with OS high-resolution monotonic timer (perf_counter_ns)|
+| Workload Suite        | 1. Direct in-memory event dispatch (EventBroker.publish_and_wait)         |
+|                       | 2. Shared context concurrent read/write (ContextManager.get_user_profile) |
+| Warm-up Period        | 1,000 unmeasured iterations to allow JIT/cache stabilization              |
+| Measurement Scope     | 10,000 recorded iterations executed across 5 isolated trials              |
+| Statistical Metrics   | p50, p90, p95, p99, maximum latency, standard deviation, and RSS delta   |
+| Pass Criteria         | p95 latency < 0.5 ms; zero deadlocks; zero memory growth across trials    |
++===================================================================================================+
+```
+
+---
+
+## 9. Architectural Compliance & Traceability
 
 This specification directly satisfies requirements from Phase 0 Product Foundation and Phase 1 Research:
 

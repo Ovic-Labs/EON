@@ -452,6 +452,7 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [API Architecture](docs/architecture/API_ARCHITECTURE.md)
 - [Python SDK Architecture](docs/architecture/PYTHON_SDK_ARCHITECTURE.md)
 - [Architecture Decision Records (ADR-001 through ADR-019)](docs/architecture/decisions/ADR-001-LAYERED-ARCHITECTURE.md)
+- [Phase 2.3–2.10 Architecture Correction Audit](docs/architecture/PHASE_2_3_TO_2_10_CORRECTION_AUDIT.md)
 - [Phase 2.3–2.10 Master Qualification Report](docs/architecture/PHASE_2_3_TO_2_10_FINAL_QUALIFICATION_REPORT.md)
 
 ### Additional documentation

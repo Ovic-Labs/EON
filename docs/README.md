@@ -3,11 +3,14 @@
 **Emotional Intelligence Infrastructure for Robotics**  
 **Organization:** OVIC Labs  
 **Repository:** [https://github.com/Ovic-Labs/EON.git](https://github.com/Ovic-Labs/EON.git)  
-**Milestone:** Phase 0 — Foundation and Documentation Qualification (FOUNDER APPROVED — BASELINE ACCEPTED)  
-**Next Milestone:** Phase 1 — Engineering Infrastructure & Core Runtime Foundation (AUTHORIZED TO BEGIN — NOT YET VERIFIED)  
-**Status:** Phase 0: FOUNDER APPROVED — BASELINE ACCEPTED | Implementation: NOT STARTED (0%) | Production Readiness: NOT QUALIFIED  
+**Current Phase:** Phase 2 — System Architecture and Engineering Design (Sub-phases 2.1–2.10 Qualified)  
+**Core Runtime Status:** Phase 1 Foundation Implemented & Verified (Sub-phases 1.1–1.3: 203 passing tests)  
+**Research Status:** Phase 1 Technical Feasibility Qualified With Conditions (Sub-phases 1.1–1.18)  
+**Product Baseline:** Phase 0 Product Foundation Production-Qualified (290 source requirements, 100% spec traceability)  
+**Intelligence Engines Status:** Seven Engine Runtimes Not Implemented (0%) — Architecture & Boundaries Specified  
+**Production Readiness:** Not Qualified — Emotional Intelligence Infrastructure in Active Architecture & Engineering  
 
-Welcome to the central documentation index for **OVIC EON**. This document catalogues all 15 Phase 0 engineering and product specifications, outlines their relationships, and provides structured reading guides for various stakeholders.
+Welcome to the central documentation index for **OVIC EON**. This document catalogues all engineering specifications, product documentation, technical research, architecture baselines, and qualification reports across Phases 0, 1, and 2.
 
 ---
 
@@ -177,7 +180,7 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | [ADR-010](architecture/decisions/ADR-010-EDGE-CLOUD-SEPARATION.md) | Edge-First Execution and Cloud Separation Boundary | Approved | Air-gapped edge autonomy with zero cloud dependency |
 | [ADR-011](architecture/decisions/ADR-011-SECURITY-AND-PRIVACY-ARCHITECTURE.md) | Security, Privacy, and Verifiable Data Governance | Approved | Zero raw media persistence and cryptographic shredding |
 | [ADR-012](architecture/decisions/ADR-012-eon-core-architecture.md) | EON Core Architecture & Kernel Orchestration | Approved | Kernel supervision and deterministic lifecycle sequence |
-| [ADR-013](architecture/decisions/ADR-013-engine-lifecycle-contract.md) | Engine Lifecycle Contract Protocol | Approved | 6-state engine FSM and escalation recovery policies |
+| [ADR-013](architecture/decisions/ADR-013-engine-lifecycle-contract.md) | Engine Lifecycle Contract Protocol | Approved | 11-state engine lifecycle FSM and 7-state operational health projection |
 | [ADR-014](architecture/decisions/ADR-014-event-driven-communication-and-delivery-guarantees.md) | Event-Driven Communication and Delivery Guarantees | Approved | Bounded message broker, topic taxonomy, and QoS |
 | [ADR-015](architecture/decisions/ADR-015-shared-context-and-access-control.md) | Shared Context Architecture & Access Control | Approved | Optimistic concurrency and capability-scoped contexts |
 | [ADR-016](architecture/decisions/ADR-016-provider-neutral-model-adapter-architecture.md) | Provider-Neutral Model Adapter Architecture | Approved | Hardware abstraction, multi-backend routing, and fallback |
@@ -198,6 +201,7 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | [Phase 2.8 Qualification Report](architecture/PHASE_2_8_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.8-001 | Architecture qualification report for Sub-phase 2.8 (Data Architecture) |
 | [Phase 2.9 Qualification Report](architecture/PHASE_2_9_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.9-001 | Architecture qualification report for Sub-phase 2.9 (API Architecture) |
 | [Phase 2.10 Qualification Report](architecture/PHASE_2_10_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.10-001 | Architecture qualification report for Sub-phase 2.10 (Python SDK) |
+| [Phase 2.3–2.10 Architecture Correction Audit](architecture/PHASE_2_3_TO_2_10_CORRECTION_AUDIT.md) | EON-AUDIT-PH2-001 | Defect audit, reconciliation, and requalification report for Sub-phases 2.3–2.10 |
 | [Phase 2.3–2.10 Master Qualification Report](architecture/PHASE_2_3_TO_2_10_FINAL_QUALIFICATION_REPORT.md) | EON-QUAL-PH2-FINAL-001 | Master consolidated qualification report for Sub-phases 2.3 through 2.10 |
 
 ### 1.6 Engineering Implementation Reports (`docs/engineering/`)

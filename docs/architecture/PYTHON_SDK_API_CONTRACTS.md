@@ -214,6 +214,7 @@ class EonClient:
 ```python
 from __future__ import annotations
 
+from enum import Enum
 from typing import List, Optional
 from eon.exceptions import (
     EonEngineError,
@@ -221,7 +222,29 @@ from eon.exceptions import (
     EonNotFoundError,
     EonTimeoutError,
 )
-from eon.models.lifecycle import EngineInfo, EngineState, TransitionResult
+from eon.models.lifecycle import EngineInfo, TransitionResult
+
+
+class EngineState(str, Enum):
+    """Operational health projection of an intelligence engine (7-state model).
+
+    Maps internal 11-state FSM states (EON-ARCH-LIFE-001) to an external view:
+    - UNINITIALIZED: DISCOVERED, REGISTERED
+    - INITIALIZING:  VALIDATING, INITIALIZING, INITIALIZED, STARTING
+    - ACTIVE:        RUNNING
+    - PAUSED:        PAUSED
+    - DEGRADED:      DEGRADED
+    - STOPPED:       STOPPING, STOPPED
+    - FAULTED:       FAILED
+    """
+
+    UNINITIALIZED = "UNINITIALIZED"
+    INITIALIZING = "INITIALIZING"
+    ACTIVE = "ACTIVE"
+    PAUSED = "PAUSED"
+    DEGRADED = "DEGRADED"
+    STOPPED = "STOPPED"
+    FAULTED = "FAULTED"
 
 
 class AsyncEngineClient:
