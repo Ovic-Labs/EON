@@ -49,11 +49,24 @@ def test_non_utc_timezone_normalized_to_utc() -> None:
 
 
 def test_iso8601_string_parsing() -> None:
-    """Verify ISO 8601 string inputs are parsed and normalized."""
-    iso_str = "2026-11-23T12:00:00+00:00"
-    m = DummyTimestampModel(timestamp=iso_str)  # type: ignore[arg-type]
-    assert m.timestamp.tzinfo == datetime.timezone.utc
-    assert m.timestamp.hour == 12
+    """Verify ISO 8601 string inputs are parsed and normalized across Python versions."""
+    # Test +00:00 offset
+    iso_offset = "2026-11-23T12:00:00+00:00"
+    m1 = DummyTimestampModel(timestamp=iso_offset)  # type: ignore[arg-type]
+    assert m1.timestamp.tzinfo == datetime.timezone.utc
+    assert m1.timestamp.hour == 12
+
+    # Test trailing 'Z' (critical for Python 3.10 compatibility)
+    iso_z = "2026-11-23T12:00:00Z"
+    m2 = DummyTimestampModel(timestamp=iso_z)  # type: ignore[arg-type]
+    assert m2.timestamp.tzinfo == datetime.timezone.utc
+    assert m2.timestamp.hour == 12
+
+    # Test trailing 'z' (lowercase)
+    iso_z_lower = "2026-11-23T12:00:00z"
+    m3 = DummyTimestampModel(timestamp=iso_z_lower)  # type: ignore[arg-type]
+    assert m3.timestamp.tzinfo == datetime.timezone.utc
+    assert m3.timestamp.hour == 12
 
 
 def test_format_iso8601_output() -> None:

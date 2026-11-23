@@ -13,8 +13,13 @@ def ensure_utc_datetime(value: datetime.datetime | str) -> datetime.datetime:
     and cross-system race conditions in robotic event routing.
     """
     if isinstance(value, str):
-        # Parse ISO 8601 string
-        dt = datetime.datetime.fromisoformat(value)
+        # Parse ISO 8601 string.
+        # Python 3.10 fromisoformat does not support trailing 'Z' / 'z', while 3.11+ does.
+        # Normalize trailing 'Z' / 'z' to '+00:00' for cross-version compatibility.
+        iso_str = value
+        if iso_str.endswith("Z") or iso_str.endswith("z"):
+            iso_str = iso_str[:-1] + "+00:00"
+        dt = datetime.datetime.fromisoformat(iso_str)
     elif isinstance(value, datetime.datetime):
         dt = value
     else:
