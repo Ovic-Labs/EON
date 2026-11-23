@@ -299,3 +299,88 @@ The synthesis of acoustic speech waveforms from written text. Modern low-latency
 
 ### Multimodal Response Coordination
 The synchronized temporal scheduling of spoken audio playback, text display, screen avatar animation, robot head orientation, and physical gesture execution to produce a unified, coherent social response.
+
+---
+
+## 15. Open-Source Models and Weight Formats (Sub-phase 1.12)
+
+### GGUF (GPT-Generated Unified Format)
+A binary file format designed by Georgi Gerganov for storing and distributing quantized neural network weights (particularly for `llama.cpp`). GGUF stores both architecture hyperparameters and quantized tensor data in a single mmap-friendly file, enabling fast zero-copy loading on edge CPUs.
+
+### Weight Quantization (Q4_K_M, INT8, FP16)
+The mathematical reduction of numeric precision used to store neural network parameters. 4-bit (Q4_K_M) quantization reduces model memory footprints by $\sim 70\%$ relative to FP16 while maintaining $\ge 98\%$ of original conversational perplexity, enabling local execution of billion-parameter models within $\sim 1\text{ GB}$ of RAM.
+
+### Small Language Model (SLM) Inference Engine
+A specialized, lightweight inference engine (e.g., `llama.cpp`, ONNX Runtime GenAI) that compiles matrix multiplications using native CPU vector instructions (AVX2, AVX-512, ARM NEON) to achieve high token throughput on edge CPUs without requiring heavy Python or CUDA runtimes.
+
+---
+
+## 16. Commercial Licensing and Intellectual Property (Sub-phase 1.13)
+
+### Weight-Code Licensing Decoupling
+The legal and architectural principle recognizing that a permissive source-code license (such as MIT or Apache 2.0) applied to a software repository does not automatically grant commercial rights to pre-trained weight checkpoints hosted within or produced by that repository, especially if the weights were trained on proprietary, non-commercial, or unconsented corpora.
+
+### Software Bill of Materials (SBOM)
+A comprehensive, formally structured inventory of all software components, libraries, shared binaries, model weight files, and dependencies embedded within an application. EON utilizes standardized SPDX 2.3 and CycloneDX 1.5 specifications to automate legal compliance checks in CI/CD.
+
+### Permissive Open-Core Licensing
+A commercial software distribution model wherein the core infrastructure (event bus, schemas, base connectors) is released under permissive open-source licenses (Apache 2.0 / MIT), while commercial extensions (OEM-specific robot motion connectors, enterprise fleet managers) are packaged under commercial licenses.
+
+---
+
+## 17. Edge Hardware and Compute Architecture (Sub-phase 1.14)
+
+### Memory Bandwidth Roofline
+The theoretical upper limit on autoregressive language model token generation imposed by memory transfer speeds rather than raw arithmetic compute. Autoregressive inference loads every model weight parameter once per generated token, making dual-channel memory bus width a primary determinant of edge SLM throughput.
+
+### SIMD Vectorization (AVX2, AVX-512, ARM NEON)
+Single Instruction, Multiple Data hardware extensions in modern x86_64 and ARM64 processors that allow a single processor instruction to perform parallel arithmetic operations across vector registers (128-bit, 256-bit, or 512-bit wide), boosting CPU neural network matrix multiplication by $4\times\text{--}8\times$.
+
+### Neural Processing Unit (NPU) Execution Provider
+A vendor-specific acceleration runtime plugin (e.g., Intel OpenVINO NPU, Qualcomm QNN) that compiles and offloads neural network subgraphs directly to dedicated low-power matrix acceleration silicon on modern system-on-chip processors.
+
+---
+
+## 18. Edge Systems and Deployment Engineering (Sub-phase 1.15)
+
+### POSIX Shared Memory Ring Buffer
+A low-latency, zero-copy inter-process communication mechanism (`shm_open`, `mmap`) used to transfer uncompressed camera video frames from sensor ingestion drivers to vision perception processes without memory duplication or kernel context-switch penalties.
+
+### Priority Ring Scheduling (SCHED_FIFO)
+A deterministic real-time operating system process scheduling policy that guarantees critical tasks (audio capture, safety monitors) preempt lower-priority tasks (background language model decoding) to prevent acoustic stutter or delayed safety responses.
+
+### Degraded Operating Mode
+A pre-planned, deterministic fallback state engaged when edge hardware experiences thermal throttling, memory exhaustion, or sensor failure, ensuring the robot maintains graceful, safe, and communicative behavior without system lock-up.
+
+---
+
+## 19. ROS 2 Robotics Middleware Integration (Sub-phase 1.16)
+
+### ROS 2 Managed Lifecycle Node
+A ROS 2 node architecture governed by a formal state machine (`Unconfigured`, `Inactive`, `Active`, `Finalized`), ensuring that robotic perception and social intelligence nodes load heavy models and calibrate sensors before active communication begins.
+
+### SROS2 Access Control Policy
+A security framework implementing DDS-Security standards (OMG DDS-SEC) that cryptographically signs and restricts topic publishing rights, preventing cognitive or language nodes from publishing unauthorized direct motor velocity commands (`/cmd_vel`).
+
+### Nav2 Social Costmap Layer
+A 2D navigation costmap plugin that renders dynamic proxemic repulsion zones (Hall's personal and social interaction zones) around detected humans, enabling standard robot navigation planners to navigate comfortably around people without requiring custom path algorithms.
+
+---
+
+## 20. Comprehensive Technical Feasibility and Risk (Sub-phase 1.17)
+
+### Zero Recurring API Liability
+An economic and operational architectural principle wherein an autonomous system relies 100% on local edge intelligence models, completely eliminating recurring cloud AI API bills (\$0.00/month) and protecting commercial deployers from sudden price hikes or service shutdowns.
+
+### Non-Authoritative Expressive Actuation
+A fundamental robotics safety architectural rule stating that communicative gestures, facial expressions, and social movements generated by affective models are strictly advisory requests, subject to independent kinematic validation and immediate preemption by certified safety PLCs.
+
+---
+
+## 21. Model and Dataset Governance (Sub-phase 1.18)
+
+### Cryptographic Checksum Pinning
+The strict verification of model weight binaries against immutable SHA-256 cryptographic hashes during automated builds and deployment packaging, preventing accidental version drift, corrupted downloads, or supply-chain tampering.
+
+### Cryptographic Erasure (Crypto-Shredding)
+A privacy compliance mechanism for GDPR Article 17 ("Right to be Forgotten") wherein destroying a specific user's symmetric data encryption key (DEK) renders all historical episodic and relational records mathematically unrecoverable, even if raw storage sectors retain physical magnetic or flash data fragments.

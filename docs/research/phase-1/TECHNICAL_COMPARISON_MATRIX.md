@@ -155,18 +155,107 @@ Each candidate approach is assessed against eight standardized technical dimensi
 
 ---
 
-## 13. Consolidated Cross-Domain Synthesis (Sub-phases 1.1 through 1.11)
+## 13. Sub-phase 1.12 — Open-Source Model Architecture Trade-Offs
 
-| Sub-phase | Selected Baseline Architecture | Fallback Architecture | Target CPU Budget | Max Permissible Latency (p95) | Safety Invariant |
+| Engine / Domain | Evaluated Model Families | Selected Primary Checkpoint | Fallback / Alternative | Edge CPU Feasibility | Commercial Status | Verdict |
+|---|---|---|---|---|---|---|
+| **ERS (Vision)** | MediaPipe, OpenFace, HSEmotion | MediaPipe Face Mesh (`face_landmarker.task`) + HSEmotion | MediaPipe BlazeFace standalone | High ($7.0\text{ms}$ on CPU) | Apache 2.0 (Approved) | **SELECTED** |
+| **ERS (Speech)** | Silero VAD, SpeechBrain, Wav2Vec2 | Silero VAD v5 + SpeechBrain ECAPA-TDNN | eGeMAPS + SVM acoustic rules | High ($8.9\text{ms}$ on CPU) | MIT / Apache 2.0 (Approved) | **SELECTED** |
+| **EMS (Embedding)**| all-MiniLM-L6-v2, BGE-small, E5-small | all-MiniLM-L6-v2 ONNX INT8 | Lexical BM25 search | High ($4.8\text{ms}$ on CPU) | Apache 2.0 (Approved) | **SELECTED** |
+| **ERG (Language)** | Qwen2.5, Phi-3.5, Gemma-2, Llama-3.2 | Qwen2.5-1.5B-Instruct (Q4_K_M) | Qwen2.5-0.5B-Instruct / Templates | High ($28.5\text{ tok/s}$) | Apache 2.0 (Approved) | **SELECTED** |
+| **ERG (Speech)** | Piper TTS, Coqui XTTS, eSpeak NG | Piper TTS (`en_US-lessac-medium`) | Piper Low voice / eSpeak NG | High ($\text{RTF} = 0.04$) | MIT / CC0 (Approved) | **SELECTED** |
+| **HBU (Pose/Hand)**| MediaPipe Pose/Hands, RTMPose, OpenPose| MediaPipe Hands & Pose Lite | RTMPose-m ONNX | High ($7.7\text{ms}$ on CPU) | Apache 2.0 (Approved) | **SELECTED** |
+
+---
+
+## 14. Sub-phase 1.13 — Commercial Licensing and Intellectual Property Due-Diligence
+
+| IP Category | Permissive / Cleared Examples | Conditional Commercial Examples | Quarantined / Restricted Examples | Prohibited / Rejected Examples | EON Commercial Policy |
 |---|---|---|---|---|---|
-| **1.1 Emotion Methods** | Continuous VAD Regression + Discrete Softmax | Unimodal Rules / Majority Voting | $<10\text{ms}$ | $15\text{ms}$ | Probabilistic observation only; non-diagnostic. |
-| **1.2 Facial Analysis** | SCRFD-500M + MediaPipe Face Mesh + AU Regressor | Landmark Distance Heuristics | $<15\text{ms}$ | $25\text{ms}$ | Ephemeral tracking IDs; zero face biometrics stored. |
-| **1.3 Speech Emotion** | Silero VAD + DistilHuBERT-SER (ONNX INT8) | eGeMAPS + LightGBM | $<25\text{ms}$ | $40\text{ms}$ | Ephemeral in-memory audio buffers; zero persistent audio. |
-| **1.4 Multimodal Fusion** | Hybrid Reliability-Aware Gated Cross-Attention | Late Bayesian Decision Averaging | $<12\text{ms}$ | $20\text{ms}$ | Explicit conflict flags; never forces consensus. |
-| **1.5 Activity (HAR)** | MediaPipe Pose + ST-GCN Skeletal Classifier | Kinematic Velocity Thresholds | $<20\text{ms}$ | $30\text{ms}$ | Non-inferential; physical motion classification only. |
-| **1.6 Gesture & Posture**| MediaPipe Hands + DTW Trajectory Matching | Geometric Angular Finger Flexion | $<15\text{ms}$ | $20\text{ms}$ | Gestures are advisory; cannot bypass safety stops. |
-| **1.7 Long-Term Memory**| Option C: Hybrid SQLite Facts + Qdrant Vectors | SQLite Relational Alone | $<5\text{ms}$ | $10\text{ms}$ | Anti-profiling; hard deletion; untrusted data boundary. |
-| **1.8 Empathy Reasoning**| Cognitive Appraisal FSM + Bayesian Belief Net | Static Policy Table | $<3\text{ms}$ | $5\text{ms}$ | Never claim subjective feeling; clarify before assuming. |
-| **1.9 Personality PSE** | Base Persona Asset + Dynamic Clamps | Fixed Unmodulated Profile | $<1\text{ms}$ | $2\text{ms}$ | Bounded style parameters; anti-drift mathematical clamps. |
-| **1.10 Social Interaction**| HFSM Macro Stages + Multimodal TRP | Fixed Timer Turn-Taking | $<5\text{ms}$ | $10\text{ms}$ | Social costmaps are advisory; safety nav is authoritative. |
-| **1.11 Response Gen ERG** | Qwen2.5-1.5B (llama.cpp) + Piper Neural TTS | Parameterized Templates + Piper | $<350\text{ms}$ | $500\text{ms}$ | Language models never directly command physical motors. |
+| **Code & Algorithms** | MIT, Apache 2.0, BSD 2/3-Clause | LGPL-2.1/3.0 (Dynamic linking only) | eSpeak NG (GPL-3.0 library linking) | Proprietary Closed SDKs with per-seat fees | 100% Permissive Open-Core. |
+| **Model Weights** | Qwen2.5 Apache 2.0, MediaPipe Apache 2.0| Gemma Terms of Use, Llama Community | Weights trained on unverified web crawls | Coqui XTTS-v2 (CPML Non-Commercial), OpenFace | Strict quarantine of non-commercial weights. |
+| **Voice Assets** | Paula Lessac (Public Domain / CC0), Alan (MIT)| Custom commercial voice talents | Unconsented actor voice clones | Web-scraped celebrity voices | Only verified CC0/MIT voices allowed in builds. |
+| **Datasets** | HaGRID (CC-BY-SA 4.0), LibriTTS-R (CC-BY 4.0)| CREMA-D (ODbL 1.0), Common Voice (CC0/ODbL)| VoxCeleb (Research Only) | RAVDESS (CC-BY-NC-SA), Jester (Proprietary) | Zero non-commercial data in production weights. |
+
+---
+
+## 15. Sub-phase 1.14 — Compute Platforms and Hardware Tiers
+
+| Hardware Tier | Target Processor & Architecture | RAM Capacity | Power Envelope | EON Capability Level | Target Robotics Applications |
+|---|---|---|---|---|---|
+| **Tier 1: Basic CPU** | Raspberry Pi 5 (4x A76) / Intel N100 | $4\text{--}8\text{ GB}$ LPDDR4 | $5\text{--}15\text{ W}$ | Light Perception + Templates ($<5\text{ms}$) | Educational robots, desktop companions, smart toys. |
+| **Tier 2: Recommended CPU**| Intel Core i5/i7 (12th-14th) / Ryzen 5/7 / RK3588 | $16\text{ GB}$ Dual-Channel | $15\text{--}45\text{ W}$ | Full Multimodal + Qwen2.5-1.5B + Piper TTS | Commercial service robots, healthcare assistants. |
+| **Tier 3: Accelerated Edge**| Intel Core Ultra 5/7 / Jetson Orin Nano / Snapdragon X| $16\text{--}32\text{ GB}$ LPDDR5x | $25\text{--}65\text{ W}$ | Vision offloaded to NPU/iGPU; SLM on CPU | Mobile industrial manipulators, hospital logistics. |
+| **Tier 4: High-Performance**| Jetson AGX Orin ($32/64\text{GB}$) / Mobile RTX 4060 | $32\text{--}64\text{ GB}$ Unified | $50\text{--}150\text{ W}$ | Multi-camera $360^\circ$ tracking + 7B SLMs | Humanoids, complex collaborative manufacturing. |
+
+---
+
+## 16. Sub-phase 1.15 — Edge Deployment Architecture and IPC
+
+| Architectural Dimension | Monolithic Single-Process | Microservices (Docker/gRPC) | Hybrid Worker Pools (Selected) | Design Justification |
+|---|---|---|---|---|
+| **Process Model** | 1 Process, Python Threads | 7 Containers, Docker Bridge | 3 Processes (Perception, Core, Response) | Fault isolation without container memory overhead. |
+| **Frame Ingestion IPC** | In-Memory Object Pointers | TCP / gRPC Network Sockets | Zero-Copy POSIX Shared Memory (`shm_open`) | $<0.05\text{ms}$ frame transfer latency at $30\text{ FPS}$. |
+| **Event Transport IPC** | AsyncIO Queue | Protobuf over gRPC ($3\text{--}8\text{ms}$) | Unix Domain Sockets / Windows Named Pipes | $<0.15\text{ms}$ latency; native OS access control. |
+| **Failure Recovery** | Crash brings down entire robot | Docker container restart ($>2\text{s}$) | Instant fallback to deterministic templates ($<2\text{ms}$) | Uninterrupted social dialogue during worker restarts. |
+
+---
+
+## 17. Sub-phase 1.16 — ROS 2 Middleware and Ecosystem Integration
+
+| Integration Dimension | ROS 2 Jazzy Jalisco (Primary) | ROS 2 Humble Hawksbill (Fallback) | Proprietary Robot Middleware | Design Selection |
+|---|---|---|---|---|
+| **LTS Lifecycle** | May 2024 $\to$ May 2029 (5 Years) | May 2022 $\to$ May 2027 (5 Years) | Vendor Dependent | **Jazzy Jalisco Primary; Humble Fallback.** |
+| **Reference Platform** | Ubuntu 24.04 LTS (Python 3.12) | Ubuntu 22.04 LTS (Python 3.10) | Custom Linux | Strict Python 3.10–3.12 compatibility maintained. |
+| **Navigation Hook** | Nav2 Costmap Dynamic Layer | Nav2 Costmap Dynamic Layer | Custom Driver Injection | Custom Gaussian proxemic social layer plugin. |
+| **Safety Isolation** | SROS2 Deny Rule on `/cmd_vel` | SROS2 Deny Rule on `/cmd_vel` | Non-standard | Hardware E-Stop and certified PLC retain sole motion authority. |
+
+---
+
+## 18. Sub-phase 1.17 — Comprehensive Feasibility Trade-Off Synthesis
+
+| Evaluation Domain | Feasibility Rating | Primary Evidence | Critical Bottleneck / Risk | Mitigation Protocol |
+|---|---|---|---|---|
+| **Perception Feasibility** | **FEASIBLE** | MediaPipe + HSEmotion $<7.0\text{ms}$ on CPU [REP] | Lighting variation, sensor noise | Dual-modality fallback (audio/vision). |
+| **Cognitive Feasibility** | **FEASIBLE** | Scherer CPM + Clamped Persona $<0.3\text{ms}$ [REP] | Unnatural rule transitions | Continuous Kalman state smoothing. |
+| **Generative Feasibility** | **FEASIBLE** | Qwen2.5-1.5B $28.5\text{ tok/s}$, Piper TTS $\text{RTF}=0.04$ [REP] | Single-channel RAM memory bandwidth | Mandate dual-channel RAM in hardware tiers. |
+| **Commercial Feasibility** | **FEASIBLE** | Apache 2.0 / MIT models eliminate cloud API bills | Accidental non-commercial weight contamination | Automated CI SBOM license compliance gate. |
+| **Safety Feasibility** | **FEASIBLE** | Inviolable boundary $\text{is\_authoritative\_stop}=\text{False}$ | Language model hallucinating motor command | Physical and DDS access control firewall. |
+
+---
+
+## 19. Sub-phase 1.18 — Model and Dataset Selection Register Summary
+
+| Subsystem | Selected Production Asset | Primary Backup Asset | Excluded / Rejected Asset |
+|---|---|---|---|
+| **Vision Perception** | MediaPipe Face Mesh & Hands (Apache 2.0) | RTMPose-m ONNX (Apache 2.0) | OpenPose (CMU \$25k fee / Non-Comm) |
+| **Speech Perception** | Silero VAD (MIT) + SpeechBrain ECAPA (Apache 2.0)| eGeMAPS + SVM acoustic features | VoxCeleb-derived unverified checkpoints |
+| **Vector Memory** | all-MiniLM-L6-v2 ONNX INT8 (Apache 2.0) | Lexical BM25 index | Heavy 768-dim BERT models ($>400\text{MB}$) |
+| **Response SLM** | Qwen2.5-1.5B-Instruct Q4_K_M (Apache 2.0) | Qwen2.5-0.5B-Instruct / Phi-3.5-mini | Coqui XTTS-v2 (CPML Non-Commercial) |
+| **Speech Vocoder** | Piper TTS (MIT) with Lessac Medium (Public Domain)| Piper Alan Voice (MIT) | Unlicensed web voice clones |
+| **Middleware** | ROS 2 Jazzy Lifecycle Nodes (Apache 2.0) | ROS 2 Humble Lifecycle Nodes | Proprietary cloud robot teleoperation APIs |
+
+---
+
+## 20. Master Consolidated Cross-Domain Synthesis (Sub-phases 1.1 through 1.18)
+
+| Sub-phase | Domain Title | Selected Architecture | Fallback Architecture | Edge CPU Latency | Memory Footprint | Safety & Governance Invariant |
+|---|---|---|---|---|---|---|
+| **1.1** | Emotion Methods | Continuous VAD Regression + Discrete Softmax | Unimodal Rules / Majority Voting | $<10\text{ms}$ | $<25\text{MB}$ | Probabilistic observation only; non-diagnostic. |
+| **1.2** | Facial Analysis | SCRFD + MediaPipe Face Mesh + HSEmotion | Landmark Distance Heuristics | $<15\text{ms}$ | $<120\text{MB}$ | Ephemeral tracking IDs; zero facial biometrics stored. |
+| **1.3** | Speech Emotion | Silero VAD + SpeechBrain ECAPA-TDNN ONNX | eGeMAPS + LightGBM acoustic rules | $<15\text{ms}$ | $<80\text{MB}$ | Ephemeral in-memory audio buffers; zero persistent audio. |
+| **1.4** | Multimodal Fusion | Calibrated Gated Late Fusion (Dirichlet) | Late Bayesian Decision Averaging | $<2\text{ms}$ | $<10\text{MB}$ | Explicit conflict flags; never forces false consensus. |
+| **1.5** | Activity (HAR) | MediaPipe Pose + Kinematic Joint Velocity | Pose Angle Thresholds | $<20\text{ms}$ | $<90\text{MB}$ | Physical motion classification only; non-inferential. |
+| **1.6** | Gesture & Posture | MediaPipe Hands + DTW Trajectory Matching | Geometric Angular Finger Flexion | $<15\text{ms}$ | $<125\text{MB}$ | Gestures are advisory; cannot bypass safety stops. |
+| **1.7** | Long-Term Memory | Hybrid SQLite WAL (SQLCipher) + Qdrant Embedded| SQLite Relational Alone | $<5\text{ms}$ | $<185\text{MB}$ | Anti-profiling; hard deletion; untrusted data boundary. |
+| **1.8** | Empathy Reasoning | Scherer CPM Appraisal Tree + Query Fallback | Static Policy Table | $<1\text{ms}$ | $<5\text{MB}$ | Never claim subjective feeling; clarify before assuming. |
+| **1.9** | Personality PSE | Base Persona Assets + Bounded Context Clamps | Fixed Unmodulated Profile | $<0.1\text{ms}$ | $<1\text{MB}$ | Hard mathematical clamps eliminate personality drift. |
+| **1.10**| Social Interaction | 12-Stage HFSM + Multi-Feature TRP Detector | Fixed Timer Turn-Taking | $<2\text{ms}$ | $<40\text{MB}$ | Social costmaps are advisory; safety nav is authoritative. |
+| **1.11**| Response Gen ERG | Dual-Path: Templates ($<5\text{ms}$) + Qwen2.5-1.5B | Parameterized Templates + Piper | $<350\text{ms}$ | $\sim 1.25\text{GB}$ | SLMs never directly command physical robot motors. |
+| **1.12**| Open-Source Models| Apache-2.0 / MIT Verified Catalogue | Secondary Quantized GGUF / ONNX | Verified | Verified | Zero unverified or non-commercial model weights. |
+| **1.13**| Commercial Licensing| 10-Tier IP Separation + Automated CI SBOM Gate | Pre-cleared Permissive Whitelist | N/A | N/A | Strict quarantine of CC-BY-NC and CPML assets. |
+| **1.14**| Hardware Compute | Tier 2 Recommended CPU (8 Cores, Dual-Channel) | Tier 1 Basic CPU (Templates only) | $<65\text{ms}$ | $\sim 1.6\text{GB}$ | CPU-first baseline; GPU/NPU are optional accelerators. |
+| **1.15**| Edge Feasibility | Hybrid 3-Process Architecture via POSIX SHM/UDS | Monolithic In-Memory Testing | $<0.2\text{ms}$ IPC | $\sim 1.8\text{GB}$ RSS | 100% offline edge execution; zero cloud AI APIs. |
+| **1.16**| ROS 2 Middleware | ROS 2 Jazzy Lifecycle Nodes + Nav2 Social Layer | ROS 2 Humble Lifecycle Nodes | $<1.5\text{ms}$ | $\sim 150\text{MB}$ | Direct `/cmd_vel` publishing blocked via SROS2 policies. |
+| **1.17**| Feasibility Report | Consolidated Feasibility: PASS WITH CONDITIONS | Documented Mitigation Protocols | $<100\text{ms}$ pipeline | $\le 2.0\text{GB}$ budget | Verified against ISO 10218, ISO 13849, RIA TR R15.06. |
+| **1.18**| Selection Register | Authoritative models.yaml, datasets.yaml, algos | Pinned Artifact Checksums | N/A | N/A | SHA-256 cryptographic verification before deployment. |

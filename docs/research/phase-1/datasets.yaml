@@ -1,0 +1,129 @@
+# OVIC EON Machine-Readable Dataset Registry
+# Schema Version: 1.0.0
+# Generated as part of Sub-phase 1.18
+
+schema_version: "1.0.0"
+registry_type: "datasets"
+last_updated: "2026-11-23"
+
+datasets:
+  - id: "DAT-01"
+    name: "HaGRID (HAnd Gesture Recognition Image Dataset)"
+    official_url: "https://github.com/hukenovs/hagrid"
+    version: "v1.0"
+    modality: "RGB Video and 2D/3D Landmarks"
+    task: "Hand gesture detection and classification"
+    sample_count: 552992
+    annotation_types:
+      - "bounding_boxes"
+      - "gesture_labels"
+      - "21_landmarks"
+    license: "CC-BY-SA-4.0"
+    commercial_use_allowed: true
+    redistribution_allowed: true
+    consent_privacy_notes: "Crowdsourced consented adult participants with background diversity."
+    known_restrictions:
+      - "Share-Alike clause requires derived gesture datasets/models to be shared under compatible terms."
+    selection_status: "SELECTED WITH CONDITIONS"
+    selection_reason: "Massive scale, realistic human gestures, permissible commercial use."
+    required_clearance: "Ensure derivative attribution notice is published."
+
+  - id: "DAT-02"
+    name: "LibriTTS-R"
+    official_url: "https://www.openslr.org/141/"
+    version: "v1.0"
+    modality: "Cleaned Speech Audio (24 kHz / 16-bit)"
+    task: "Neural text-to-speech voice modeling"
+    sample_count: 585
+    annotation_types:
+      - "normalized_text_transcripts"
+      - "phoneme_alignments"
+    license: "CC-BY-4.0"
+    commercial_use_allowed: true
+    redistribution_allowed: true
+    consent_privacy_notes: "Public domain LibriVox audiobooks processed and enhanced."
+    known_restrictions:
+      - "Standard attribution requirement."
+    selection_status: "SELECTED"
+    selection_reason: "Primary high-fidelity audio corpus for Piper TTS acoustic voices."
+    required_clearance: "None (Standard CC-BY attribution)."
+
+  - id: "DAT-03"
+    name: "CREMA-D (Crowd-sourced Emotional Multimodal Actors Dataset)"
+    official_url: "https://github.com/CheyneyComputerScience/CREMA-D"
+    version: "v1.0"
+    modality: "Audiovisual Video Clips"
+    task: "Multimodal emotion recognition benchmarking"
+    sample_count: 7442
+    annotation_types:
+      - "categorical_emotions"
+      - "valence_arousal_ratings"
+    license: "Open Database License (ODbL) 1.0"
+    commercial_use_allowed: true
+    redistribution_allowed: true
+    consent_privacy_notes: "91 ethnically diverse professional actors with IRB consent."
+    known_restrictions:
+      - "Attribution notice required under ODbL."
+    selection_status: "SELECTED WITH CONDITIONS"
+    selection_reason: "Exceptional demographic diversity for ERS validation."
+    required_clearance: "ODbL database attribution notice."
+
+  - id: "DAT-04"
+    name: "Common Voice"
+    official_url: "https://commonvoice.mozilla.org"
+    version: "11.0"
+    modality: "Crowdsourced Multilingual Speech"
+    task: "Acoustic feature extraction and speaker adaptation"
+    sample_count: 12000000
+    annotation_types:
+      - "text_transcripts"
+      - "demographic_metadata"
+    license: "CC0-1.0 / ODbL"
+    commercial_use_allowed: true
+    redistribution_allowed: true
+    consent_privacy_notes: "Explicit participant consent under Mozilla terms."
+    known_restrictions:
+      - "Strict prohibition against attempting to re-identify anonymous participants."
+    selection_status: "SELECTED WITH CONDITIONS"
+    selection_reason: "Global multilingual coverage for speech robustness."
+    required_clearance: "Compliance with re-identification prohibition."
+
+  - id: "DAT-05"
+    name: "RAVDESS"
+    official_url: "https://zenodo.org/record/1188976"
+    version: "v1.0"
+    modality: "Speech and Song Audiovisual Clips"
+    task: "Acoustic and facial emotion analysis"
+    sample_count: 7356
+    annotation_types:
+      - "categorical_emotions"
+      - "intensity_levels"
+    license: "CC-BY-NC-SA-4.0"
+    commercial_use_allowed: false
+    redistribution_allowed: false
+    consent_privacy_notes: "24 professional Canadian actors."
+    known_restrictions:
+      - "Strict non-commercial clause prohibits commercial distribution."
+    selection_status: "RESEARCH ONLY"
+    selection_reason: "Academic comparative baseline only; strictly prohibited from commercial weights."
+    required_clearance: "Restricted to offline research sandbox."
+
+  - id: "DAT-06"
+    name: "EmpatheticDialogues"
+    official_url: "https://github.com/facebookresearch/EmpatheticDialogues"
+    version: "v1.0"
+    modality: "Two-party Text Conversations"
+    task: "Empathy reasoning and response evaluation"
+    sample_count: 24850
+    annotation_types:
+      - "emotional_situation_prompts"
+      - "emotion_tags"
+    license: "CC-BY-NC-4.0"
+    commercial_use_allowed: false
+    redistribution_allowed: false
+    consent_privacy_notes: "Consented Amazon Mechanical Turk workers."
+    known_restrictions:
+      - "Non-commercial license forbids fine-tuning commercial SLMs."
+    selection_status: "RESEARCH ONLY"
+    selection_reason: "Offline metric validation only."
+    required_clearance: "Restricted to offline research sandbox."

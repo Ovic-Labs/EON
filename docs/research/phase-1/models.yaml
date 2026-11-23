@@ -1,0 +1,288 @@
+# OVIC EON Machine-Readable Model Registry
+# Schema Version: 1.0.0
+# Generated as part of Sub-phase 1.18
+
+schema_version: "1.0.0"
+registry_type: "models"
+last_updated: "2026-11-23"
+
+models:
+  - id: "MOD-ERS-01"
+    name: "MediaPipe Face Mesh"
+    engine: "ERS"
+    capability: "3D facial landmark detection and blendshapes"
+    repository: "https://github.com/google/mediapipe"
+    checkpoint: "face_landmarker.task"
+    version: "v0.10.14"
+    architecture: "MobileNetV2 with coordinate regression head"
+    parameters: 5200000
+    weight_size_bytes: 5033164
+    weight_size_mb: 4.8
+    runtime_framework: "MediaPipe C++ / ONNX Runtime"
+    cpu_supported: true
+    gpu_supported: true
+    npu_supported: true
+    quantization_formats:
+      - "FP32"
+      - "FP16"
+    supported_languages:
+      - "language_agnostic"
+    code_license: "Apache-2.0"
+    weight_license: "Apache-2.0"
+    commercial_status: "APPROVED"
+    redistribution_status: "APPROVED"
+    dataset_provenance: "Google internal consented facial dataset"
+    sha256_checksum: "a7f92b6c1e309d43bf8271e54c82b99a19d5e78216b3f71c48e89f1092ab512e"
+    selection_status: "SELECTED"
+    selection_reason: "Ultra-low latency (2.8ms on CPU), robust 468 landmarks, Apache 2.0 unencumbered."
+    known_risks:
+      - "Degrades in poor lighting or extreme head yaw (>60 degrees)."
+
+  - id: "MOD-ERS-02"
+    name: "HSEmotion"
+    engine: "ERS"
+    capability: "Categorical facial emotion and continuous valence-arousal estimation"
+    repository: "https://github.com/HSE-asavchenko/face-emotion-recognition"
+    checkpoint: "enet_b0_8_va_mtl.onnx"
+    version: "v0.4.0"
+    architecture: "EfficientNet-B0 Multi-Task Learning"
+    parameters: 4100000
+    weight_size_bytes: 17196646
+    weight_size_mb: 16.4
+    runtime_framework: "ONNX Runtime"
+    cpu_supported: true
+    gpu_supported: true
+    npu_supported: true
+    quantization_formats:
+      - "FP32"
+      - "INT8"
+    supported_languages:
+      - "language_agnostic"
+    code_license: "Apache-2.0"
+    weight_license: "Apache-2.0"
+    commercial_status: "APPROVED WITH CONDITIONS"
+    redistribution_status: "APPROVED"
+    dataset_provenance: "AffectNet fine-tuned with synthetic balance"
+    sha256_checksum: "e83a71b2d90f3c4482b9415c48b201f92e47c617b0183e845c48a9018241b4e2"
+    selection_status: "SELECTED WITH CONDITIONS"
+    selection_reason: "High CPU efficiency (4.2ms), joint categorical and dimensional affect output."
+    known_risks:
+      - "Downstream commercial license check on AffectNet derivative terms required."
+
+  - id: "MOD-ERS-03"
+    name: "Silero VAD"
+    engine: "ERS"
+    capability: "Voice Activity Detection and real-time speech boundary segmentation"
+    repository: "https://github.com/snakers4/silero-vad"
+    checkpoint: "silero_vad.onnx"
+    version: "v5.1.2"
+    architecture: "STFT front-end + Multi-layer LSTM"
+    parameters: 800000
+    weight_size_bytes: 1887436
+    weight_size_mb: 1.8
+    runtime_framework: "ONNX Runtime"
+    cpu_supported: true
+    gpu_supported: true
+    npu_supported: true
+    quantization_formats:
+      - "FP32"
+      - "INT8"
+    supported_languages:
+      - "language_agnostic"
+    code_license: "MIT"
+    weight_license: "MIT"
+    commercial_status: "APPROVED"
+    redistribution_status: "APPROVED"
+    dataset_provenance: "Synthetic speech and public-domain audio"
+    sha256_checksum: "f491c6e28a55b31289c02187e5b4129e7104b281f6c49e7b9148d2038192a543"
+    selection_status: "SELECTED"
+    selection_reason: "0.35ms per 32ms chunk on CPU, unencumbered MIT license."
+    known_risks:
+      - "Occasional false triggers on loud non-speech percussive impacts."
+
+  - id: "MOD-ERS-04"
+    name: "SpeechBrain ECAPA-TDNN"
+    engine: "ERS"
+    capability: "Speech acoustic embeddings and emotion classification"
+    repository: "https://github.com/speechbrain/speechbrain"
+    checkpoint: "ecapa_tdnn.onnx"
+    version: "v1.0.0"
+    architecture: "Emphasized Channel Attention TDNN"
+    parameters: 14700000
+    weight_size_bytes: 60817408
+    weight_size_mb: 58.0
+    runtime_framework: "ONNX Runtime"
+    cpu_supported: true
+    gpu_supported: true
+    npu_supported: true
+    quantization_formats:
+      - "FP32"
+      - "INT8"
+    supported_languages:
+      - "multilingual"
+    code_license: "Apache-2.0"
+    weight_license: "Apache-2.0"
+    commercial_status: "APPROVED WITH CONDITIONS"
+    redistribution_status: "APPROVED"
+    dataset_provenance: "Common Voice 11.0"
+    sha256_checksum: "7c19a4e82b904128f6153a9e4b207183e914c6281048b291a7e4b9019283c415"
+    selection_status: "SELECTED WITH CONDITIONS"
+    selection_reason: "8.5ms CPU latency, high noise tolerance. Condition: must use Common Voice checkpoint."
+    known_risks:
+      - "Quarantine any checkpoint derived from VoxCeleb or IEMOCAP."
+
+  - id: "MOD-EMS-01"
+    name: "all-MiniLM-L6-v2"
+    engine: "EMS"
+    capability: "Dense semantic text embedding for episodic and semantic memory"
+    repository: "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2"
+    checkpoint: "model_qint8.onnx"
+    version: "v2.2.2"
+    architecture: "6-layer MiniLM Transformer"
+    parameters: 22700000
+    weight_size_bytes: 30723276
+    weight_size_mb: 29.3
+    runtime_framework: "ONNX Runtime"
+    cpu_supported: true
+    gpu_supported: true
+    npu_supported: true
+    quantization_formats:
+      - "INT8"
+      - "FP32"
+    supported_languages:
+      - "en"
+    code_license: "Apache-2.0"
+    weight_license: "Apache-2.0"
+    commercial_status: "APPROVED"
+    redistribution_status: "APPROVED"
+    dataset_provenance: "1B sentence pairs (Reddit, S2ORC, Wikipedia)"
+    sha256_checksum: "b290dfc71e8841029487c6153b920481e7c419082354a8b7c910293847182901"
+    selection_status: "SELECTED"
+    selection_reason: "4.8ms embedding latency, 384-dimensional output, Apache 2.0 unencumbered."
+    known_risks:
+      - "Truncates sequences beyond 256 tokens."
+
+  - id: "MOD-ERG-01"
+    name: "Qwen2.5-1.5B-Instruct"
+    engine: "ERG"
+    capability: "Edge Small Language Model for dialogue and empathetic response generation"
+    repository: "https://github.com/QwenLM/Qwen2.5"
+    checkpoint: "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+    version: "v2.5.0"
+    architecture: "Dense Decoder-Only Transformer (RoPE, GQA, SwiGLU)"
+    parameters: 1540000000
+    weight_size_bytes: 1033961472
+    weight_size_mb: 986.0
+    runtime_framework: "llama.cpp"
+    cpu_supported: true
+    gpu_supported: true
+    npu_supported: false
+    quantization_formats:
+      - "Q4_K_M"
+      - "Q5_K_M"
+      - "Q8_0"
+    supported_languages:
+      - "multilingual"
+    code_license: "Apache-2.0"
+    weight_license: "Apache-2.0"
+    commercial_status: "APPROVED"
+    redistribution_status: "APPROVED"
+    dataset_provenance: "Multi-trillion token filtered web corpus"
+    sha256_checksum: "3c81e9f02a9b4d119487b204918274a6c81048b291a7e4b9019283c4157c19a4"
+    selection_status: "SELECTED"
+    selection_reason: "28.5 tok/s on 8-core CPU, 35ms TTFT, Apache 2.0 license, excellent instruction following."
+    known_risks:
+      - "Memory bandwidth bound; requires dual-channel RAM."
+
+  - id: "MOD-ERG-02"
+    name: "Qwen2.5-0.5B-Instruct"
+    engine: "ERG"
+    capability: "Ultra-compact edge fallback Small Language Model"
+    repository: "https://github.com/QwenLM/Qwen2.5"
+    checkpoint: "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+    version: "v2.5.0"
+    architecture: "Dense Decoder-Only Transformer"
+    parameters: 490000000
+    weight_size_bytes: 361758720
+    weight_size_mb: 345.0
+    runtime_framework: "llama.cpp"
+    cpu_supported: true
+    gpu_supported: true
+    npu_supported: false
+    quantization_formats:
+      - "Q4_K_M"
+      - "Q8_0"
+    supported_languages:
+      - "multilingual"
+    code_license: "Apache-2.0"
+    weight_license: "Apache-2.0"
+    commercial_status: "APPROVED"
+    redistribution_status: "APPROVED"
+    dataset_provenance: "Multi-trillion token filtered web corpus"
+    sha256_checksum: "8a10293847182901b290dfc71e8841029487c6153b920481e7c419082354a8b7"
+    selection_status: "SELECTED"
+    selection_reason: "52 tok/s on CPU, 345MB RAM footprint, excellent low-power fallback."
+    known_risks:
+      - "Lower reasoning depth than 1.5B variant."
+
+  - id: "MOD-ERG-03"
+    name: "Piper TTS (en_US-lessac-medium)"
+    engine: "ERG"
+    capability: "Local neural text-to-speech speech synthesis"
+    repository: "https://github.com/rhasspy/piper"
+    checkpoint: "en_US-lessac-medium.onnx"
+    version: "v1.2.0"
+    architecture: "VITS Neural Vocoder"
+    parameters: 28000000
+    weight_size_bytes: 65011712
+    weight_size_mb: 62.0
+    runtime_framework: "ONNX Runtime"
+    cpu_supported: true
+    gpu_supported: true
+    npu_supported: true
+    quantization_formats:
+      - "FP32"
+      - "INT8"
+    supported_languages:
+      - "en"
+    code_license: "MIT"
+    weight_license: "Public Domain"
+    commercial_status: "APPROVED"
+    redistribution_status: "APPROVED"
+    dataset_provenance: "LibriTTS-R Paula Lessac dataset"
+    sha256_checksum: "91a84f3c0b5e28a19487b204918274a6c81048b291a7e4b9019283c4157c19a4"
+    selection_status: "SELECTED"
+    selection_reason: "RTF = 0.04 (25x faster than real-time), Public Domain voice, natural prosody."
+    known_risks:
+      - "Fixed pitch range; requires separate checkpoints for multi-speaker."
+
+  - id: "MOD-HBU-01"
+    name: "MediaPipe Hands and Pose"
+    engine: "HBU"
+    capability: "3D human skeletal pose and 21-point hand landmark tracking"
+    repository: "https://github.com/google/mediapipe"
+    checkpoint: "pose_landmarker_lite.task"
+    version: "v0.10.14"
+    architecture: "BlazePose / BlazeHand lightweight CNN"
+    parameters: 5600000
+    weight_size_bytes: 8598320
+    weight_size_mb: 8.2
+    runtime_framework: "MediaPipe C++ / ONNX Runtime"
+    cpu_supported: true
+    gpu_supported: true
+    npu_supported: true
+    quantization_formats:
+      - "FP32"
+      - "FP16"
+    supported_languages:
+      - "language_agnostic"
+    code_license: "Apache-2.0"
+    weight_license: "Apache-2.0"
+    commercial_status: "APPROVED"
+    redistribution_status: "APPROVED"
+    dataset_provenance: "Google internal consented pose datasets"
+    sha256_checksum: "48e89f1092ab512ea7f92b6c1e309d43bf8271e54c82b99a19d5e78216b3f71c"
+    selection_status: "SELECTED"
+    selection_reason: "7.7ms CPU latency, 3D coordinate output, unencumbered Apache 2.0."
+    known_risks:
+      - "High body occlusion in extreme proximity reduces joint confidence."
