@@ -408,7 +408,7 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [Phase 1.1 Implementation Report](docs/engineering/PHASE_1_1_IMPLEMENTATION_REPORT.md)
 - [Developer Installation Guide](docs/developer/INSTALLATION.md)
 
-### Technical research and feasibility (Phase 1 Sub-phases 1.1–1.11)
+### Technical research and feasibility (Phase 1 Sub-phases 1.1–1.18)
 
 - [Phase 1 Research Overview](docs/research/phase-1/README.md)
 - [Scientific Terminology Glossary](docs/research/phase-1/GLOSSARY.md)
@@ -417,8 +417,13 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [Engine Dependency Matrix](docs/research/phase-1/ENGINE_DEPENDENCY_MATRIX.md)
 - [Initial Perception Architecture](docs/research/phase-1/EON_PERCEPTION_ARCHITECTURE.md)
 - [Social Intelligence Architecture](docs/research/phase-1/EON_SOCIAL_INTELLIGENCE_ARCHITECTURE.md)
+- [Licensing Compliance Matrix](docs/research/phase-1/LICENSING_COMPLIANCE_MATRIX.md)
+- [Hardware Compatibility Matrix](docs/research/phase-1/HARDWARE_COMPATIBILITY_MATRIX.md)
+- [Edge Deployment Architecture](docs/research/phase-1/EDGE_DEPLOYMENT_ARCHITECTURE.md)
+- [ROS 2 Integration Architecture](docs/research/phase-1/ROS2_INTEGRATION_ARCHITECTURE.md)
 - [Phase 1.1–1.5 Qualification Report](docs/research/phase-1/PHASE_1_1_TO_1_5_QUALIFICATION_REPORT.md)
 - [Phase 1.6–1.11 Qualification Report](docs/research/phase-1/PHASE_1_6_TO_1_11_QUALIFICATION_REPORT.md)
+- [Phase 1 Final Qualification Report](docs/research/phase-1/PHASE_1_FINAL_QUALIFICATION_REPORT.md)
 
 ### Additional documentation
 

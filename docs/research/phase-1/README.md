@@ -4,10 +4,10 @@
 **Organization:** OVIC Labs
 **Repository:** [https://github.com/Ovic-Labs/EON](https://github.com/Ovic-Labs/EON)
 **Phase:** Phase 1 — Technical Research and Feasibility
-**Scope:** Sub-phases 1.1 through 1.11
-**Baseline Implementation Status:** Pre-implementation Research and Feasibility
+**Scope:** Sub-phases 1.1 through 1.18 (Complete Master Phase 1 Scope)
+**Baseline Implementation Status:** Pre-implementation Research and Feasibility Complete
 **Status:** Approved
-**Version:** 1.1.0
+**Version:** 1.2.0
 
 ---
 
@@ -15,13 +15,13 @@
 
 OVIC EON is an emotional intelligence infrastructure platform designed for humanoid, service, collaborative, and social robotics. EON provides robotic systems with the modular software capability to interpret observable human affective cues, track spatial biomechanics, maintain governed interaction memory, reason about appropriate social responses, model consistent robot personality, and communicate empathetically.
 
-The objective of **Phase 1 — Technical Research and Feasibility (Sub-phases 1.1 to 1.11)** is to establish a rigorous, evidence-based scientific and technical foundation for EON's perception, memory, social reasoning, and multimodal response generation capabilities prior to committing to major runtime implementation decisions.
+The objective of **Phase 1 — Technical Research and Feasibility (Sub-phases 1.1 to 1.18)** is to establish a rigorous, evidence-based scientific, architectural, hardware, licensing, and edge deployment foundation for all seven EON intelligence engines prior to committing to major runtime implementation decisions in Phase 2.
 
 ---
 
-## 2. Completed Scope Inventory (Sub-phases 1.1 to 1.11)
+## 2. Complete Scope Inventory (Sub-phases 1.1 to 1.18)
 
-| Sub-phase | Research Domain | Engine | Deliverable Document | Quality Gate Status |
+| Sub-phase | Research Domain | Engine / Focus | Primary Deliverable | Status |
 |---|---|---|---|---|
 | **Sub-phase 1.1** | Emotion Recognition Methods | ERS | [`1.1-emotion-recognition-methods.md`](1.1-emotion-recognition-methods.md) | **QUALIFIED** |
 | **Sub-phase 1.2** | Facial Expression Analysis | ERS | [`1.2-facial-expression-analysis.md`](1.2-facial-expression-analysis.md) | **QUALIFIED** |
@@ -34,16 +34,13 @@ The objective of **Phase 1 — Technical Research and Feasibility (Sub-phases 1.
 | **Sub-phase 1.9** | Personality Modelling | PSE | [`1.9-personality-modelling.md`](1.9-personality-modelling.md) | **QUALIFIED** |
 | **Sub-phase 1.10** | Social Interaction Systems | SIE | [`1.10-social-interaction-systems.md`](1.10-social-interaction-systems.md) | **QUALIFIED** |
 | **Sub-phase 1.11** | Response Generation | ERG | [`1.11-response-generation.md`](1.11-response-generation.md) | **QUALIFIED** |
-
-### Deferred Scope (Sub-phases 1.12 to 1.18)
-In accordance with governance directives, the following milestones are formally deferred to subsequent sub-phases and are **not** marked complete:
-- *1.12 Full open-source model selection register*
-- *1.13 Full commercial model and dataset licensing evaluation*
-- *1.14 Complete hardware feasibility evaluation*
-- *1.15 Full edge computing feasibility*
-- *1.16 ROS 2 integration requirements*
-- *1.17 Final overall technical feasibility report*
-- *1.18 Final model and dataset selection register*
+| **Sub-phase 1.12** | Open-Source Model Research | All Engines | [`1.12-open-source-model-research.md`](1.12-open-source-model-research.md) | **QUALIFIED** |
+| **Sub-phase 1.13** | Commercial Licensing & Due-Diligence | Legal / IP | [`1.13-commercial-model-and-dataset-licensing.md`](1.13-commercial-model-and-dataset-licensing.md) | **QUALIFIED** |
+| **Sub-phase 1.14** | CPU, GPU & NPU Hardware Requirements | Compute / Edge | [`1.14-cpu-gpu-npu-hardware-requirements.md`](1.14-cpu-gpu-npu-hardware-requirements.md) | **QUALIFIED** |
+| **Sub-phase 1.15** | Edge Computing Feasibility | Systems / RT | [`1.15-edge-computing-feasibility.md`](1.15-edge-computing-feasibility.md) | **QUALIFIED** |
+| **Sub-phase 1.16** | ROS 2 Integration Requirements | Middleware | [`1.16-ros2-integration-requirements.md`](1.16-ros2-integration-requirements.md) | **QUALIFIED** |
+| **Sub-phase 1.17** | Comprehensive Technical Feasibility | Master Synthesis | [`1.17-comprehensive-technical-feasibility-report.md`](1.17-comprehensive-technical-feasibility-report.md) | **QUALIFIED** |
+| **Sub-phase 1.18** | Model & Dataset Selection Register | Governance | [`1.18-model-and-dataset-selection-register.md`](1.18-model-and-dataset-selection-register.md) | **QUALIFIED** |
 
 ---
 
@@ -60,64 +57,53 @@ All research evaluations strictly adhere to EON's non-negotiable architectural i
 
 ## 4. Documentation Navigation
 
-The complete Phase 1 research documentation suite comprises the following interconnected technical specifications:
-
 ### Foundational Cross-Cutting Specifications
 - **[`README.md`](README.md):** Executive overview, scope boundaries, methodology, and navigational index (this document).
-- **[`GLOSSARY.md`](GLOSSARY.md):** Comprehensive scientific terminology dictionary covering affective computing, computer vision, acoustic paralinguistics, multimodal fusion, cognitive memory, empathy, personality, social interaction, and NLG.
-- **[`RESEARCH_SOURCE_REGISTER.md`](RESEARCH_SOURCE_REGISTER.md):** Master bibliographic register containing 100 independently audited, verifiable scientific sources (`SRC-001` through `SRC-100`).
-- **[`TECHNICAL_COMPARISON_MATRIX.md`](TECHNICAL_COMPARISON_MATRIX.md):** Multi-dimensional comparison matrix assessing candidate algorithms, CPU suitabilities, latencies, memory footprints, and licensing across Sub-phases 1.1 through 1.11.
+- **[`GLOSSARY.md`](GLOSSARY.md):** Comprehensive scientific terminology dictionary covering Sections 1 through 21.
+- **[`RESEARCH_SOURCE_REGISTER.md`](RESEARCH_SOURCE_REGISTER.md):** Master bibliographic register containing 130 independently audited, verifiable scientific sources (`SRC-001` through `SRC-130`).
+- **[`TECHNICAL_COMPARISON_MATRIX.md`](TECHNICAL_COMPARISON_MATRIX.md):** Multi-dimensional comparison matrix assessing candidate algorithms, CPU suitabilities, latencies, memory footprints, and licensing across all 18 sub-phases.
 - **[`ENGINE_DEPENDENCY_MATRIX.md`](ENGINE_DEPENDENCY_MATRIX.md):** Matrix defining inter-engine data flows, event topics, contract hand-offs, and functional responsibilities across all 7 EON engines.
 - **[`EON_PERCEPTION_ARCHITECTURE.md`](EON_PERCEPTION_ARCHITECTURE.md):** Proposed initial edge-CPU perception pipeline specification (Sub-phases 1.1–1.5), Mermaid diagram, and observation contracts.
 - **[`EON_SOCIAL_INTELLIGENCE_ARCHITECTURE.md`](EON_SOCIAL_INTELLIGENCE_ARCHITECTURE.md):** Proposed social intelligence architecture specification (Sub-phases 1.6–1.11), Mermaid diagrams, memory lifecycle, and multimodal response pipeline.
+- **[`LICENSING_COMPLIANCE_MATRIX.md`](LICENSING_COMPLIANCE_MATRIX.md):** Comprehensive IP and licensing register covering all evaluated models, weights, datasets, and voice checkpoints.
+- **[`HARDWARE_COMPATIBILITY_MATRIX.md`](HARDWARE_COMPATIBILITY_MATRIX.md):** Edge compute platform compatibility matrix across Raspberry Pi 5, RK3588, Core Ultra 5, Ryzen 7, and Jetson boards.
+- **[`EDGE_DEPLOYMENT_ARCHITECTURE.md`](EDGE_DEPLOYMENT_ARCHITECTURE.md):** Multi-process runtime architecture, zero-copy shared memory IPC, CPU pinning, and memory budgets.
+- **[`ROS2_INTEGRATION_ARCHITECTURE.md`](ROS2_INTEGRATION_ARCHITECTURE.md):** ROS 2 Jazzy/Humble lifecycle node mapping, message definitions (`.msg`, `.srv`, `.action`), SROS2 security policies, and Nav2 social costmap layer.
 
-### Sub-Phase Research Reports
+### Machine-Readable Governance Registries
+- **[`models.yaml`](models.yaml):** Validated YAML registry of all evaluated neural models, checkpoint filenames, parameter counts, and SHA-256 hashes.
+- **[`datasets.yaml`](datasets.yaml):** Validated YAML registry of all audited evaluation and training datasets, sample counts, and commercial rights.
+- **[`algorithms.yaml`](algorithms.yaml):** Validated YAML registry of deterministic non-neural algorithms, latency benchmarks, and RAM budgets.
+
+### Sub-Phase Research Reports (1.1 to 1.18)
 - **[`1.1-emotion-recognition-methods.md`](1.1-emotion-recognition-methods.md):** Sub-phase 1.1: Foundations, VAD representation, calibration, and datasets.
 - **[`1.2-facial-expression-analysis.md`](1.2-facial-expression-analysis.md):** Sub-phase 1.2: MediaPipe Face Mesh, FACS Action Units, and ephemeral tracking.
 - **[`1.3-speech-emotion-analysis.md`](1.3-speech-emotion-analysis.md):** Sub-phase 1.3: Silero VAD, DistilHuBERT-SER, acoustics, and noise resilience.
 - **[`1.4-multimodal-fusion-methods.md`](1.4-multimodal-fusion-methods.md):** Sub-phase 1.4: Hybrid Gated Cross-Attention, sliding windows, and conflict flags.
 - **[`1.5-human-activity-recognition.md`](1.5-human-activity-recognition.md):** Sub-phase 1.5: 3D BlazePose + ST-GCN, taxonomy, and non-inferential safety.
-- **[`1.6-gesture-and-posture-recognition.md`](1.6-gesture-and-posture-recognition.md):** Sub-phase 1.6: MediaPipe Hands, DTW trajectories, pointing deictics, and non-universal posture semantics.
+- **[`1.6-gesture-and-posture-recognition.md`](1.6-gesture-and-posture-recognition.md):** Sub-phase 1.6: MediaPipe Hands, DTW trajectories, pointing deictics, and kinematics.
 - **[`1.7-long-term-memory-architectures.md`](1.7-long-term-memory-architectures.md):** Sub-phase 1.7: Hybrid hierarchical memory (SQLite + Qdrant), anti-profiling, and GDPR deletion.
-- **[`1.8-empathy-reasoning-approaches.md`](1.8-empathy-reasoning-approaches.md):** Sub-phase 1.8: Cognitive appraisal (Scherer CPM), perspective-taking, and anti-manipulation guardrails.
+- **[`1.8-empathy-reasoning-approaches.md`](1.8-empathy-reasoning-approaches.md):** Sub-phase 1.8: Cognitive appraisal (Scherer CPM), perspective-taking, and inquiry fallbacks.
 - **[`1.9-personality-modelling.md`](1.9-personality-modelling.md):** Sub-phase 1.9: Parametric style profiles, anti-drift clamps, and user preference controls.
 - **[`1.10-social-interaction-systems.md`](1.10-social-interaction-systems.md):** Sub-phase 1.10: 12-stage interaction HFSM, multimodal TRP turn-taking, and social navigation.
 - **[`1.11-response-generation.md`](1.11-response-generation.md):** Sub-phase 1.11: Hybrid NLG (Qwen2.5-1.5B via `llama.cpp`), Piper neural TTS, and motor safety firewalls.
+- **[`1.12-open-source-model-research.md`](1.12-open-source-model-research.md):** Sub-phase 1.12: Comprehensive 20-field model comparison across all 7 engines.
+- **[`1.13-commercial-model-and-dataset-licensing.md`](1.13-commercial-model-and-dataset-licensing.md):** Sub-phase 1.13: 10-tier IP due-diligence, SBOM generation, and license whitelist.
+- **[`1.14-cpu-gpu-npu-hardware-requirements.md`](1.14-cpu-gpu-npu-hardware-requirements.md):** Sub-phase 1.14: 4 hardware tiers, memory bandwidth analysis, SIMD vectorization, and Core Ultra 5 deep dive.
+- **[`1.15-edge-computing-feasibility.md`](1.15-edge-computing-feasibility.md):** Sub-phase 1.15: Hybrid multi-process worker pools, priority scheduling, and 5 degraded modes.
+- **[`1.16-ros2-integration-requirements.md`](1.16-ros2-integration-requirements.md):** Sub-phase 1.16: ROS 2 Jazzy Jalisco lifecycle nodes, message definitions, and SROS2 safety boundaries.
+- **[`1.17-comprehensive-technical-feasibility-report.md`](1.17-comprehensive-technical-feasibility-report.md):** Sub-phase 1.17: Master technical, commercial, and operational feasibility report with risk register.
+- **[`1.18-model-and-dataset-selection-register.md`](1.18-model-and-dataset-selection-register.md):** Sub-phase 1.18: Authoritative model, dataset, and algorithm selection register with SHA-256 checksums.
 
 ### Milestone Qualification Reports
 - **[`PHASE_1_1_TO_1_5_QUALIFICATION_REPORT.md`](PHASE_1_1_TO_1_5_QUALIFICATION_REPORT.md):** Formal qualification report for Perception Sub-phases 1.1 through 1.5.
 - **[`PHASE_1_6_TO_1_11_QUALIFICATION_REPORT.md`](PHASE_1_6_TO_1_11_QUALIFICATION_REPORT.md):** Formal qualification report for Social Intelligence Sub-phases 1.6 through 1.11.
+- **[`PHASE_1_FINAL_QUALIFICATION_REPORT.md`](PHASE_1_FINAL_QUALIFICATION_REPORT.md):** Master Phase 1 Final Technical Qualification Report covering all 18 sub-phases.
 
 ---
 
-## 5. Research Methodology and Evidence Standards
+## 5. Master Phase 1 Feasibility Verdict
 
-This research package was executed under strict evidentiary governance:
-- **Zero Hallucination Standard:** No fabricated DOIs, benchmark metrics, model capabilities, or licensing terms are permitted.
-- **Audited Literature:** All 100 cited works represent peer-reviewed publications, IEEE/ACM transactions, official repositories, or international standards.
-- **Edge Hardware Profiling:** Memory footprints and latencies are based on standard ONNX Runtime INT8, OpenVINO, `llama.cpp`, and SQLite benchmarks on 4-core edge processor targets (Intel Core i5 / ARM Cortex-A76).
-- **Licensing Audit:** Open-source components are audited to guarantee permissive commercial distribution (Apache 2.0, MIT, BSD) while quarantining non-commercial academic datasets.
+### Status: PHASE 1 QUALIFIED WITH CONDITIONS
 
----
-
-## 6. Open Research Questions (Phase 1.12–1.18)
-
-Across the eleven evaluated sub-phases, key outstanding questions reserved for subsequent milestones include:
-1. *Memory Decay Tuning:* What is the optimal Ebbinghaus decay parameter ($\lambda$) for episodic memory across industrial versus domestic service robotics?
-2. *TTS Streaming Buffer Underrun:* What audio chunking size in Piper best balances real-time speech start ($<350\text{ms}$) with uninterrupted acoustic delivery during complex multi-clause generation?
-3. *Multilingual Code-Switching Invariants:* What automated testing suite best evaluates multi-turn conversational consistency across Telugu-English code-switched dialogues?
-
----
-
-## 7. Completion Criteria Verification
-
-Sub-phases 1.1 through 1.11 have satisfied all mandatory research completion criteria:
-- [x] All 11 sub-phase research reports authored, cross-referenced, and audited.
-- [x] Cross-sub-phase glossary expanded to cover all cognitive, social, and NLG terms.
-- [x] Research source register expanded to 100 verified scientific citations.
-- [x] Technical comparison matrix expanded across all 11 sub-phases.
-- [x] Both Perception and Social Intelligence architecture specifications authored with Mermaid diagrams.
-- [x] Cross-engine dependency matrix mapping inter-engine contracts established.
-- [x] CPU-first execution feasibility proved ($<20\text{ms}$ perception; $<350\text{ms}$ TTFS response generation).
-- [x] Non-authoritative safety invariants (`is_authoritative_stop=False`) and privacy boundaries enforced.
-- [x] Final qualification reports authored and approved.
+The Phase 1 Technical Research and Feasibility study is complete across all 18 sub-phases. The technical architecture, commercial model licensing, edge CPU execution, ROS 2 integration, and privacy/safety boundaries are rigorously established and verified. Phase 2 (Engineering Planning and Core Prototyping) may commence upon formal stakeholder review.

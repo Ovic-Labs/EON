@@ -1,0 +1,157 @@
+# OVIC EON Machine-Readable Algorithm and Runtime Registry
+# Schema Version: 1.0.0
+# Generated as part of Sub-phase 1.18
+
+schema_version: "1.0.0"
+registry_type: "algorithms"
+last_updated: "2026-11-23"
+
+algorithms:
+  - id: "ALG-01"
+    name: "Extended Kalman Filter (EKF) Valence-Arousal Tracker"
+    engine: "EMS"
+    capability: "Continuous affective state estimation and observation smoothing"
+    approach_type: "probabilistic_filter"
+    requires_neural_weights: false
+    implementation_languages:
+      - "Python"
+      - "C++"
+    execution_latency_ms: 0.05
+    memory_footprint_kb: 80
+    code_license: "Apache-2.0"
+    selection_status: "SELECTED"
+    rationale: "Zero-latency mathematical filtering eliminates sensor flicker without neural overhead."
+
+  - id: "ALG-02"
+    name: "SQLite WAL with SQLCipher Encryption"
+    engine: "EMS"
+    capability: "Relational persistence of episodic memories and interaction logs"
+    approach_type: "embedded_database"
+    requires_neural_weights: false
+    implementation_languages:
+      - "C"
+      - "Python"
+    execution_latency_ms: 0.40
+    memory_footprint_kb: 2048
+    code_license: "Public Domain / BSD"
+    selection_status: "SELECTED"
+    rationale: "Atomic ACID transactions, robust crash recovery, and 256-bit AES encryption."
+
+  - id: "ALG-03"
+    name: "Qdrant Embedded Vector Engine"
+    engine: "EMS"
+    capability: "Local Hierarchical Navigable Small World (HNSW) vector similarity search"
+    approach_type: "vector_index"
+    requires_neural_weights: false
+    implementation_languages:
+      - "Rust"
+      - "Python"
+    execution_latency_ms: 3.50
+    memory_footprint_kb: 15360
+    code_license: "Apache-2.0"
+    selection_status: "SELECTED"
+    rationale: "High-speed in-process vector retrieval without running external database services."
+
+  - id: "ALG-04"
+    name: "Scherer Component Process Model (CPM) Appraisal Rule Tree"
+    engine: "ERE"
+    capability: "Deterministic cognitive appraisal of human situation events"
+    approach_type: "decision_tree"
+    requires_neural_weights: false
+    implementation_languages:
+      - "Python"
+      - "C++"
+    execution_latency_ms: 0.25
+    memory_footprint_kb: 450
+    code_license: "Apache-2.0"
+    selection_status: "SELECTED"
+    rationale: "Scientifically explainable empathy checks; zero synthetic emotion claims."
+
+  - id: "ALG-05"
+    name: "Clamped 9-Persona Bounded Context Modulator"
+    engine: "PSE"
+    capability: "Mathematical context-dependent modulation over Big Five OCEAN personality traits"
+    approach_type: "mathematical_clamping"
+    requires_neural_weights: false
+    implementation_languages:
+      - "Python"
+      - "C++"
+    execution_latency_ms: 0.05
+    memory_footprint_kb: 95
+    code_license: "Apache-2.0"
+    selection_status: "SELECTED"
+    rationale: "Hard mathematical clamping bounds eliminate personality drift and prevent unsafe behaviors."
+
+  - id: "ALG-06"
+    name: "12-Stage Hierarchical Finite State Machine (HFSM)"
+    engine: "SIE"
+    capability: "Coordination of social interaction stages (Greeting, Turn-Taking, Farewell)"
+    approach_type: "state_machine"
+    requires_neural_weights: false
+    implementation_languages:
+      - "Python"
+      - "C++"
+    execution_latency_ms: 0.10
+    memory_footprint_kb: 220
+    code_license: "Apache-2.0"
+    selection_status: "SELECTED"
+    rationale: "Deterministic, predictable social turn transitions with robust timeout fallbacks."
+
+  - id: "ALG-07"
+    name: "Transition Relevance Place (TRP) Turn-Taking Detector"
+    engine: "SIE"
+    capability: "Sub-400ms conversational turn-taking detection fusing VAD, Pitch, and Gaze"
+    approach_type: "multimodal_fusion_heuristics"
+    requires_neural_weights: false
+    implementation_languages:
+      - "Python"
+      - "C++"
+    execution_latency_ms: 1.20
+    memory_footprint_kb: 1200
+    code_license: "Apache-2.0"
+    selection_status: "SELECTED"
+    rationale: "Eliminates conversational awkwardness by predicting floor transitions naturally."
+
+  - id: "ALG-08"
+    name: "Dynamic Time Warping (DTW) Gesture Trajectory Matcher"
+    engine: "HBU"
+    capability: "Non-linear temporal alignment and matching of dynamic hand gestures"
+    approach_type: "temporal_pattern_matching"
+    requires_neural_weights: false
+    implementation_languages:
+      - "C++"
+      - "Python"
+    execution_latency_ms: 1.20
+    memory_footprint_kb: 1500
+    code_license: "Apache-2.0"
+    selection_status: "SELECTED"
+    rationale: "Robust to variations in human gesture speed without requiring deep recurrent networks."
+
+  - id: "ALG-09"
+    name: "Finite-State Grammar Constraint Decoding (Outlines / BNF)"
+    engine: "ERG"
+    capability: "Guaranteed JSON schema output generation from Small Language Models"
+    approach_type: "grammar_constrained_decoding"
+    requires_neural_weights: false
+    implementation_languages:
+      - "Python"
+      - "C++"
+    execution_latency_ms: 0.15
+    memory_footprint_kb: 2800
+    code_license: "Apache-2.0"
+    selection_status: "SELECTED"
+    rationale: "Completely eliminates JSON parsing errors and structural hallucinations from SLMs."
+
+  - id: "ALG-10"
+    name: "Nav2 2D Social Costmap Gaussian Layer Plugin"
+    engine: "ROS 2"
+    capability: "Rendering Hall interpersonal proxemic zones into Nav2 path planning costmaps"
+    approach_type: "costmap_plugin"
+    requires_neural_weights: false
+    implementation_languages:
+      - "C++"
+    execution_latency_ms: 0.80
+    memory_footprint_kb: 3800
+    code_license: "Apache-2.0"
+    selection_status: "SELECTED"
+    rationale: "Advisory soft-layer path planning; certified collision safety remains authoritative."

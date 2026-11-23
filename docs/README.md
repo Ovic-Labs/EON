@@ -87,12 +87,16 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | Document | Document ID | Description |
 |---|---|---|
 | [Phase 1 Research Overview](research/phase-1/README.md) | EON-RES-OVR-001 | Phase 1 research objective, scope boundaries, methodology, and navigational index |
-| [Scientific Terminology Glossary](research/phase-1/GLOSSARY.md) | EON-RES-GLOSS-001 | Definitions for affective computing, vision, acoustics, memory, social reasoning, and NLG |
-| [Research Source Register](research/phase-1/RESEARCH_SOURCE_REGISTER.md) | EON-RES-SRC-001 | 100 independently audited, verifiable scientific sources (`SRC-001`–`SRC-100`) |
-| [Technical Comparison Matrix](research/phase-1/TECHNICAL_COMPARISON_MATRIX.md) | EON-RES-TCM-001 | Multi-dimensional comparison of algorithms, CPU suitability, latency, and licensing across 1.1–1.11 |
+| [Scientific Terminology Glossary](research/phase-1/GLOSSARY.md) | EON-RES-GLOSS-001 | Definitions for affective computing, vision, acoustics, memory, social reasoning, NLG, hardware, and ROS 2 |
+| [Research Source Register](research/phase-1/RESEARCH_SOURCE_REGISTER.md) | EON-RES-SRC-001 | 130 independently audited, verifiable scientific sources (`SRC-001`–`SRC-130`) |
+| [Technical Comparison Matrix](research/phase-1/TECHNICAL_COMPARISON_MATRIX.md) | EON-RES-TCM-001 | Multi-dimensional comparison of algorithms, CPU suitability, latency, and licensing across all 18 sub-phases |
 | [Engine Dependency Matrix](research/phase-1/ENGINE_DEPENDENCY_MATRIX.md) | EON-ARCH-DEP-001 | Cross-engine interactions, event hand-offs, and capability mappings for all seven engines |
 | [Initial Perception Architecture](research/phase-1/EON_PERCEPTION_ARCHITECTURE.md) | EON-ARCH-PERC-001 | Proposed edge-CPU perception pipeline, Mermaid diagram, and data contracts |
 | [Social Intelligence Architecture](research/phase-1/EON_SOCIAL_INTELLIGENCE_ARCHITECTURE.md) | EON-ARCH-SOC-001 | Proposed social intelligence pipeline, memory lifecycle, and multimodal response architecture |
+| [Licensing Compliance Matrix](research/phase-1/LICENSING_COMPLIANCE_MATRIX.md) | EON-RES-LIC-001 | Comprehensive IP compliance register covering all evaluated models, weights, datasets, and voice checkpoints |
+| [Hardware Compatibility Matrix](research/phase-1/HARDWARE_COMPATIBILITY_MATRIX.md) | EON-RES-HW-001 | Edge compute platform compatibility matrix across Raspberry Pi 5, RK3588, Core Ultra 5, Ryzen 7, and Jetson |
+| [Edge Deployment Architecture](research/phase-1/EDGE_DEPLOYMENT_ARCHITECTURE.md) | EON-ARCH-EDGE-001 | Multi-process runtime architecture, zero-copy shared memory IPC, CPU pinning, and memory budgets |
+| [ROS 2 Integration Architecture](research/phase-1/ROS2_INTEGRATION_ARCHITECTURE.md) | EON-ARCH-ROS2-001 | ROS 2 Jazzy/Humble lifecycle node mapping, message definitions (`.msg`, `.srv`, `.action`), and safety boundaries |
 | [Emotion Recognition Methods](research/phase-1/1.1-emotion-recognition-methods.md) | EON-RES-SUB-1.1 | Sub-phase 1.1: Foundations, VAD representation, calibration, and datasets |
 | [Facial Expression Analysis](research/phase-1/1.2-facial-expression-analysis.md) | EON-RES-SUB-1.2 | Sub-phase 1.2: MediaPipe Face Mesh, FACS Action Units, and ephemeral tracking |
 | [Speech Emotion Analysis](research/phase-1/1.3-speech-emotion-analysis.md) | EON-RES-SUB-1.3 | Sub-phase 1.3: Silero VAD, DistilHuBERT-SER, acoustics, and noise resilience |
@@ -104,8 +108,16 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | [Personality Modelling](research/phase-1/1.9-personality-modelling.md) | EON-RES-SUB-1.9 | Sub-phase 1.9: Parametric style profiles, anti-drift clamps, and user preference controls |
 | [Social Interaction Systems](research/phase-1/1.10-social-interaction-systems.md) | EON-RES-SUB-1.10 | Sub-phase 1.10: 12-stage interaction HFSM, multimodal TRP turn-taking, and social navigation |
 | [Response Generation](research/phase-1/1.11-response-generation.md) | EON-RES-SUB-1.11 | Sub-phase 1.11: Hybrid NLG (Qwen2.5-1.5B via `llama.cpp`), Piper neural TTS, and motor safety firewalls |
+| [Open-Source Model Research](research/phase-1/1.12-open-source-model-research.md) | EON-RES-SUB-1.12 | Sub-phase 1.12: Comprehensive 20-field model comparison across all 7 engines |
+| [Commercial Licensing & Due-Diligence](research/phase-1/1.13-commercial-model-and-dataset-licensing.md) | EON-RES-SUB-1.13 | Sub-phase 1.13: 10-tier IP due-diligence, SBOM generation, and license whitelist |
+| [CPU, GPU & NPU Requirements](research/phase-1/1.14-cpu-gpu-npu-hardware-requirements.md) | EON-RES-SUB-1.14 | Sub-phase 1.14: 4 hardware tiers, memory bandwidth analysis, SIMD vectorization, and Core Ultra 5 deep dive |
+| [Edge Computing Feasibility](research/phase-1/1.15-edge-computing-feasibility.md) | EON-RES-SUB-1.15 | Sub-phase 1.15: Hybrid multi-process worker pools, priority scheduling, and 5 degraded modes |
+| [ROS 2 Integration Requirements](research/phase-1/1.16-ros2-integration-requirements.md) | EON-RES-SUB-1.16 | Sub-phase 1.16: ROS 2 Jazzy Jalisco lifecycle nodes, message definitions, and SROS2 safety boundaries |
+| [Comprehensive Technical Feasibility](research/phase-1/1.17-comprehensive-technical-feasibility-report.md) | EON-RES-SUB-1.17 | Sub-phase 1.17: Master technical, commercial, and operational feasibility report with risk register |
+| [Model & Dataset Selection Register](research/phase-1/1.18-model-and-dataset-selection-register.md) | EON-RES-SUB-1.18 | Sub-phase 1.18: Authoritative model, dataset, and algorithm selection register with SHA-256 checksums |
 | [Phase 1.1–1.5 Qualification Report](research/phase-1/PHASE_1_1_TO_1_5_QUALIFICATION_REPORT.md) | EON-QUAL-PHASE1-001 | Sections A–L synthesis for Perception Sub-phases 1.1 through 1.5 |
 | [Phase 1.6–1.11 Qualification Report](research/phase-1/PHASE_1_6_TO_1_11_QUALIFICATION_REPORT.md) | EON-QUAL-PHASE1-002 | Sections 1–20 synthesis for Social Intelligence Sub-phases 1.6 through 1.11 |
+| [Phase 1 Final Qualification Report](research/phase-1/PHASE_1_FINAL_QUALIFICATION_REPORT.md) | EON-QUAL-PHASE1-FINAL | Master Phase 1 Final Technical Qualification Report covering all 18 sub-phases |
 
 ---
 
