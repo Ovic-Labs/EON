@@ -676,7 +676,7 @@ This section establishes critical boundaries between OVIC EON and physical robot
 
 OVIC EON SHALL NOT replace or act as the sole safety controller for a physical robot.
 
-The robot manufacturer's safety architecture SHALL remain authoritative.
+The robot manufacturer's safety architecture SHALL remain authoritative. All safety advisory events emitted by EON SHALL strictly enforce the non-authoritative flag `is_authoritative_stop=False`.
 
 ## EON-PSR-061 — No Direct Emotion-to-Motion Authorization
 
@@ -691,6 +691,8 @@ Emotion-related classifications SHALL NOT directly authorize:
 - Speed changes.
 - Safety-limit changes.
 - Emergency-stop release.
+
+Furthermore, OVIC EON is explicitly a non-diagnostic software middleware platform. It SHALL NOT produce medical, clinical psychiatric, or psychological diagnostic assessments.
 
 ## EON-PSR-062 — Authorized Action Interface
 

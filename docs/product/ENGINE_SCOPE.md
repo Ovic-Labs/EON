@@ -146,6 +146,20 @@ EON Core must not:
 - Replace manufacturer-specific safety systems.
 - Require a cloud connection for core local runtime operation where offline deployment is supported.
 
+## 4.5 Orchestration and Circular Dependency Prevention Invariants
+
+To maintain system stability, predictability, and deadlock-free operation across edge computing environments, EON Core enforces strict orchestration and dependency invariants across all seven engines:
+
+1. **Directed Acyclic Event Flow (DAG):** Engines must never communicate through direct synchronous references to each other's runtime instances. All inter-engine communication is routed through the central `EventBus` using typed Phase 1.2 `EventEnvelope` data contracts.
+2. **Layered Architectural Hierarchy:**
+   - **Ingestion & Perception Layer (ERS, HBU):** Ingests raw perception features from host robot adapters; publishes `ObservationEvent` payloads. They have zero dependencies on downstream reasoning or memory engines.
+   - **Affective State & Context Layer (EMS, PSE):** Subscribes to observations; maintains bounded memory and consistent personality profiles; emits contextual updates. They do not trigger response generation directly.
+   - **Reasoning & Deliberation Layer (ERE):** Evaluates incoming observations alongside contextual state and personality parameters; formulates empathetic reasoning outcomes.
+   - **Interaction & Response Layer (SIE, ERG):** Manages social turn-taking and formulates multi-modal response plans (`EmotionEstimateEvent`, `SafetyAdvisoryEvent`).
+3. **No Circular Call Graphs:** No engine may publish an event that triggers a synchronous feedback loop resulting in an immediate re-publish to itself without passing through an explicit time-bounded event queue.
+4. **Isolated Memory Ownership:** Engine memory is strictly isolated. `EMS` is the sole authorized custodian of longitudinal interaction records; other engines must query `EMS` via typed request/response contracts rather than accessing storage directly.
+5. **Non-Authoritative Actuation Invariant:** Every event produced by any engine preserves `is_authoritative_stop=False` and provides advisory cues only. Robot hardware controllers retain absolute motion authority.
+
 # 5. Engine 1 — Emotion Recognition System (ERS)
 
 ## 5.1 Definition
@@ -266,6 +280,22 @@ ERS must not:
 - Inference failures are handled.
 - Supported execution environments are documented.
 - Performance is measured where applicable.
+
+## 5.10 Engineering Specification Profile
+
+| Specification Dimension | Engineering Requirement & Implementation Invariant |
+|---|---|
+| **Internal Processing Boundaries** | Stateless perception inference windowing; executes within isolated worker thread or dedicated subprocess; no cross-session state persistence. |
+| **Error Handling** | Categorized typed error responses (`EON-ERR-001` to `007`); graceful degradation on missing modalities or corrupted frames; never crashes host bus. |
+| **Uncertainty Handling** | Normalizes probabilistic confidence to `[0.0, 1.0]`; includes explicit `uncertainty` dictionary detailing sensory limitations and ambiguity factors. |
+| **Privacy Requirements** | Strictly zero unencrypted retention or logging of raw PCM audio waveforms or camera RGB frames; ephemeral feature embedding processing only. |
+| **Safety Restrictions** | Strictly non-authoritative (`is_authoritative_stop=False`); outputs advisory perceptual cues only; zero physical actuator authority. |
+| **Configuration** | Strict positive thresholds (`gt=0`); configurable confidence cutoff, active modality selection, model checkpoint path, and timeout budget. |
+| **Observability** | Emits per-inference duration metrics, dropped frame counts, rolling latency percentiles (p50, p95, p99), and component health heartbeats. |
+| **Performance Requirements** | Provisional target: p95 processing latency $\le 30.0\text{ ms}$; lightweight observation throughput $\ge 30\text{ Hz}$ on reference edge hardware. |
+| **Testing Requirements** | Unit tests for all modality parsers; schema validation contract tests; synthetic sensor noise and drop tests; hardware timeout tests. |
+| **Acceptance Criteria** | `AC-001`, `AC-002`, `AC-003`, `AC-004`, `AC-005`, `AC-006`, `AC-007`, `AC-008`, `AC-009`, `AC-010`. |
+| **Explicit Out-of-Scope** | Medical or psychiatric diagnosis; emotion polygraph analysis; long-term biographical memory retention; autonomous motor control. |
 
 # 6. Engine 2 — Emotional Memory System (EMS)
 
@@ -395,6 +425,22 @@ EMS must not:
 - Storage failures are handled.
 - Memory integrity is tested.
 
+## 6.11 Engineering Specification Profile
+
+| Specification Dimension | Engineering Requirement & Implementation Invariant |
+|---|---|
+| **Internal Processing Boundaries** | Manages governed local memory state; enforces strict participant session boundaries; isolates memory records per registered user/session. |
+| **Error Handling** | Categorized errors for storage failures, record corruptions, and policy violations; rolls back atomic transactions on I/O error. |
+| **Uncertainty Handling** | Stores observation confidence scores alongside memory items; decays stale unconfirmed memories over time; reports memory uncertainty. |
+| **Privacy Requirements** | Enforces configurable retention expiration and cryptographic user erasure ("right to be forgotten"); encrypts local storage at rest. |
+| **Safety Restrictions** | Memory retrieval cannot override real-time safety advisories; zero direct motor command persistence. |
+| **Configuration** | Max memory depth, time-to-live (TTL) retention periods, encryption keys, decay rates, and storage backend selection. |
+| **Observability** | Tracks active record counts, retrieval query latency (p50, p95, p99), cache hit rates, eviction counts, and database compaction status. |
+| **Performance Requirements** | Provisional target: local retrieval p95 $\le 10.0\text{ ms}$; local write p95 $\le 15.0\text{ ms}$ under 10,000 active records. |
+| **Testing Requirements** | CRUD memory lifecycle tests; retention expiration tests; right-to-be-forgotten deletion tests; storage corruption recovery tests. |
+| **Acceptance Criteria** | `AC-011`, `AC-012`, `AC-013`, `AC-014`, `AC-015`, `AC-016`, `AC-017`, `AC-018`, `AC-019`, `AC-020`. |
+| **Explicit Out-of-Scope** | Cloud biometric syncing; global surveillance tracking; cross-tenant unencrypted memory sharing; medical records management. |
+
 # 7. Engine 3 — Empathy Reasoning Engine (ERE)
 
 ## 7.1 Definition
@@ -511,6 +557,22 @@ ERE must not:
 - Safe fallback behavior is verified.
 - Reasoning outputs are traceable.
 
+## 7.10 Engineering Specification Profile
+
+| Specification Dimension | Engineering Requirement & Implementation Invariant |
+|---|---|
+| **Internal Processing Boundaries** | Rule-based and model-assisted empathy reasoning; evaluates social conventions and manufacturer policies without retaining persistent state. |
+| **Error Handling** | Detects conflicting emotional observations; provides deterministic fallback to safe neutral social policy on inference ambiguity or timeout. |
+| **Uncertainty Handling** | Propagates input uncertainty; weights low-confidence perception inputs lower than established context; flags reasoning ambiguities explicitly. |
+| **Privacy Requirements** | Never exposes raw participant identifiers or emotional history in reasoning logs; uses anonymized session tokens. |
+| **Safety Restrictions** | Empathy reasoning is purely advisory (`is_authoritative_stop=False`); cannot command mechanical movements or override safety limits. |
+| **Configuration** | Configurable social policy rulesets, empathy threshold levels, conflict resolution strategies, and reasoning timeout limits. |
+| **Observability** | Emits reasoning duration percentiles, policy rule execution logs, conflict resolution counters, and audit trail traces. |
+| **Performance Requirements** | Provisional target: deterministic reasoning p95 $\le 20.0\text{ ms}$; end-to-end evaluation within conversational turn deadlines. |
+| **Testing Requirements** | Scenario tests with conflicting cues; policy boundary constraint tests; timeout and fallback behavior tests; audit traceability tests. |
+| **Acceptance Criteria** | `AC-021`, `AC-022`, `AC-023`, `AC-024`, `AC-025`, `AC-026`, `AC-027`, `AC-028`, `AC-029`, `AC-030`. |
+| **Explicit Out-of-Scope** | Autonomous ethical moral arbitration; psychiatric counseling; legal liability adjudication; physical safety control. |
+
 # 8. Engine 4 — Personality Simulation Engine (PSE)
 
 ## 8.1 Definition
@@ -604,6 +666,22 @@ PSE must not:
 - Personality consistency can be evaluated.
 - Invalid configurations are rejected.
 - Configuration versions are traceable.
+
+## 8.10 Engineering Specification Profile
+
+| Specification Dimension | Engineering Requirement & Implementation Invariant |
+|---|---|
+| **Internal Processing Boundaries** | Pure configuration-driven personality profile evaluation; applies parameterized OCEAN traits and behavioral boundaries deterministically. |
+| **Error Handling** | Rejects out-of-range personality weights (`[0.0, 1.0]`); falls back to factory baseline neutral profile on missing or corrupted configuration. |
+| **Uncertainty Handling** | Maintains deterministic baseline traits; adjusts behavioral modifiers proportionately to interaction uncertainty. |
+| **Privacy Requirements** | Personality definitions contain no personal data; profile modifications are restricted to authorized manufacturer administrative roles. |
+| **Safety Restrictions** | Personality expressions cannot command aggressive, deceptive, or physically reckless behavior; hard-coded ethical boundary clamps. |
+| **Configuration** | Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism (OCEAN) parameters, humor thresholds, formality levels, verbosity. |
+| **Observability** | Tracks active profile ID, dynamic mood modifier offsets, trait clamp activations, and profile switch audit logs. |
+| **Performance Requirements** | Provisional target: profile lookup and trait state update p95 $\le 5.0\text{ ms}$; negligible CPU utilization. |
+| **Testing Requirements** | Parameter validation tests; profile hot-reloading tests; ethical boundary constraint clamping tests; consistency regression suites. |
+| **Acceptance Criteria** | `AC-031`, `AC-032`, `AC-033`, `AC-034`, `AC-035`, `AC-036`, `AC-037`, `AC-038`, `AC-039`, `AC-040`. |
+| **Explicit Out-of-Scope** | Autonomous sentient personality evolution; manipulative dark-pattern behaviors; impersonation of specific living individuals. |
 
 # 9. Engine 5 — Social Interaction Engine (SIE)
 
@@ -731,6 +809,22 @@ SIE must not:
 - Invalid transitions are rejected.
 - Context references remain consistent.
 
+## 9.10 Engineering Specification Profile
+
+| Specification Dimension | Engineering Requirement & Implementation Invariant |
+|---|---|
+| **Internal Processing Boundaries** | Finite state machine (FSM) governing conversational turn-taking, active engagement states, and social interruption dynamics. |
+| **Error Handling** | Detects overlapping speech or abrupt user departures; gracefully transitions to IDLE or RE-ENGAGING state; rejects invalid FSM state jumps. |
+| **Uncertainty Handling** | Handles ambiguous user intent by requesting polite clarification; incorporates conversational silence detectors. |
+| **Privacy Requirements** | Session tokens are rotated regularly; dialogue transcripts are never logged unencrypted; respects user privacy requests to pause listening. |
+| **Safety Restrictions** | Conversation management cannot command physical gestures that violate proximity safety zones; advisory interaction cues only. |
+| **Configuration** | Turn-taking timeouts, maximum pause durations, interruption sensitivity thresholds, and social distance parameters. |
+| **Observability** | Tracks active session state, turn duration, interruption frequency, silence timeouts, and FSM transition latency (p50, p95, p99). |
+| **Performance Requirements** | Provisional target: deterministic state evaluation p95 $\le 10.0\text{ ms}$; immediate response to human interruption $\le 50.0\text{ ms}$. |
+| **Testing Requirements** | FSM state transition completeness tests; concurrent interruption tests; session timeout and recovery tests; turn-taking stress tests. |
+| **Acceptance Criteria** | `AC-041`, `AC-042`, `AC-043`, `AC-044`, `AC-045`, `AC-046`, `AC-047`, `AC-048`, `AC-049`, `AC-050`. |
+| **Explicit Out-of-Scope** | Large language model conversational generation; natural language speech-to-text; voice synthesis; acoustic noise cancellation. |
+
 # 10. Engine 6 — Emotional Response Generation (ERG)
 
 ## 10.1 Definition
@@ -839,6 +933,22 @@ ERG must not:
 - Response latency is measured.
 - Safety boundaries are maintained.
 
+## 10.10 Engineering Specification Profile
+
+| Specification Dimension | Engineering Requirement & Implementation Invariant |
+|---|---|
+| **Internal Processing Boundaries** | Plans structured multimodal expressive outputs (vocal pitch/speed modifiers, facial animation tags, non-verbal gestures); no motor control. |
+| **Error Handling** | Rejects unvalidated or out-of-spec response plans; falls back to neutral polite speech text if expressive planning fails. |
+| **Uncertainty Handling** | Reflects reasoning confidence in response intensity; tempers expressive vigor when observation confidence is low. |
+| **Privacy Requirements** | Ensures generated responses do not inadvertently disclose private interaction history or third-party user data in dialogue. |
+| **Safety Restrictions** | All gesture and expression plans are non-authoritative suggestions (`is_authoritative_stop=False`); host motion planner must validate kinematics. |
+| **Configuration** | Expressive modality toggles (audio tone, facial LED, head tilt), maximum intensity bounds, language templates, and rate limits. |
+| **Observability** | Tracks response generation latency, plan validation failures, policy clamp triggers, and multimodal output channel distributions. |
+| **Performance Requirements** | Provisional target: deterministic response planning p95 $\le 25.0\text{ ms}$; end-to-end plan generation within real-time dialogue budgets. |
+| **Testing Requirements** | Multimodal contract validation tests; expressive boundary clamp tests; policy rejection tests; fallback safety tests. |
+| **Acceptance Criteria** | `AC-051`, `AC-052`, `AC-053`, `AC-054`, `AC-055`, `AC-056`, `AC-057`, `AC-058`, `AC-059`, `AC-060`. |
+| **Explicit Out-of-Scope** | Motor joint trajectory planning; text-to-speech audio rendering; direct physical actuator servoing; hardware display driving. |
+
 # 11. Engine 7 — Human Behaviour Understanding (HBU)
 
 ## 11.1 Definition
@@ -946,6 +1056,22 @@ HBU must not:
 - Missing inputs are handled.
 - Model failures are handled.
 - Performance is measured where applicable.
+
+## 11.10 Engineering Specification Profile
+
+| Specification Dimension | Engineering Requirement & Implementation Invariant |
+|---|---|
+| **Internal Processing Boundaries** | Temporal analysis of human movement, gaze orientation, proximity changes, and interaction rhythm over sliding observation windows. |
+| **Error Handling** | Handles tracking loss or occluded user observations gracefully; flags temporal discontinuities; emits `inconclusive` status on tracking loss. |
+| **Uncertainty Handling** | Scores behavioural pattern stability; differentiates between deliberate user gestures and random background movement using confidence decay. |
+| **Privacy Requirements** | Never stores or reconstructs raw skeletal coordinates or facial geometry across sessions; extracts normalized interaction features only. |
+| **Safety Restrictions** | Behavioural interpretations are strictly advisory; cannot be used as primary input for robot obstacle avoidance or emergency braking. |
+| **Configuration** | Temporal sliding window duration (e.g. 500ms–5000ms), tracking confidence threshold, proximity zones, and gesture sensitivity. |
+| **Observability** | Tracks observation frame rate, tracking drop rates, window processing latency (p50, p95, p99), and pattern classification distribution. |
+| **Performance Requirements** | Provisional target: processing latency p95 $\le 30.0\text{ ms}$; temporal observation throughput $\ge 20\text{ Hz}$. |
+| **Testing Requirements** | Occlusion and tracking recovery tests; temporal sliding window stability tests; sensor noise robustness tests; benchmark latency tests. |
+| **Acceptance Criteria** | `AC-061`, `AC-062`, `AC-063`, `AC-064`, `AC-065`, `AC-066`, `AC-067`, `AC-068`, `AC-069`, `AC-070`. |
+| **Explicit Out-of-Scope** | Security biometric surveillance; gait identification; criminal intent prediction; robot navigation obstacle detection. |
 
 # 12. Cross-Engine Responsibilities
 

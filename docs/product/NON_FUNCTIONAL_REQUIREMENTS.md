@@ -162,6 +162,11 @@ Performance benchmarks SHALL record:
 
 Performance claims SHALL NOT be published without reproducible evidence.
 
+**Verification:**
+- Inspect benchmark execution logs and artifact metadata.
+- Verify environment parameters, hardware configuration, and measurement methodology are recorded.
+- Re-run benchmark to verify reproducibility.
+
 # 6. Resource Efficiency Requirements
 
 ## EON-NFR-005 — CPU-First Compatibility

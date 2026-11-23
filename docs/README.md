@@ -13,7 +13,7 @@ Welcome to the central documentation index for **OVIC EON**. This document catal
 
 ## 1. Phase 0 Documentation Matrix
 
-The Phase 0 documentation suite comprises 15 foundational documents across three core domains:
+The Phase 0 documentation suite comprises 16 foundational specifications across three core domains:
 
 ### 1.1 Product Documentation (`docs/product/`)
 
@@ -27,6 +27,7 @@ The Phase 0 documentation suite comprises 15 foundational documents across three
 | [Non-Functional Requirements](product/NON_FUNCTIONAL_REQUIREMENTS.md) | EON-NFR-001 | Reliability, security, maintainability, modularity, and resource efficiency requirements (`EON-NFR-001` through `EON-NFR-078`) |
 | [Performance Requirements](product/PERFORMANCE_REQUIREMENTS.md) | EON-PROD-PERF-001 | Detailed latency, throughput, memory, and CPU targets, benchmarks, and qualification criteria (`EON-PERF-001` through `EON-PERF-066`) |
 | [Privacy and Safety Requirements](product/PRIVACY_AND_SAFETY_REQUIREMENTS.md) | EON-PSR-001 | Data minimization, retention/deletion controls, physical safety boundaries, and responsible AI (`EON-PSR-001` through `EON-PSR-086`) |
+| [Commercial Licensing Strategy](product/COMMERCIAL_LICENSING_STRATEGY.md) | EON-LIC-001 | Open-core boundaries, dependency whitelisting, model/dataset compliance, and OEM licensing models |
 | [Product Requirements Document](product/PRD.md) | EON-PRD-001 | Master product specification uniting vision, commercial direction, architecture, and milestone roadmap |
 
 ### 1.2 Engineering Requirements (`docs/requirements/`)
@@ -45,6 +46,7 @@ The Phase 0 documentation suite comprises 15 foundational documents across three
 | [Defect Register](acceptance/DEFECT_REGISTER.md) | EON-DEF-001 | Repository defect catalog, classification scheme, severity/priority matrices, and lifecycle workflows |
 | [Release Acceptance](acceptance/RELEASE_ACCEPTANCE.md) | EON-ACC-REL-001 | Release governance policies, mandatory milestone release gates, and founder sign-off procedures |
 | [Phase 0 Verification Report](acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md) | EON-REP-P0-FINAL-001 | Final verification, qualification report, requirement audit, and formal founder approval record |
+| [Phase 0 Production Qualification Report](acceptance/PHASE_0_PRODUCTION_QUALIFICATION_REPORT.md) | EON-REP-P0-PROD-001 | Final production implementation, hardening, and qualification report |
 
 ### 1.4 Engineering Roadmap (`docs/roadmap/`)
 

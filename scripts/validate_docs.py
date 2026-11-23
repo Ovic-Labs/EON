@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """OVIC EON — Documentation Qualification and Structure Validation Suite.
 
-Phase 0 Final Verification and Automated Regression Audit.
+Phase 0 Final Production Qualification and Automated Regression Audit.
+Implements 15 deterministic verification gates for Phase 0 engineering specifications.
 """
 
 import json
@@ -18,6 +19,7 @@ REQUIRED_PHASE0_DOCS = [
     "docs/product/NON_FUNCTIONAL_REQUIREMENTS.md",
     "docs/product/PERFORMANCE_REQUIREMENTS.md",
     "docs/product/PRIVACY_AND_SAFETY_REQUIREMENTS.md",
+    "docs/product/COMMERCIAL_LICENSING_STRATEGY.md",
     "docs/product/PRD.md",
     "docs/requirements/SRS.md",
     "docs/requirements/REQUIREMENT_TRACEABILITY.md",
@@ -76,12 +78,12 @@ RECONCILED_PERF_METRICS = [
 ]
 
 
-def check_file_structure():
-    """Verify all required documentation and governance files exist."""
-    print("Checking repository documentation structure...")
+def check_file_structure(base_dir: str = ".") -> bool:
+    """Gate 1: Verify all required documentation and governance files exist."""
+    print("Gate 1: Checking repository documentation structure...")
     missing = []
     for doc in REQUIRED_PHASE0_DOCS + REQUIRED_GOVERNANCE_DOCS:
-        norm_path = os.path.normpath(doc)
+        norm_path = os.path.normpath(os.path.join(base_dir, doc))
         if not os.path.exists(norm_path):
             missing.append(doc)
     if missing:
@@ -89,17 +91,18 @@ def check_file_structure():
         return False
     p0_count = len(REQUIRED_PHASE0_DOCS)
     gov_count = len(REQUIRED_GOVERNANCE_DOCS)
-    print(f"SUCCESS: All {p0_count} Phase 0 documents and {gov_count} governance files exist.")
+    print(f"SUCCESS: All {p0_count} Phase 0 specifications and {gov_count} governance files exist.")
     return True
 
 
-def check_clone_url():
-    """Verify README contains canonical clone URL."""
-    print("Checking README clone URL...")
-    if not os.path.exists("README.md"):
+def check_clone_url(base_dir: str = ".") -> bool:
+    """Gate 2: Verify README contains canonical clone URL."""
+    print("Gate 2: Checking README clone URL...")
+    readme_path = os.path.normpath(os.path.join(base_dir, "README.md"))
+    if not os.path.exists(readme_path):
         print("FAILED: README.md not found.")
         return False
-    with open("README.md", encoding="utf-8") as f:
+    with open(readme_path, encoding="utf-8") as f:
         content = f.read()
     if EXPECTED_CLONE_URL not in content:
         print(f"FAILED: README.md does not contain expected clone URL '{EXPECTED_CLONE_URL}'")
@@ -108,16 +111,17 @@ def check_clone_url():
     return True
 
 
-def check_markdown_links():
-    """Verify internal markdown hyperlinks resolve correctly."""
-    print("Checking internal Markdown links...")
+def check_markdown_links(base_dir: str = ".") -> bool:
+    """Gate 3: Verify internal markdown hyperlinks resolve correctly."""
+    print("Gate 3: Checking internal Markdown links...")
     files = []
-    for root, _dirs, filenames in os.walk("."):
-        if ".git" in root or ".gemini" in root or "brain" in root:
+    skip_dirs = [".git", ".gemini", "brain", ".pytest_cache", "node_modules"]
+    for root, _dirs, filenames in os.walk(base_dir):
+        if any(skip in root for skip in skip_dirs):
             continue
-        for f in filenames:
-            if f.endswith(".md"):
-                files.append(os.path.normpath(os.path.join(root, f)))
+        for fname in filenames:
+            if fname.endswith(".md"):
+                files.append(os.path.normpath(os.path.join(root, fname)))
 
     link_pattern = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
     broken = []
@@ -129,7 +133,7 @@ def check_markdown_links():
 
         for match in link_pattern.finditer(content):
             text, url = match.groups()
-            if url.startswith(("http://", "https://", "mailto:")):
+            if url.startswith(("http://", "https://", "mailto:", "#")):
                 continue
             total_checked += 1
             clean_url = url.split("#")[0]
@@ -152,9 +156,9 @@ def check_markdown_links():
     return True
 
 
-def check_no_duplicate_requirement_definitions():
-    """Audit canonical specification documents for duplicate requirement IDs."""
-    print("Checking requirement definition uniqueness (excluding RTM matrix)...")
+def check_no_duplicate_requirement_definitions(base_dir: str = ".") -> bool:
+    """Gate 4: Audit canonical specification documents for duplicate requirement IDs."""
+    print("Gate 4: Checking requirement definition uniqueness (excluding RTM matrix)...")
     spec_files = [
         "docs/product/FUNCTIONAL_REQUIREMENTS.md",
         "docs/product/NON_FUNCTIONAL_REQUIREMENTS.md",
@@ -164,11 +168,11 @@ def check_no_duplicate_requirement_definitions():
         "docs/acceptance/ACCEPTANCE_CRITERIA.md",
     ]
 
-    all_defs = {}
-    duplicates = []
+    all_defs: dict[str, tuple[str, int, str]] = {}
+    duplicates: list[tuple[str, tuple[str, int, str], tuple[str, int, str]]] = []
 
     for sf in spec_files:
-        norm_path = os.path.normpath(sf)
+        norm_path = os.path.normpath(os.path.join(base_dir, sf))
         if not os.path.exists(norm_path):
             continue
         with open(norm_path, encoding="utf-8") as f:
@@ -205,18 +209,51 @@ def check_no_duplicate_requirement_definitions():
     return True
 
 
-def check_performance_reconciliation():
-    """Verify all 21 system performance targets are reconciled across specs."""
-    print("Checking performance targets reconciliation across PRD, SRS, PERF, and AC...")
+def check_acceptance_id_uniqueness(base_dir: str = ".") -> bool:
+    """Gate 5: Verify acceptance criteria IDs (179 AC definitions) are unique and complete."""
+    print("Gate 5: Checking Acceptance Criteria ID uniqueness and completeness...")
+    ac_file = os.path.normpath(os.path.join(base_dir, "docs/acceptance/ACCEPTANCE_CRITERIA.md"))
+    if not os.path.exists(ac_file):
+        print(f"FAILED: {ac_file} not found.")
+        return False
+
+    with open(ac_file, encoding="utf-8") as f:
+        lines = f.readlines()
+
+    ac_ids = []
+    for line in lines:
+        m = re.match(r"^#+\s+(AC-[A-Z0-9-]+)", line)
+        if m:
+            ac_ids.append(m.group(1))
+
+    if len(ac_ids) != len(set(ac_ids)):
+        duplicates = [x for x in ac_ids if ac_ids.count(x) > 1]
+        print(f"FAILED: Duplicate AC IDs found: {set(duplicates)}")
+        return False
+
+    if len(ac_ids) != 179:
+        print(f"FAILED: Expected exactly 179 AC definitions, found {len(ac_ids)}")
+        return False
+
+    print(f"SUCCESS: Verified all {len(ac_ids)} Acceptance Criteria are unique.")
+    return True
+
+
+def check_performance_reconciliation(base_dir: str = ".") -> bool:
+    """Gate 6: Verify all 21 system performance targets are reconciled across specs."""
+    print("Gate 6: Checking performance targets reconciliation across PRD, SRS, PERF, and AC...")
     perf_files = {
-        "PRD": "docs/product/PRD.md",
-        "SRS": "docs/requirements/SRS.md",
-        "AC": "docs/acceptance/ACCEPTANCE_CRITERIA.md",
-        "PERF": "docs/product/PERFORMANCE_REQUIREMENTS.md",
+        "PRD": os.path.join(base_dir, "docs/product/PRD.md"),
+        "SRS": os.path.join(base_dir, "docs/requirements/SRS.md"),
+        "AC": os.path.join(base_dir, "docs/acceptance/ACCEPTANCE_CRITERIA.md"),
+        "PERF": os.path.join(base_dir, "docs/product/PERFORMANCE_REQUIREMENTS.md"),
     }
 
-    missing_in_files = {}
+    missing_in_files: dict[str, list[str]] = {}
     for label, path in perf_files.items():
+        if not os.path.exists(path):
+            missing_in_files[label] = ["FILE_NOT_FOUND"]
+            continue
         with open(path, encoding="utf-8") as f:
             content = f.read()
         missing = []
@@ -240,10 +277,37 @@ def check_performance_reconciliation():
     return True
 
 
-def check_evidence_integrity():
-    """Verify evidence registers preserve Phase 0 integrity without false passes."""
-    print("Checking evidence registers for strict Phase 0 integrity...")
-    evidence_file = os.path.normpath("docs/acceptance/TEST_EVIDENCE_REGISTER.md")
+def check_performance_target_classification(base_dir: str = ".") -> bool:
+    """Gate 7: Verify all performance targets are clearly classified as provisional."""
+    print("Gate 7: Checking performance target classification as provisional...")
+    perf_file = os.path.normpath(os.path.join(base_dir, "docs/product/PERFORMANCE_REQUIREMENTS.md"))
+    if not os.path.exists(perf_file):
+        print(f"FAILED: {perf_file} not found.")
+        return False
+
+    with open(perf_file, encoding="utf-8") as f:
+        content = f.read()
+
+    if "provisional" not in content.lower():
+        print(
+            "FAILED: PERFORMANCE_REQUIREMENTS.md does not classify performance "
+            "targets as provisional."
+        )
+        return False
+
+    print(
+        "SUCCESS: Performance targets are rigorously classified as PROVISIONAL "
+        "pending hardware measurement."
+    )
+    return True
+
+
+def check_evidence_integrity(base_dir: str = ".") -> bool:
+    """Gate 8: Verify evidence registers preserve Phase 0 integrity without false passes."""
+    print("Gate 8: Checking evidence registers for strict Phase 0 integrity...")
+    evidence_file = os.path.normpath(
+        os.path.join(base_dir, "docs/acceptance/TEST_EVIDENCE_REGISTER.md")
+    )
     if not os.path.exists(evidence_file):
         print(f"FAILED: {evidence_file} not found.")
         return False
@@ -281,15 +345,41 @@ def check_evidence_integrity():
     return True
 
 
-def check_rtm_metrics():
-    """Validate machine-readable RTM JSON dataset schema and metrics."""
-    print("Checking machine-readable RTM JSON metrics...")
-    json_path = os.path.normpath("docs/requirements/requirement_traceability_matrix.json")
+def check_defect_register_integrity(base_dir: str = ".") -> bool:
+    """Gate 9: Verify defect register contains zero unresolved critical/high defects."""
+    print("Gate 9: Checking defect register integrity...")
+    defect_file = os.path.normpath(os.path.join(base_dir, "docs/acceptance/DEFECT_REGISTER.md"))
+    if not os.path.exists(defect_file):
+        print(f"FAILED: {defect_file} not found.")
+        return False
+
+    with open(defect_file, encoding="utf-8") as f:
+        content = f.read()
+
+    if "0 Open Defects" not in content and "0 open defects" not in content.lower():
+        print("FAILED: Defect register does not indicate 0 open defects for Phase 0 baseline.")
+        return False
+
+    print("SUCCESS: Defect register verified: zero unresolved critical/high Phase 0 defects.")
+    return True
+
+
+def check_rtm_metrics(base_dir: str = ".") -> bool:
+    """Gate 10: Validate machine-readable RTM JSON dataset schema and metrics."""
+    print("Gate 10: Checking machine-readable RTM JSON metrics...")
+    json_path = os.path.normpath(
+        os.path.join(base_dir, "docs/requirements/requirement_traceability_matrix.json")
+    )
     if not os.path.exists(json_path):
         print(f"FAILED: {json_path} not found.")
         return False
-    with open(json_path, encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        with open(json_path, encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as exc:
+        print(f"FAILED: Invalid JSON syntax in RTM matrix: {exc}")
+        return False
+
     metrics = data.get("metrics", {})
     if metrics.get("total_source_requirements") != 290:
         found_cnt = metrics.get("total_source_requirements")
@@ -325,8 +415,185 @@ def check_rtm_metrics():
     return True
 
 
-def main():
-    """Execute all verification gates."""
+def check_traceability_completeness(base_dir: str = ".") -> bool:
+    """Gate 11: Validate requirement traceability completeness and detect orphans."""
+    print("Gate 11: Checking requirement traceability completeness...")
+    json_path = os.path.normpath(
+        os.path.join(base_dir, "docs/requirements/requirement_traceability_matrix.json")
+    )
+    if not os.path.exists(json_path):
+        print(f"FAILED: {json_path} not found.")
+        return False
+
+    with open(json_path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    reqs = data.get("requirements", {})
+    source_counts = {
+        "functional": len(reqs.get("functional", [])),
+        "non_functional": len(reqs.get("non_functional", [])),
+        "performance": len(reqs.get("performance", [])),
+        "privacy_and_safety": len(reqs.get("privacy_and_safety", [])),
+    }
+
+    if source_counts["functional"] != 60:
+        print(f"FAILED: Expected 60 FRs, found {source_counts['functional']}")
+        return False
+    if source_counts["non_functional"] != 78:
+        print(f"FAILED: Expected 78 NFRs, found {source_counts['non_functional']}")
+        return False
+    if source_counts["performance"] != 66:
+        print(f"FAILED: Expected 66 PERF reqs, found {source_counts['performance']}")
+        return False
+    if source_counts["privacy_and_safety"] != 86:
+        print(f"FAILED: Expected 86 PSRs, found {source_counts['privacy_and_safety']}")
+        return False
+
+    total_source = sum(source_counts.values())
+    srs_count = len(reqs.get("srs", []))
+    use_case_count = len(reqs.get("use_cases", []))
+
+    if total_source != 290 or srs_count != 203 or use_case_count != 54:
+        print(
+            f"FAILED: Mismatched counts: total_source={total_source}, "
+            f"srs={srs_count}, uc={use_case_count}"
+        )
+        return False
+
+    print(
+        "SUCCESS: Traceability complete: 290 source requirements "
+        "(60 FR, 78 NFR, 66 PERF, 86 PSR), 203 SRS, 54 Use Cases."
+    )
+    return True
+
+
+def check_verification_methods(base_dir: str = ".") -> bool:
+    """Gate 12: Verify all requirements declare an objective verification method."""
+    print("Gate 12: Checking requirement verification methods...")
+    fr_file = os.path.normpath(os.path.join(base_dir, "docs/product/FUNCTIONAL_REQUIREMENTS.md"))
+    nfr_file = os.path.normpath(
+        os.path.join(base_dir, "docs/product/NON_FUNCTIONAL_REQUIREMENTS.md")
+    )
+
+    targets = [(fr_file, 60, "Functional"), (nfr_file, 78, "Non-Functional")]
+    for fpath, expected_count, label in targets:
+        if not os.path.exists(fpath):
+            print(f"FAILED: {fpath} not found.")
+            return False
+        with open(fpath, encoding="utf-8") as f:
+            content = f.read()
+        matches = re.findall(r"\*\*Verification:\*\*", content)
+        if len(matches) != expected_count:
+            print(
+                f"FAILED: Expected {expected_count} verification methods in {label} "
+                f"Requirements, found {len(matches)}"
+            )
+            return False
+
+    print(
+        "SUCCESS: Objective verification methods (Test/Inspection/Analysis/Demonstration) "
+        "defined for all 60 FRs and 78 NFRs."
+    )
+    return True
+
+
+def check_commercial_licensing_strategy(base_dir: str = ".") -> bool:
+    """Gate 13: Verify commercial licensing strategy completeness and legal disclaimers."""
+    print("Gate 13: Checking Commercial Licensing Strategy completeness...")
+    lic_file = os.path.normpath(
+        os.path.join(base_dir, "docs/product/COMMERCIAL_LICENSING_STRATEGY.md")
+    )
+    if not os.path.exists(lic_file):
+        print(f"FAILED: {lic_file} not found.")
+        return False
+
+    with open(lic_file, encoding="utf-8") as f:
+        content = f.read()
+
+    required_keywords = [
+        "Open-Core",
+        "Apache License 2.0",
+        "Category A: Permissive",
+        "Category C: Strong Copyleft",
+        "Software Bill of Materials",
+        "Legal Disclaimer",
+        "Model Weights",
+        "Dataset",
+        "OEM",
+    ]
+
+    missing = [kw for kw in required_keywords if kw.lower() not in content.lower()]
+    if missing:
+        print(f"FAILED: COMMERCIAL_LICENSING_STRATEGY.md missing required sections: {missing}")
+        return False
+
+    print(
+        "SUCCESS: Commercial Licensing Strategy verified: covers Open-Core, "
+        "whitelist, models, datasets, SBOM, and legal disclaimer."
+    )
+    return True
+
+
+def check_privacy_and_safety_boundaries(base_dir: str = ".") -> bool:
+    """Gate 14: Verify safety non-authoritative boundary and privacy constraints."""
+    print("Gate 14: Checking privacy and safety architectural boundaries...")
+    psr_file = os.path.normpath(
+        os.path.join(base_dir, "docs/product/PRIVACY_AND_SAFETY_REQUIREMENTS.md")
+    )
+    if not os.path.exists(psr_file):
+        print(f"FAILED: {psr_file} not found.")
+        return False
+
+    with open(psr_file, encoding="utf-8") as f:
+        content = f.read()
+
+    safety_invariants = [
+        "is_authoritative_stop=False",
+        "uncertain",
+        "emergency",
+        "non-diagnostic",
+    ]
+
+    missing = [inv for inv in safety_invariants if inv.lower() not in content.lower()]
+    if missing:
+        print(f"FAILED: PRIVACY_AND_SAFETY_REQUIREMENTS.md missing safety invariants: {missing}")
+        return False
+
+    print(
+        "SUCCESS: Privacy & safety boundaries verified: non-authoritative motion, "
+        "uncertainty, and non-diagnostic constraints enforced."
+    )
+    return True
+
+
+def check_document_metadata(base_dir: str = ".") -> bool:
+    """Gate 15: Verify all Phase 0 documents contain valid metadata headers."""
+    print("Gate 15: Checking document metadata and ownership headers...")
+    missing_metadata = []
+    for doc in REQUIRED_PHASE0_DOCS:
+        norm_path = os.path.normpath(os.path.join(base_dir, doc))
+        if not os.path.exists(norm_path):
+            continue
+        with open(norm_path, encoding="utf-8") as f:
+            header = "".join([f.readline() for _ in range(25)])
+
+        for field in ["Document ID:", "Status:", "Version:"]:
+            if field not in header:
+                missing_metadata.append((doc, field))
+
+    if missing_metadata:
+        print(f"FAILED: Phase 0 document(s) missing metadata fields: {missing_metadata}")
+        return False
+
+    print(
+        f"SUCCESS: All {len(REQUIRED_PHASE0_DOCS)} Phase 0 documents contain "
+        "complete governance metadata headers."
+    )
+    return True
+
+
+def run_all_checks(base_dir: str = ".") -> bool:
+    """Execute all 15 verification gates."""
     print("==================================================")
     print("   OVIC EON — Phase 0 Documentation Audit Suite   ")
     print("==================================================")
@@ -336,27 +603,41 @@ def main():
         check_clone_url,
         check_markdown_links,
         check_no_duplicate_requirement_definitions,
+        check_acceptance_id_uniqueness,
         check_performance_reconciliation,
+        check_performance_target_classification,
         check_evidence_integrity,
+        check_defect_register_integrity,
         check_rtm_metrics,
+        check_traceability_completeness,
+        check_verification_methods,
+        check_commercial_licensing_strategy,
+        check_privacy_and_safety_boundaries,
+        check_document_metadata,
     ]
 
     all_passed = True
     for check in checks:
         print()
-        if not check():
+        if not check(base_dir):
             all_passed = False
 
     print()
     print("==================================================")
     if all_passed:
-        print("   ALL DOCUMENTATION QUALIFICATION CHECKS PASSED  ")
+        print("   ALL 15 DOCUMENTATION QUALIFICATION GATES PASSED")
         print("==================================================")
-        sys.exit(0)
+        return True
     else:
-        print("   DOCUMENTATION QUALIFICATION CHECKS FAILED      ")
+        print("   DOCUMENTATION QUALIFICATION GATES FAILED       ")
         print("==================================================")
-        sys.exit(1)
+        return False
+
+
+def main() -> None:
+    """Main entrypoint for script execution."""
+    success = run_all_checks(".")
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":

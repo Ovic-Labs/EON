@@ -555,6 +555,165 @@ Medium.
 
 Research institutions can provide valuable validation, publications, feedback and credibility, although procurement cycles and budgets may be different from commercial OEMs.
 
+---
+
+## 3.7 Segment 7 — Healthcare and Assistive Robotics Developers
+
+<badge color="warning">Initial priority: Medium (Strict Regulatory & Safety Boundaries)</badge>
+
+### Description
+
+Organizations developing assistive robots, eldercare companions, hospital service escorts, and physical therapy support platforms designed to interact with patients, residents, or healthcare workers.
+
+### Customer Examples
+
+Illustrative target accounts include:
+
+- Diligent Robotics (Moxi).
+- Intuition Robotics (ElliQ).
+- Paro Robots.
+- Fourier Rehab.
+- Cyberdyne.
+
+These are prospective target accounts, not confirmed customers or partners.
+
+### Customer Problems
+
+Healthcare and assistive robotics teams face specific interaction challenges:
+
+- Tracking user comfort, fatigue, or confusion during routine interactions.
+- Adapting interaction pacing, vocal volume, and communication style for older adults or individuals with cognitive impairments.
+- Maintaining longitudinal interaction memory across visits without compromising patient privacy.
+- Differentiating between interaction assistance and medical diagnosis.
+
+### OVIC EON Value
+
+| Customer Need | OVIC EON Capability |
+|---|---|
+| User comfort and fatigue cue tracking | ERS (probabilistic observation only) |
+| Governed, privacy-compliant interaction memory | EMS (local-only, strict retention) |
+| Empathetic pacing and turn-taking adaptation | ERE and SIE |
+| Supportive and consistent vocal/gesture tone | ERG and PSE |
+
+### Technical Requirements
+
+- 100% edge-local processing (air-gapped operation without cloud dependency).
+- Deterministic memory lifecycle with cryptographically secure data erasure.
+- Deterministic failure isolation preventing software lockups.
+- ROS 2 and lightweight Python/C++ interfaces.
+- Strictly bounded CPU utilization to preserve compute for robot safety navigation.
+
+### Integration Expectations
+
+- Plug-and-play integration with standard assistive robot sensory inputs.
+- Compatible with institutional air-gapped hospital networks.
+- Comprehensive documentation of uncertainty handling and failure modes.
+
+### Commercial Expectations
+
+- Pilot evaluation licenses followed by per-facility or per-robot annual subscriptions.
+- Rigorous third-party software audits and compliance reviews.
+- Clear contract terms disclaiming medical liability and clinical diagnostic use.
+
+### Purchasing Considerations
+
+- Clinical ethics board and Institutional Review Board (IRB) review.
+- Data Protection Officer (DPO) and healthcare privacy officer sign-off.
+- Extended procurement and evaluation cycles (6–18 months).
+
+### Deployment Constraints
+
+- Must operate reliably without internet connectivity.
+- Must execute on edge compute enclosures with strict thermal limits.
+
+### Security and Privacy Expectations
+
+- Compliance with HIPAA security rules and GDPR special-category health data requirements.
+- Strictly zero transmission or unencrypted retention of raw facial video, voice audio, or biometric embeddings.
+- Role-based access control and tamper-evident local audit logging.
+
+### Product Limitations and Regulatory Boundary
+
+> [!CAUTION]
+> **Strict Non-Medical Device Notice:** OVIC EON is **NOT** a certified medical device under US FDA regulations (21 CFR), European Union Medical Device Regulation (EU MDR 2017/745), or international equivalent standards. OVIC EON must **NEVER** be used for medical diagnosis, psychiatric triage, clinical depression/anxiety scoring, suicide risk assessment, or physical therapy authorization. It is exclusively an interaction-support middleware platform.
+
+---
+
+## 3.8 Segment 8 — OEM Integration Partners
+
+<badge color="info">Initial priority: High (Platform Distribution Channel)</badge>
+
+### Description
+
+Tier-1 robotics system integrators, embedded computing module vendors (e.g. NVIDIA Jetson, Intel, Qualcomm, Advantech), and value-added distributors who embed social intelligence capabilities directly into turnkey hardware or software platforms.
+
+### Customer Examples
+
+Illustrative target accounts include:
+
+- ADLINK Technology.
+- Advantech.
+- NexCOBOT.
+- Arrow Electronics.
+- Canonical (Ubuntu Robotics).
+- Tier-1 robotics engineering consultancies.
+
+These are prospective partner accounts, not confirmed commercial partners.
+
+### Customer Problems
+
+- Hardware module vendors need pre-validated, high-value AI software stacks to differentiate and sell edge computing boards.
+- System integrators building custom robotics solutions for enterprise clients face repeated engineering overhead implementing bespoke interaction software.
+- Need for predictable, certified software with long-term maintenance commitments.
+
+### OVIC EON Value
+
+- Pre-integrated reference pipelines optimized for popular edge silicon (e.g. Jetson Orin, x86_64).
+- Standardized ROS 2 nodes and communication schemas reducing customer integration time from months to days.
+- Co-marketing and joint reference architecture opportunities.
+
+### Technical Requirements
+
+- Optimized container images and Debian/Wheel packages for ARM64 and AMD64.
+- Automated Software Bill of Materials (SBOM) and vulnerability scanning reports.
+- Comprehensive hardware acceleration benchmarks across reference edge tiers.
+- Clean separation between permissive open-core interfaces and commercial engine binaries.
+
+### Integration Expectations
+
+- Turnkey ROS 2 launch packages and Docker Compose deployment manifests.
+- Multi-year API stability guarantees (Semantic Versioning 2.0.0).
+- Modular architecture allowing OEM partners to substitute proprietary vision models.
+
+### Commercial Expectations
+
+- Volume-tiered royalty agreements (per-unit embedded runtime fees).
+- Non-exclusive distribution and value-added reseller (VAR) margins.
+- Joint commercial engagement on high-value enterprise robotics tenders.
+
+### Purchasing Considerations
+
+- Supply chain security and software provenance audits.
+- Multi-year enterprise maintenance agreements (3–5 year LTS).
+- Clear export control classification (EAR99 / ECCN).
+
+### Deployment Constraints
+
+- Must support fanless embedded enclosures with limited power budgets (15W–60W).
+- Must support automated over-the-air (OTA) updates and atomic rollback.
+
+### Security and Privacy Expectations
+
+- Cryptographic signature verification for all distributed binaries.
+- Hardware Root-of-Trust (RoT) and secure boot compatibility.
+- Zero unauthorized telemetry reporting.
+
+### Product Limitations
+
+- OVIC EON provides software runtime and middleware; it does not manufacture hardware computing boards or robotic chassis.
+
+---
+
 # 4. Customer Segment Comparison
 
 | Segment | Need for Social Intelligence | Integration Complexity | Commercial Potential | Initial Priority |
@@ -563,7 +722,9 @@ Research institutions can provide valuable validation, publications, feedback an
 | Industrial robotics | Medium to high | Very high | Very high | High |
 | Service robotics | High | Medium to high | High | High |
 | Social and companion robotics | Very high | Medium to high | High | Very high |
-| Robotics integrators | High | High | High | High |
+| Healthcare and assistive robotics | High | High | High | Medium (Regulatory Gate) |
+| Robotics integrators & software | High | High | High | High |
+| OEM integration partners | High | Medium to high | Very high | High |
 | Research institutions | High | Medium | Medium | Medium |
 
 These are qualitative strategic assessments, not measured market-size or revenue data.
