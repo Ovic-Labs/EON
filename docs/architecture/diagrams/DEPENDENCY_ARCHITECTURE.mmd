@@ -1,0 +1,41 @@
+flowchart TD
+    %% OVIC EON — Dependency Architecture (DAG)
+    %% Document ID: EON-ARCH-DIAG-DEP-001
+
+    subgraph TIER_TOP["Application & Edge Hosts"]
+        L10["L10: Deployment & Host OS"]
+        L9["L9: API Layer"]
+        L8["L8: SDK & ROS 2 Bridge"]
+    end
+
+    subgraph TIER_MID["Core Substrate"]
+        L5["L5: Core Event Bus & Lifecycle"]
+    end
+
+    subgraph TIER_ENGINES["Cognitive Domain"]
+        L4["L4: Seven Intelligence Engines"]
+        L6["L6: Context & Memory SPI"]
+        L7["L7: Model & Algorithm Adapters"]
+    end
+
+    subgraph TIER_BOTTOM["Perception & Hardware"]
+        L3["L3: Perception Pipelines"]
+        L2["L2: Device Abstraction (HAL)"]
+        L1["L1: Physical Devices & Silicon"]
+    end
+
+    %% Dependency Rules: Strict DAG (Top to Bottom)
+    L10 --> L9
+    L10 --> L8
+    L10 --> L5
+    L9 --> L8
+    L8 --> L5
+    L5 --> L4
+    L4 --> L6
+    L4 --> L7
+    L3 --> L7
+    L3 --> L2
+    L2 --> L1
+
+    %% Event Bus Intermediary: L3 publishes to L5, L5 delivers to L4
+    L3 -.->|Asynchronous Event Publishing| L5

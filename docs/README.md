@@ -65,6 +65,30 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | [Core Event Bus Architecture](architecture/CORE_EVENT_BUS_ARCHITECTURE.md) | EON-ARCH-CORE-001 | In-memory asynchronous event bus architecture, priority queues, and lifecycle |
 | [Event Routing and Delivery](architecture/EVENT_ROUTING_AND_DELIVERY.md) | EON-ARCH-CORE-002 | Snapshot-based routing, exact and wildcard subscriptions, and delivery outcomes |
 | [Backpressure and Priority Policy](architecture/BACKPRESSURE_AND_PRIORITY_POLICY.md) | EON-ARCH-CORE-003 | Backpressure policies (WAIT, REJECT, DROP), priority scheduling, and starvation |
+| [System Layered Architecture](architecture/SYSTEM_LAYERED_ARCHITECTURE.md) | EON-ARCH-LAYERS-001 | Ten-tier layered architecture model, layer evaluations, and data flows |
+| [Inter-Layer Interfaces](architecture/INTER_LAYER_INTERFACES.md) | EON-ARCH-INT-001 | Strongly typed interfaces, SPIs, buffer contracts, and cross-layer boundaries |
+| [Architecture Constraints](architecture/ARCHITECTURE_CONSTRAINTS.md) | EON-ARCH-CONST-001 | Non-negotiable architectural invariants (DAG, safety, privacy, CPU-first) |
+| [Seven Engine Architecture](architecture/SEVEN_ENGINE_ARCHITECTURE.md) | EON-ARCH-ENG-001 | Seven intelligence engines overview, mission roster, and coordination model |
+| [Engine Boundary Specifications](architecture/ENGINE_BOUNDARY_SPECIFICATIONS.md) | EON-SPEC-ENG-001 | Complete 27-item boundary specifications for all seven intelligence engines |
+| [Engine Dependency Matrix](architecture/ENGINE_DEPENDENCY_MATRIX.md) | EON-ARCH-DEP-002 | Authoritative 7x7 engine interaction matrix, event dependencies, and DAG |
+| [Engine Input/Output Contracts](architecture/ENGINE_INPUT_OUTPUT_CONTRACTS.md) | EON-SPEC-ENG-IO-001 | Schema mapping, existing Phase 1.2 contracts, and proposed Phase 2 schemas |
+| [Phase 2.1 & 2.2 Qualification Report](architecture/PHASE_2_1_2_2_ARCHITECTURE_QUALIFICATION_REPORT.md) | EON-QUAL-PH2-ARCH-001 | Architecture qualification report and acceptance matrix for Sub-phases 2.1 & 2.2 |
+
+#### 1.5.1 Architecture Decision Records (`docs/architecture/decisions/`)
+
+| ADR | Title | Status | Scope |
+|---|---|---|---|
+| [ADR-001](architecture/decisions/ADR-001-LAYERED-ARCHITECTURE.md) | Ten-Tier Layered Architecture Model | Approved | System-wide layered architecture decomposition |
+| [ADR-002](architecture/decisions/ADR-002-ENGINE-INDEPENDENCE.md) | Seven Engine Independence and Decoupling | Approved | Zero direct coupling and modular engine design |
+| [ADR-003](architecture/decisions/ADR-003-EVENT-DRIVEN-COMMUNICATION.md) | Asynchronous Event-Driven Communication | Approved | Core Event Bus messaging and bounded queues |
+| [ADR-004](architecture/decisions/ADR-004-SHARED-CONTEXT-OWNERSHIP.md) | Shared Context and Memory Layer Ownership | Approved | L6 memory architecture and EMS custodianship |
+| [ADR-005](architecture/decisions/ADR-005-MODEL-ADAPTER-BOUNDARIES.md) | Model and Algorithm Adapter Boundaries | Approved | L7 adapter interfaces and framework isolation |
+| [ADR-006](architecture/decisions/ADR-006-CPU-FIRST-EXECUTION.md) | CPU-First and Edge-First Execution Invariant | Approved | Real-time baseline operation on 4-core edge CPU |
+| [ADR-007](architecture/decisions/ADR-007-SDK-BOUNDARIES.md) | SDK and Client Integration Boundaries | Approved | Dual-mode in-process and IPC client bindings |
+| [ADR-008](architecture/decisions/ADR-008-ROS2-INTEGRATION-BOUNDARY.md) | ROS 2 Integration and Lifecycle Node Boundary | Approved | Optional ROS 2 package and lifecycle node bridge |
+| [ADR-009](architecture/decisions/ADR-009-ROBOT-ABSTRACTION.md) | Robot Hardware Abstraction & Non-Authoritative Actuation | Approved | Strict advisory boundaries; zero direct motor control |
+| [ADR-010](architecture/decisions/ADR-010-EDGE-CLOUD-SEPARATION.md) | Edge-First Execution and Cloud Separation Boundary | Approved | Air-gapped edge autonomy with zero cloud dependency |
+| [ADR-011](architecture/decisions/ADR-011-SECURITY-AND-PRIVACY-ARCHITECTURE.md) | Security, Privacy, and Verifiable Data Governance | Approved | Zero raw media persistence and cryptographic shredding |
 
 ### 1.6 Engineering Implementation Reports (`docs/engineering/`)
 

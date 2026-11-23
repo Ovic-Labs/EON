@@ -1,0 +1,40 @@
+flowchart TD
+    %% OVIC EON — Engine Failure Isolation Architecture
+    %% Document ID: EON-ARCH-DIAG-ISOLATION-001
+
+    subgraph FAULT_SOURCES["Fault & Anomaly Injection Points"]
+        CRASH["Engine Unhandled Exception\n(Syntax Error / Logic Bug)"]
+        TIMEOUT["Engine Deadline Exceeded\n(Handler > 300ms)"]
+        SATURATION["Subscriber Queue Full\n(Slow Consumer)"]
+        MODEL_FAIL["Local ML Runtime Failure\n(OOM / CUDA / Tensor Mismatch)"]
+        BAD_PAYLOAD["Malformed Envelope\n(Schema Validation Error)"]
+    end
+
+    subgraph ISOLATION_MECHANISMS["L5 Core Event Bus Isolation Layer"]
+        TRY_CATCH["Isolated Handler Invocation\n(try-except wrapper)"]
+        TIMER_GUARD["Task Deadline Enforcer\n(asyncio.wait_for)"]
+        QUEUE_POLICY["Bounded Priority Queue\n(WAIT / REJECT / DROP_OLDEST)"]
+        RULE_FALLBACK["Deterministic Fallback Router\n(<5ms Template Recovery)"]
+        SCHEMA_GUARD["Strict Schema Gate\n(Pydantic v2 Type Check)"]
+    end
+
+    subgraph SYSTEM_STABILITY["Guaranteed System Invariants"]
+        CORE_ALIVE["Core Event Bus Uninterrupted\n(Main Process Stays Alive)"]
+        PEERS_ACTIVE["Peer Engines Unaffected\n(Zero Cascading Failure)"]
+        HEALTH_REPORT["Component Health Degraded\n(ComponentHealthPayload Emitted)"]
+        SAFETY_SAFEGUARD["Safety Monitoring Intact\n(Safety Advisories Continue)"]
+    end
+
+    %% Fault Routing to Isolation
+    CRASH --> TRY_CATCH
+    TIMEOUT --> TIMER_GUARD
+    SATURATION --> QUEUE_POLICY
+    MODEL_FAIL --> RULE_FALLBACK
+    BAD_PAYLOAD --> SCHEMA_GUARD
+
+    %% Isolation to Stability
+    TRY_CATCH --> CORE_ALIVE & PEERS_ACTIVE & HEALTH_REPORT
+    TIMER_GUARD -->|Cancel Stalled Task| PEERS_ACTIVE & HEALTH_REPORT
+    QUEUE_POLICY -->|Evict Oldest Unread| CORE_ALIVE
+    RULE_FALLBACK -->|Emit Verified Template| SAFETY_SAFEGUARD
+    SCHEMA_GUARD -->|Reject Invalid Event| CORE_ALIVE

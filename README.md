@@ -345,6 +345,8 @@ OVIC EON is being developed through controlled, milestone-based engineering with
   Research scope across all eighteen sub-phases (1.1–1.18) is completed and qualified, subject to documented conditions and outstanding live-hardware verification.
 - **Phase 1 Runtime Foundation:** `IMPLEMENTED & QUALIFIED`  
   Repository packaging scaffolding (Phase 1.1), foundational data schemas and serialization contracts (Phase 1.2), and the asynchronous in-memory core event bus (Phase 1.3) are implemented with complete regression test evidence.
+- **Phase 2 Architecture & Engine Boundaries (Sub-phases 2.1 & 2.2):** `QUALIFIED — ARCHITECTURE & BOUNDARIES SPECIFIED`  
+  The 10-tier layered architecture, inter-layer interfaces, system constraints, seven-engine boundary specifications, 7x7 dependency matrix, input/output contracts, and 11 ADRs are fully specified and qualified.
 - **Seven Intelligence Engines:** `NOT IMPLEMENTED (0%)`  
   Full software runtimes for ERS, EMS, ERE, PSE, SIE, ERG, and HBU are not yet implemented.
 - **ROS 2 Integration:** `NOT IMPLEMENTED`  
@@ -431,6 +433,18 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [Edge Deployment Architecture](docs/research/phase-1/EDGE_DEPLOYMENT_ARCHITECTURE.md)
 - [ROS 2 Integration Architecture](docs/research/phase-1/ROS2_INTEGRATION_ARCHITECTURE.md)
 - [Phase 1 Master Qualification Report](docs/research/phase-1/PHASE_1_FINAL_QUALIFICATION_REPORT.md)
+
+### System architecture and engineering design (Phase 2 Sub-phases 2.1 & 2.2)
+
+- [System Layered Architecture](docs/architecture/SYSTEM_LAYERED_ARCHITECTURE.md)
+- [Inter-Layer Interfaces](docs/architecture/INTER_LAYER_INTERFACES.md)
+- [Architecture Constraints](docs/architecture/ARCHITECTURE_CONSTRAINTS.md)
+- [Seven Engine Architecture](docs/architecture/SEVEN_ENGINE_ARCHITECTURE.md)
+- [Engine Boundary Specifications](docs/architecture/ENGINE_BOUNDARY_SPECIFICATIONS.md)
+- [Engine Dependency Matrix](docs/architecture/ENGINE_DEPENDENCY_MATRIX.md)
+- [Engine Input/Output Contracts](docs/architecture/ENGINE_INPUT_OUTPUT_CONTRACTS.md)
+- [Phase 2.1 & 2.2 Architecture Qualification Report](docs/architecture/PHASE_2_1_2_2_ARCHITECTURE_QUALIFICATION_REPORT.md)
+- [Architecture Decision Records](docs/architecture/decisions/ADR-001-LAYERED-ARCHITECTURE.md)
 
 ### Additional documentation
 
