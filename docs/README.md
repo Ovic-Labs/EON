@@ -52,6 +52,18 @@ The Phase 0 documentation suite comprises 15 foundational documents across three
 |---|---|---|
 | [Phase 1 Execution Plan](roadmap/PHASE_1_EXECUTION_PLAN.md) | EON-PLN-PH1-001 | Phase 1 engineering infrastructure, core runtime, module boundaries, and acceptance criteria |
 
+### 1.5 Engineering Implementation Reports (`docs/engineering/`)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Phase 1.1 Implementation Report](engineering/PHASE_1_1_IMPLEMENTATION_REPORT.md) | EON-REP-PH1.1-001 | Phase 1.1 packaging scaffolding, build configuration, tests, and qualification report |
+
+### 1.6 Developer Documentation (`docs/developer/`)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Developer Installation Guide](developer/INSTALLATION.md) | EON-DEV-INST-001 | Setup, virtual environments, editable installation, quality tools, and troubleshooting |
+
 ---
 
 ## 2. The Seven Intelligence Engines
@@ -80,11 +92,13 @@ OVIC EON organizes intelligence processing into seven specialized engines coordi
 7. [Phase 1 Execution Plan](roadmap/PHASE_1_EXECUTION_PLAN.md)
 
 ### For Robotics Software Integrators
-1. [Engine Scope](product/ENGINE_SCOPE.md)
-2. [Functional Requirements](product/FUNCTIONAL_REQUIREMENTS.md)
-3. [Software Requirements Specification (SRS)](requirements/SRS.md)
-4. [Performance Requirements](product/PERFORMANCE_REQUIREMENTS.md)
-5. [Acceptance Criteria](acceptance/ACCEPTANCE_CRITERIA.md)
+1. [Developer Installation Guide](developer/INSTALLATION.md)
+2. [Engine Scope](product/ENGINE_SCOPE.md)
+3. [Functional Requirements](product/FUNCTIONAL_REQUIREMENTS.md)
+4. [Software Requirements Specification (SRS)](requirements/SRS.md)
+5. [Performance Requirements](product/PERFORMANCE_REQUIREMENTS.md)
+6. [Acceptance Criteria](acceptance/ACCEPTANCE_CRITERIA.md)
+7. [Phase 1.1 Implementation Report](engineering/PHASE_1_1_IMPLEMENTATION_REPORT.md)
 
 ### For Safety, Privacy, and Systems Engineers
 1. [Privacy and Safety Requirements](product/PRIVACY_AND_SAFETY_REQUIREMENTS.md)

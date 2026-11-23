@@ -397,9 +397,11 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [Release Acceptance](docs/acceptance/RELEASE_ACCEPTANCE.md)
 - [Phase 0 Verification Report](docs/acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md)
 
-### Engineering roadmap
+### Engineering roadmap and implementation
 
 - [Phase 1 Execution Plan](docs/roadmap/PHASE_1_EXECUTION_PLAN.md)
+- [Phase 1.1 Implementation Report](docs/engineering/PHASE_1_1_IMPLEMENTATION_REPORT.md)
+- [Developer Installation Guide](docs/developer/INSTALLATION.md)
 
 ### Additional documentation
 
