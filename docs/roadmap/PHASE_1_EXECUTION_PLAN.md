@@ -333,10 +333,10 @@ Every Phase 1 milestone completion must produce concrete evidence logged in `doc
                       OVIC EON — PHASE 1 EXECUTION CHECKLIST
 ========================================================================================
 
-[ ] 1. Repository scaffolding and Python package configuration (pyproject.toml).
+[X] 1. Repository scaffolding and Python package configuration (pyproject.toml).
 [ ] 2. Core runtime lifecycle supervisor and state machine.
-[ ] 3. In-memory event bus with priority queues and monotonic ordering.
-[ ] 4. Universal Pydantic data schemas (emotions, events, observations).
+[X] 3. In-memory event bus with priority queues and monotonic ordering.
+[X] 4. Universal Pydantic data schemas (emotions, events, observations).
 [ ] 5. Abstract base classes (IEngine) for ERS, EMS, ERE, PSE, SIE, ERG, HBU.
 [ ] 6. FastAPI local service with health and observation ingestion endpoints.
 [ ] 7. ROS 2 lifecycle wrapper node and advisory topics.

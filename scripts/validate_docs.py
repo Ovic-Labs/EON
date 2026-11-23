@@ -42,6 +42,11 @@ REQUIRED_GOVERNANCE_DOCS = [
     "docs/architecture/DATA_SCHEMA_ARCHITECTURE.md",
     "docs/architecture/EVENT_ENVELOPE_SPECIFICATION.md",
     "docs/architecture/SCHEMA_VERSIONING_POLICY.md",
+    "docs/architecture/CORE_EVENT_BUS_ARCHITECTURE.md",
+    "docs/architecture/EVENT_ROUTING_AND_DELIVERY.md",
+    "docs/architecture/BACKPRESSURE_AND_PRIORITY_POLICY.md",
+    "docs/developer/EVENT_BUS_DEVELOPER_GUIDE.md",
+    "docs/engineering/PHASE_1_3_IMPLEMENTATION_REPORT.md",
 ]
 
 EXPECTED_CLONE_URL = "https://github.com/Ovic-Labs/EON.git"
