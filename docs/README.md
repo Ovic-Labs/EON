@@ -82,6 +82,22 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | [Data Contracts Developer Guide](developer/DATA_CONTRACTS_GUIDE.md) | EON-DEV-SCHEMA-001 | Developer guide with copy-pasteable examples for observations, emotions, and events |
 | [Event Bus Developer Guide](developer/EVENT_BUS_DEVELOPER_GUIDE.md) | EON-DEV-CORE-001 | Integration guide for publishers, subscribers, failure isolation, and metrics |
 
+### 1.8 Technical Research and Feasibility (`docs/research/phase-1/`)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Phase 1 Research Overview](research/phase-1/README.md) | EON-RES-OVR-001 | Phase 1 research objective, scope boundaries, methodology, and navigational index |
+| [Scientific Terminology Glossary](research/phase-1/GLOSSARY.md) | EON-RES-GLOSS-001 | Definitions for affective computing, vision, acoustics, fusion, and uncertainty |
+| [Research Source Register](research/phase-1/RESEARCH_SOURCE_REGISTER.md) | EON-RES-SRC-001 | 50 independently audited, verifiable scientific sources (`SRC-001`–`SRC-050`) |
+| [Technical Comparison Matrix](research/phase-1/TECHNICAL_COMPARISON_MATRIX.md) | EON-RES-TCM-001 | Multi-dimensional comparison of algorithms, CPU suitability, latency, and licensing |
+| [Initial Perception Architecture](research/phase-1/EON_PERCEPTION_ARCHITECTURE.md) | EON-ARCH-PERC-001 | Proposed edge-CPU perception pipeline, Mermaid diagram, and data contracts |
+| [Emotion Recognition Methods](research/phase-1/1.1-emotion-recognition-methods.md) | EON-RES-SUB-1.1 | Sub-phase 1.1: Foundations, VAD representation, calibration, and datasets |
+| [Facial Expression Analysis](research/phase-1/1.2-facial-expression-analysis.md) | EON-RES-SUB-1.2 | Sub-phase 1.2: MediaPipe Face Mesh, FACS Action Units, and ephemeral tracking |
+| [Speech Emotion Analysis](research/phase-1/1.3-speech-emotion-analysis.md) | EON-RES-SUB-1.3 | Sub-phase 1.3: Silero VAD, DistilHuBERT-SER, acoustics, and noise resilience |
+| [Multimodal Fusion Methods](research/phase-1/1.4-multimodal-fusion-methods.md) | EON-RES-SUB-1.4 | Sub-phase 1.4: Hybrid Gated Cross-Attention, sliding windows, and conflict flags |
+| [Human Activity Recognition](research/phase-1/1.5-human-activity-recognition.md) | EON-RES-SUB-1.5 | Sub-phase 1.5: 3D BlazePose + ST-GCN, taxonomy, and non-inferential safety |
+| [Phase 1.1–1.5 Qualification Report](research/phase-1/PHASE_1_1_TO_1_5_QUALIFICATION_REPORT.md) | EON-QUAL-PHASE1-001 | Sections A–L synthesis, CPU budgets, licensing audit, and qualification decision |
+
 ---
 
 ## 2. The Seven Intelligence Engines

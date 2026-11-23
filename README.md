@@ -408,6 +408,15 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [Phase 1.1 Implementation Report](docs/engineering/PHASE_1_1_IMPLEMENTATION_REPORT.md)
 - [Developer Installation Guide](docs/developer/INSTALLATION.md)
 
+### Technical research and feasibility (Phase 1 Sub-phases 1.1–1.5)
+
+- [Phase 1 Research Overview](docs/research/phase-1/README.md)
+- [Scientific Terminology Glossary](docs/research/phase-1/GLOSSARY.md)
+- [Research Source Register](docs/research/phase-1/RESEARCH_SOURCE_REGISTER.md)
+- [Technical Comparison Matrix](docs/research/phase-1/TECHNICAL_COMPARISON_MATRIX.md)
+- [Initial Perception Architecture](docs/research/phase-1/EON_PERCEPTION_ARCHITECTURE.md)
+- [Phase 1.1–1.5 Qualification Report](docs/research/phase-1/PHASE_1_1_TO_1_5_QUALIFICATION_REPORT.md)
+
 ### Additional documentation
 
 The following documentation is planned as the engineering architecture and implementation mature:
