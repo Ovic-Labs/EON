@@ -34,6 +34,7 @@ REQUIRED_GOVERNANCE_DOCS = [
     'docs/README.md',
     'docs/requirements/requirement_traceability_matrix.json',
     'docs/acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md',
+    'docs/acceptance/PHASE_0_FOUNDER_APPROVAL.md',
 ]
 
 EXPECTED_CLONE_URL = "https://github.com/Ovic-Labs/EON.git"
@@ -247,10 +248,16 @@ def check_rtm_metrics():
     if metrics.get('total_srs_requirements') != 203:
         print(f"FAILED: Expected 203 SRS requirements, found {metrics.get('total_srs_requirements')}")
         return False
-    if metrics.get('coverage_percentage') != 100.0:
-        print(f"FAILED: Expected 100.0% coverage, found {metrics.get('coverage_percentage')}")
+    if metrics.get('total_acceptance_criteria') != 179:
+        print(f"FAILED: Expected 179 acceptance criteria, found {metrics.get('total_acceptance_criteria')}")
         return False
-    print(f"SUCCESS: Machine-readable RTM verified: 290 source reqs, 203 SRS reqs, 100.0% coverage.")
+    if metrics.get('coverage_percentage') != 100.0 or metrics.get('specification_mapping_coverage_percentage') != 100.0:
+        print(f"FAILED: Expected 100.0% specification coverage, found {metrics.get('coverage_percentage')}")
+        return False
+    if metrics.get('implementation_coverage_percentage') != 0.0:
+        print(f"FAILED: Expected 0.0% implementation coverage for Phase 0, found {metrics.get('implementation_coverage_percentage')}")
+        return False
+    print(f"SUCCESS: Machine-readable RTM verified: 290 source reqs, 203 SRS reqs, 179 ACs, 100.0% spec coverage, 0.0% implementation.")
     return True
 
 def main():

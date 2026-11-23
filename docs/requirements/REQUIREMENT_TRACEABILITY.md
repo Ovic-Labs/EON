@@ -5,7 +5,7 @@
 **Organization:** OVIC Labs  
 **Document ID:** EON-RTM-001  
 **Version:** 0.1.0  
-**Status:** Approved Baseline — Pending Repository Validation  
+**Status:** Qualified Baseline — Specification Mapped (100% Traceability / 0% Implementation)  
 **Owner:** OVIC Labs  
 **Classification:** Internal — Engineering Governance  
 **Last Updated:** 20 November 2026
@@ -911,7 +911,7 @@ This document is considered implemented in the repository only when:
 - [ ] Markdown formatting and internal links are validated.
 - [ ] The document is committed to the EON repository.
 
-**Current status:** Approved Baseline — Pending Repository Validation.
+**Current status:** Qualified Baseline — Specification Mapped (100% Traceability / 0% Implementation).
 
 ---
 

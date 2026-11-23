@@ -7,7 +7,7 @@
 **Document:** Product Vision  
 **Document ID:** EON-PV-001  
 **Version:** 0.1.0  
-**Status:** Approved Baseline — Pending Repository Validation  
+**Status:** Qualified Baseline — Documentation Verified  
 **Owner:** OVIC Labs  
 **Classification:** Internal — Product Strategy  
 **Last Updated:** 20 November 2026
@@ -441,6 +441,8 @@ Long-term direction includes controlled customer environments, configurable secu
 
 ## 12. Commercial Vision
 
+**Status:** Proposed Planning Baseline — Requires Founder Approval and Formal Legal Review.
+
 OVIC EON is intended to become a commercially sustainable software infrastructure product.
 
 Potential commercial models include:
@@ -453,7 +455,7 @@ Potential commercial models include:
 6. Integration and customization services.
 7. Premium support and maintenance.
 
-Commercial terms, pricing, redistribution rights, support obligations, and licensing restrictions must be formally defined before commercial release.
+Commercial terms, pricing, redistribution rights, open-core boundaries, support obligations, and licensing restrictions described herein represent proposed planning assumptions and are not finalized legal agreements. Formal licensing requires founder decision and legal counsel review prior to commercial distribution.
 
 The platform should provide value to customers without requiring them to purchase unnecessary hardware or use a single proprietary AI provider.
 
@@ -622,6 +624,6 @@ Phase 0.1 is considered implemented in the repository only when:
 - [ ] Markdown formatting and internal links are validated.
 - [ ] The document is committed to the EON repository.
 
-**Current document status:** Approved Baseline — Pending Repository Validation.
+**Current document status:** Qualified Baseline — Documentation Verified.
 
 **Phase 0.1 completion must be supported by repository evidence. Founder approval alone does not establish repository implementation.**

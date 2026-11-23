@@ -12,13 +12,16 @@
     "performance_requirements_count": 66,
     "privacy_safety_requirements_count": 86,
     "total_srs_requirements": 203,
+    "total_acceptance_criteria": 179,
     "total_use_cases": 54,
     "mapped_source_requirements": 290,
     "mapped_srs_requirements": 203,
     "derived_requirements_count": 24,
     "unmapped_requirements": 0,
     "coverage_percentage": 100.0,
-    "implementation_status": "PENDING_PHASE_1_IMPLEMENTATION",
+    "specification_mapping_coverage_percentage": 100.0,
+    "implementation_coverage_percentage": 0.0,
+    "implementation_status": "NOT_STARTED_PHASE_1_PENDING",
     "documentation_verification_status": "VERIFIED_100_PERCENT"
   },
   "requirements": {

@@ -4,7 +4,7 @@
 **Organization:** OVIC Labs  
 **Repository:** [https://github.com/Ovic-Labs/EON.git](https://github.com/Ovic-Labs/EON.git)  
 **Milestone:** Phase 0 — Foundation and Documentation Qualification  
-**Status:** Approved Baseline — Pending Repository Validation  
+**Status:** Qualified Baseline — Documentation Verified (Ready for Founder Acceptance)  
 
 Welcome to the central documentation index for **OVIC EON**. This document catalogues all 15 Phase 0 engineering and product specifications, outlines their relationships, and provides structured reading guides for various stakeholders.
 
@@ -44,6 +44,7 @@ The Phase 0 documentation suite comprises 15 foundational documents across three
 | [Defect Register](acceptance/DEFECT_REGISTER.md) | EON-DEF-001 | Repository defect catalog, classification scheme, severity/priority matrices, and lifecycle workflows |
 | [Release Acceptance](acceptance/RELEASE_ACCEPTANCE.md) | EON-ACC-REL-001 | Release governance policies, mandatory milestone release gates, and founder sign-off procedures |
 | [Phase 0 Verification Report](acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md) | EON-REP-P0-FINAL-001 | Final verification, qualification report, requirement audit, and founder approval record |
+| [Phase 0 Founder Approval](acceptance/PHASE_0_FOUNDER_APPROVAL.md) | EON-ACC-FND-001 | Formal founder review, acceptance decision, and Phase 0 sign-off record |
 
 ---
 
@@ -70,6 +71,7 @@ OVIC EON organizes intelligence processing into seven specialized engines coordi
 4. [Product Requirements Document (PRD)](product/PRD.md)
 5. [Release Acceptance](acceptance/RELEASE_ACCEPTANCE.md)
 6. [Phase 0 Verification Report](acceptance/PHASE_0_FINAL_VERIFICATION_REPORT.md)
+7. [Phase 0 Founder Approval](acceptance/PHASE_0_FOUNDER_APPROVAL.md)
 
 ### For Robotics Software Integrators
 1. [Engine Scope](product/ENGINE_SCOPE.md)

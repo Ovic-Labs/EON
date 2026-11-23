@@ -6,7 +6,7 @@
 **Organization:** OVIC Labs  
 **Tagline:** Emotional Intelligence Infrastructure for Robotics  
 **Document Version:** 0.1.0  
-**Document Status:** Approved Baseline — Pending Repository Validation  
+**Document Status:** Qualified Baseline — Targets Provisional (Not Benchmarked)  
 **Document Owner:** Product Founder  
 **Classification:** Internal — Product and Engineering  
 **Last Updated:** 2026-11-20
@@ -990,7 +990,7 @@ Phase 0.10 is complete as a documentation deliverable when:
 | Version | 0.1.0 |
 | Owner | Product Founder |
 | Product | OVIC EON |
-| Status | Approved Baseline — Pending Repository Validation |
+| Status | Qualified Baseline — Targets Provisional (Not Benchmarked) |
 | Parent | PRD.md |
 | Related Specification | NON_FUNCTIONAL_REQUIREMENTS.md |
 | Phase | 0.10 — Performance Requirements |
