@@ -52,17 +52,27 @@ The Phase 0 documentation suite comprises 15 foundational documents across three
 |---|---|---|
 | [Phase 1 Execution Plan](roadmap/PHASE_1_EXECUTION_PLAN.md) | EON-PLN-PH1-001 | Phase 1 engineering infrastructure, core runtime, module boundaries, and acceptance criteria |
 
-### 1.5 Engineering Implementation Reports (`docs/engineering/`)
+### 1.5 Architecture Documentation (`docs/architecture/`)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Data Schema Architecture](architecture/DATA_SCHEMA_ARCHITECTURE.md) | EON-ARCH-SCHEMA-001 | Foundational data contracts, Pydantic v2 architecture, and security boundaries |
+| [Event Envelope Specification](architecture/EVENT_ENVELOPE_SPECIFICATION.md) | EON-SPEC-ENV-001 | Universal EventEnvelope[T] specification, causality tracking, and sequence flows |
+| [Schema Versioning Policy](architecture/SCHEMA_VERSIONING_POLICY.md) | EON-POL-VER-001 | SemVer 2.0.0 compatibility rules, breaking change classifications, and deprecation |
+
+### 1.6 Engineering Implementation Reports (`docs/engineering/`)
 
 | Document | Document ID | Description |
 |---|---|---|
 | [Phase 1.1 Implementation Report](engineering/PHASE_1_1_IMPLEMENTATION_REPORT.md) | EON-REP-PH1.1-001 | Phase 1.1 packaging scaffolding, build configuration, tests, and qualification report |
+| [Phase 1.2 Implementation Report](engineering/PHASE_1_2_IMPLEMENTATION_REPORT.md) | EON-REP-PH1.2-001 | Phase 1.2 data schemas, event envelopes, serialization suite, and qualification report |
 
-### 1.6 Developer Documentation (`docs/developer/`)
+### 1.7 Developer Documentation (`docs/developer/`)
 
 | Document | Document ID | Description |
 |---|---|---|
 | [Developer Installation Guide](developer/INSTALLATION.md) | EON-DEV-INST-001 | Setup, virtual environments, editable installation, quality tools, and troubleshooting |
+| [Data Contracts Developer Guide](developer/DATA_CONTRACTS_GUIDE.md) | EON-DEV-SCHEMA-001 | Developer guide with copy-pasteable examples for observations, emotions, and events |
 
 ---
 
