@@ -79,6 +79,12 @@ class ModelValidationRecord(BaseModel):
     validation_notes: list[str] = Field(
         default_factory=list, description="Limitations, operational bounds, and caveats."
     )
+    dataset_archive_sha256: str = Field(
+        default="", description="Verified SHA-256 digest of empirical dataset archive."
+    )
+    execution_proof_signature: str = Field(
+        default="", description="Tamper-evident SHA-256 signature of trusted pipeline execution."
+    )
 
     def verify_artifact_binding(self, artifact_path: str) -> bool:
         """Cryptographically verify that this validation record binds to the target artifact."""

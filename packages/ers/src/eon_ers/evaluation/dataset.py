@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+import time
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +47,13 @@ class DatasetMetadata(BaseModel):
         description="Partitioning strategy (e.g., 'subject_independent', 'predefined').",
     )
     checksum: str = Field(default="", description="Checksum of the dataset manifest or archive.")
+    manifest_checksum: str = Field(
+        default="", description="Checksum of the extracted manifest file, if applicable."
+    )
+    acquisition_status: str = Field(
+        default="UNAVAILABLE_UNVERIFIED",
+        description="Dataset acquisition and verification status (e.g., 'ACQUIRED_VERIFIED', 'UNAVAILABLE_UNVERIFIED').",
+    )
     download_url: str = Field(default="", description="Official acquisition URL.")
     subject_ids: list[str] = Field(
         default_factory=list, description="List of unique subject or actor identifiers."
@@ -56,7 +64,11 @@ class DatasetMetadata(BaseModel):
         return self.commercial_allowed
 
     def is_valid_checksum(self) -> bool:
-        """Verify whether the registered checksum is a valid, non-placeholder 64-char SHA-256."""
+        """Syntactic validation only: verify whether the registered checksum is a valid, non-placeholder 64-char hex SHA-256.
+
+        IMPORTANT: Syntactic validity does NOT constitute verification of archive bytes.
+        Actual verification requires verify_archive() on the physical file.
+        """
         if not self.checksum:
             return False
         c = self.checksum.strip().lower()
@@ -68,20 +80,28 @@ class DatasetMetadata(BaseModel):
             return False
         return True
 
-    def verify_archive(self, archive_path: str | Path) -> tuple[bool, str]:
-        """Verify the integrity of a dataset archive file against its registered SHA-256 checksum."""
+    def verify_archive(
+        self, archive_path: str | Path, return_audit: bool = False
+    ) -> tuple[bool, str] | tuple[bool, str, dict[str, Any]]:
+        """Verify the integrity of a dataset archive file against its registered SHA-256 checksum.
+
+        Rejects missing, empty, malformed, placeholder, or mismatched archives.
+        Returns a tuple of (is_verified, message) or (is_verified, message, audit_record) if return_audit=True.
+        """
+        empty_audit: dict[str, Any] = {}
         if not self.is_valid_checksum():
-            return (
-                False,
-                f"Dataset '{self.name}' has no registered valid SHA-256 checksum (value: '{self.checksum}').",
-            )
+            msg = f"Dataset '{self.name}' has no registered valid SHA-256 checksum (value: '{self.checksum}')."
+            return (False, msg, empty_audit) if return_audit else (False, msg)
 
         path = Path(archive_path)
         if not path.is_file():
-            return False, f"Dataset archive file not found: {path}"
+            msg = f"Dataset archive file not found: {path}"
+            return (False, msg, empty_audit) if return_audit else (False, msg)
 
-        if path.stat().st_size == 0:
-            return False, f"Dataset archive file is empty (0 bytes): {path}"
+        file_size = path.stat().st_size
+        if file_size == 0:
+            msg = f"Dataset archive file is empty (0 bytes): {path}"
+            return (False, msg, empty_audit) if return_audit else (False, msg)
 
         hasher = hashlib.sha256()
         with open(path, "rb") as f:
@@ -91,12 +111,64 @@ class DatasetMetadata(BaseModel):
 
         expected = self.checksum.strip().lower()
         if computed != expected:
-            return (
-                False,
-                f"Checksum mismatch for '{self.name}': expected {expected}, got {computed}.",
-            )
+            msg = f"Checksum mismatch for '{self.name}': expected {expected}, got {computed}."
+            return (False, msg, empty_audit) if return_audit else (False, msg)
 
-        return True, f"Dataset archive integrity verified ({computed[:16]}...)."
+        audit_record: dict[str, Any] = {
+            "dataset_name": self.name,
+            "dataset_version": self.version,
+            "acquisition_source": self.source,
+            "archive_path": str(path.resolve()),
+            "archive_size_bytes": file_size,
+            "sha256_checksum": computed,
+            "verified_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "verification_status": "ACQUIRED_VERIFIED",
+        }
+        msg = f"Dataset archive integrity verified ({computed[:16]}...)."
+        return (True, msg, audit_record) if return_audit else (True, msg)
+
+    def verify_manifest(
+        self, manifest_path: str | Path, expected_sha256: str | None = None
+    ) -> tuple[bool, str, dict[str, Any]]:
+        """Verify the integrity and non-emptiness of an extracted dataset manifest file."""
+        empty_audit: dict[str, Any] = {}
+        path = Path(manifest_path)
+        if not path.is_file():
+            return False, f"Dataset manifest not found: {path}", empty_audit
+
+        size = path.stat().st_size
+        if size == 0:
+            return False, f"Dataset manifest file is empty (0 bytes): {path}", empty_audit
+
+        hasher = hashlib.sha256()
+        with open(path, "rb") as f:
+            while chunk := f.read(65536):
+                hasher.update(chunk)
+        computed = hasher.hexdigest().lower()
+
+        target_expected = (expected_sha256 or self.manifest_checksum).strip().lower()
+        if target_expected:
+            if target_expected in KNOWN_PLACEHOLDER_CHECKSUMS:
+                return (
+                    False,
+                    f"Manifest checksum '{target_expected}' is a placeholder.",
+                    empty_audit,
+                )
+            if computed != target_expected:
+                return (
+                    False,
+                    f"Manifest checksum mismatch: expected {target_expected}, got {computed}.",
+                    empty_audit,
+                )
+
+        audit = {
+            "dataset_name": self.name,
+            "manifest_path": str(path.resolve()),
+            "manifest_sha256": computed,
+            "manifest_size_bytes": size,
+            "verified_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+        return True, f"Dataset manifest verified ({computed[:16]}...).", audit
 
 
 class EvaluationSample(BaseModel):
