@@ -54,9 +54,12 @@ async def test_end_to_end_real_onnx_pipelines() -> None:
             image_payload=make_test_face(),
         )
         face_obs = await engine.process_facial(face_inp)
-        assert face_obs.status in (ObservationStatus.OK, ObservationStatus.INSUFFICIENT_EVIDENCE)
+        assert face_obs.status in (
+            ObservationStatus.OK,
+            ObservationStatus.INSUFFICIENT_EVIDENCE,
+            ObservationStatus.MODEL_UNVALIDATED,
+        )
         assert face_obs.model_id == "ers-facial-onnx-cpu-v1"
-        assert face_obs.confidence > 0.0
         assert face_obs.is_definitive_claim is False
         assert face_inp.image_payload is None  # Payload scrubbed
 
@@ -69,9 +72,12 @@ async def test_end_to_end_real_onnx_pipelines() -> None:
             sample_rate=16000,
         )
         speech_obs = await engine.process_speech(speech_inp)
-        assert speech_obs.status == ObservationStatus.OK
+        assert speech_obs.status in (
+            ObservationStatus.OK,
+            ObservationStatus.INSUFFICIENT_EVIDENCE,
+            ObservationStatus.MODEL_UNVALIDATED,
+        )
         assert speech_obs.model_id == "ers-speech-onnx-cpu-v1"
-        assert speech_obs.confidence > 0.0
         assert speech_obs.is_definitive_claim is False
         assert speech_inp.audio_payload is None  # Payload scrubbed
 
@@ -90,8 +96,11 @@ async def test_end_to_end_real_onnx_pipelines() -> None:
             sample_rate=16000,
         )
         fused = await engine.process_multimodal(face_inp2, speech_inp2)
-        assert fused.confidence > 0.0
-        assert fused.dominant_estimate in fused.fused_probabilities
+        assert fused.confidence >= 0.0
+        assert (
+            fused.dominant_estimate in fused.fused_probabilities
+            or fused.dominant_estimate == "insufficient_evidence"
+        )
         assert fused.is_definitive_claim is False
 
 

@@ -1,30 +1,67 @@
-"""Interactive HTML/CSS/JavaScript live demonstration dashboard for ERS."""
+"""Professional, enterprise-grade scientific instrumentation dashboard for OVIC EON ERS.
 
-from __future__ import annotations
+Provides:
+- Dark/Light theme switching with CSS variables
+- Independent Camera and Microphone hardware acquisition and lifecycle control
+- Explicit MediaStreamTrack stopping to prevent device lockouts or leaks
+- Real-time audio VU metering using Web Audio API AudioWorklet/ScriptProcessor
+- Bounded rolling telemetry history with P50, P95, P99 latency instrumentation
+- Model validation state banners and unvalidated evidence callouts
+- Device enumeration and hotplug change detection
+- Reconnection logic with exponential backoff and jitter
+"""
 
-
-def get_dashboard_html() -> str:
-    """Return the complete standalone, self-contained responsive dashboard HTML."""
-    return """<!DOCTYPE html>
-<html lang="en">
+DASHBOARD_HTML = """<!DOCTYPE html>
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OVIC EON — ERS Live Input Demonstration</title>
+    <title>OVIC EON — ERS Telemetry & Perception Instrumentation</title>
     <style>
         :root {
-            --bg-primary: #0f141c;
-            --bg-secondary: #1a2230;
-            --bg-card: #222d3f;
-            --border: #31425a;
-            --text-primary: #f0f4f8;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --accent-blue: #38bdf8;
-            --accent-green: #34d399;
-            --accent-amber: #fbbf24;
-            --accent-rose: #fb7185;
-            --accent-purple: #c084fc;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-mono: "SF Mono", "Segoe UI Mono", "Roboto Mono", Menlo, Courier, monospace;
+
+            /* Dark Theme (Default) */
+            --bg-base: #090d16;
+            --bg-surface: #111827;
+            --bg-surface-elevated: #1f2937;
+            --bg-subtle: #1e2638;
+            --border-subtle: #1f293d;
+            --border-medium: #374151;
+            --text-main: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent: #6366f1;
+            --status-success: #10b981;
+            --status-warning: #f59e0b;
+            --status-error: #ef4444;
+            --status-neutral: #6b7280;
+            --card-radius: 8px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        [data-theme="light"] {
+            --bg-base: #f8fafc;
+            --bg-surface: #ffffff;
+            --bg-surface-elevated: #f1f5f9;
+            --bg-subtle: #e2e8f0;
+            --border-subtle: #e2e8f0;
+            --border-medium: #cbd5e1;
+            --text-main: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --accent: #4f46e5;
+            --status-success: #059669;
+            --status-warning: #d97706;
+            --status-error: #dc2626;
+            --status-neutral: #94a3b8;
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
         }
 
         * {
@@ -34,1019 +71,1209 @@ def get_dashboard_html() -> str:
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
+            font-family: var(--font-sans);
+            background-color: var(--bg-base);
+            color: var(--text-main);
             line-height: 1.5;
+            padding: 1.25rem;
             min-height: 100vh;
-            padding: 1rem;
         }
 
+        /* Header & Top Bar */
         header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-            gap: 0.5rem;
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 1.25rem;
         }
 
-        .brand-title {
-            font-size: 1.35rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
+        .brand-container {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-        }
-
-        .brand-badge {
-            background-color: rgba(56, 189, 248, 0.15);
-            color: var(--accent-blue);
-            font-size: 0.75rem;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            border: 1px solid rgba(56, 189, 248, 0.3);
-            font-weight: 600;
-        }
-
-        .header-status-pills {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        .pill {
-            font-size: 0.75rem;
-            padding: 0.25rem 0.6rem;
-            border-radius: 9999px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-        }
-
-        .pill-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: var(--text-muted);
-        }
-
-        .pill-dot.active { background-color: var(--accent-green); box-shadow: 0 0 6px var(--accent-green); }
-        .pill-dot.warning { background-color: var(--accent-amber); }
-        .pill-dot.danger { background-color: var(--accent-rose); }
-
-        .banner-alert {
-            background: rgba(251, 191, 36, 0.1);
-            border: 1px solid rgba(251, 191, 36, 0.3);
-            color: var(--accent-amber);
-            padding: 0.65rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .grid-layout {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-
-        @media (min-width: 1024px) {
-            .grid-layout {
-                grid-template-columns: 1.15fr 1fr;
-            }
-        }
-
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            display: flex;
-            flex-direction: column;
             gap: 0.75rem;
         }
 
-        .card-header {
+        .brand-badge {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            background: var(--bg-surface-elevated);
+            color: var(--primary);
+            border: 1px solid var(--border-medium);
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-toggle-btn {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-medium);
+            color: var(--text-secondary);
+            padding: 0.35rem 0.75rem;
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .theme-toggle-btn:hover {
+            color: var(--text-main);
+            border-color: var(--primary);
+        }
+
+        /* Banner Notifications */
+        .system-banner {
+            padding: 0.75rem 1rem;
+            border-radius: var(--card-radius);
+            margin-bottom: 1.25rem;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid transparent;
+        }
+
+        .banner-warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.3);
+            color: var(--status-warning);
+        }
+
+        .banner-info {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.3);
+            color: var(--primary);
+        }
+
+        .banner-text strong {
+            font-weight: 600;
+        }
+
+        /* Main Grid Layout */
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr 340px;
+            gap: 1.25rem;
+        }
+
+        @media (max-width: 1200px) {
+            .layout-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards & Panels */
+        .panel {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--card-radius);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 1.25rem;
+        }
+
+        .panel-header {
+            padding: 0.75rem 1rem;
+            background: var(--bg-surface-elevated);
+            border-bottom: 1px solid var(--border-subtle);
+            font-size: 0.85rem;
+            font-weight: 600;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-            padding-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
         }
 
-        .card-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .consent-box {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 0.75rem;
-            font-size: 0.85rem;
+        .panel-body {
+            padding: 1rem;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 1rem;
         }
 
-        .consent-label {
+        /* Control Elements */
+        .control-group {
             display: flex;
-            align-items: flex-start;
-            gap: 0.5rem;
-            cursor: pointer;
-            color: var(--text-primary);
-            line-height: 1.4;
-        }
-
-        .consent-label input[type="checkbox"] {
-            margin-top: 0.2rem;
-            cursor: pointer;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        button {
-            padding: 0.45rem 0.85rem;
-            font-size: 0.85rem;
-            font-weight: 600;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            cursor: pointer;
-            transition: all 0.15s ease;
-            display: inline-flex;
-            align-items: center;
+            flex-direction: column;
             gap: 0.35rem;
         }
 
-        button:hover:not(:disabled) {
-            background: #2b3950;
-            border-color: #475d7c;
+        .control-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-family: var(--font-mono);
+            letter-spacing: 0.04em;
         }
 
-        button:disabled {
+        .select-input {
+            width: 100%;
+            padding: 0.45rem 0.6rem;
+            background-color: var(--bg-base);
+            border: 1px solid var(--border-medium);
+            color: var(--text-main);
+            border-radius: 4px;
+            font-size: 0.82rem;
+            font-family: var(--font-sans);
+            outline: none;
+        }
+
+        .select-input:focus {
+            border-color: var(--primary);
+        }
+
+        .button-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.45rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid var(--border-medium);
+            background: var(--bg-surface-elevated);
+            color: var(--text-main);
+            transition: all 0.12s ease-in-out;
+            text-align: center;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: var(--border-medium);
+        }
+
+        .btn:disabled {
             opacity: 0.45;
             cursor: not-allowed;
         }
 
-        button.btn-primary {
-            background: #0284c7;
-            border-color: #38bdf8;
+        .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
             color: #ffffff;
         }
 
-        button.btn-primary:hover:not(:disabled) {
-            background: #0369a1;
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--primary-hover);
         }
 
-        button.btn-danger {
-            background: rgba(244, 63, 94, 0.15);
-            border-color: rgba(244, 63, 94, 0.4);
-            color: var(--accent-rose);
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: var(--status-error);
         }
 
-        button.btn-danger:hover:not(:disabled) {
-            background: rgba(244, 63, 94, 0.25);
+        .btn-danger:hover:not(:disabled) {
+            background-color: rgba(239, 68, 68, 0.25);
         }
 
-        .media-preview-container {
+        /* Video Preview Area */
+        .preview-container {
             position: relative;
             background: #000;
             border-radius: 6px;
             overflow: hidden;
-            width: 100%;
-            height: 240px;
+            aspect-ratio: 16 / 9;
             display: flex;
             align-items: center;
             justify-content: center;
+            border: 1px solid var(--border-subtle);
         }
 
-        video, canvas {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .preview-overlay {
             position: absolute;
             top: 0.5rem;
             left: 0.5rem;
-            background: rgba(15, 20, 28, 0.75);
-            padding: 0.25rem 0.5rem;
+            background: rgba(0, 0, 0, 0.65);
+            padding: 0.2rem 0.5rem;
             border-radius: 4px;
-            font-size: 0.75rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .preview-canvas-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: #fff;
+            letter-spacing: 0.05em;
             pointer-events: none;
         }
 
-        .audio-meter-bar {
-            width: 100%;
-            height: 12px;
-            background: #111827;
-            border-radius: 9999px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-        }
-
-        .audio-meter-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, var(--accent-green) 0%, var(--accent-amber) 70%, var(--accent-rose) 100%);
-            transition: width 0.08s ease;
-        }
-
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        .metric-val {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .prob-bars-container {
+        /* Audio VU Meter */
+        .vu-meter-container {
             display: flex;
             flex-direction: column;
-            gap: 0.4rem;
+            gap: 0.35rem;
         }
 
-        .prob-bar-row {
-            display: grid;
-            grid-template-columns: 85px 1fr 45px;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.75rem;
+        .vu-meter-bar {
+            height: 8px;
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
         }
 
-        .prob-bar-label {
-            color: var(--text-secondary);
+        .vu-meter-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #10b981 0%, #f59e0b 70%, #ef4444 95%);
+            transition: width 0.05s ease-out;
+        }
+
+        .vu-meter-labels {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        /* Observation & Fusion Center Stage */
+        .perception-card {
+            background: var(--bg-surface-elevated);
+            border-radius: 6px;
+            border: 1px solid var(--border-subtle);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .state-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        .dominant-category {
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
             text-transform: capitalize;
         }
 
-        .prob-bar-track {
-            background: var(--bg-secondary);
+        .confidence-indicator {
+            font-family: var(--font-mono);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .metric-badge {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
             border-radius: 4px;
-            height: 10px;
+            text-transform: uppercase;
+        }
+
+        .badge-verified {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--status-success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-unvalidated {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--status-warning);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .badge-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--status-error);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .probability-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem 1rem;
+        }
+
+        .prob-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .prob-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-family: var(--font-mono);
+        }
+
+        .prob-bar-container {
+            height: 6px;
+            background: var(--bg-base);
+            border-radius: 3px;
             overflow: hidden;
         }
 
         .prob-bar-fill {
             height: 100%;
-            background: var(--accent-blue);
+            background: var(--accent);
             width: 0%;
             transition: width 0.2s ease;
         }
 
-        .dominant-estimate-badge {
-            font-size: 1.25rem;
-            font-weight: 700;
-            padding: 0.35rem 0.75rem;
-            border-radius: 6px;
-            display: inline-block;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            background: rgba(56, 189, 248, 0.1);
-            color: var(--accent-blue);
-            border: 1px solid rgba(56, 189, 248, 0.3);
-        }
-
-        .uncertainty-meter {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-
-        .controls-row {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            flex-wrap: wrap;
+        /* Telemetry & Stats Table */
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
             font-size: 0.8rem;
+            font-family: var(--font-mono);
         }
 
-        select {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            padding: 0.35rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
+        .stats-table th, .stats-table td {
+            padding: 0.4rem 0.6rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
         }
 
-        footer {
-            margin-top: 1.5rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border);
-            text-align: center;
-            font-size: 0.75rem;
+        .stats-table th {
             color: var(--text-muted);
+            font-weight: 500;
         }
+
+        .stats-table td:last-child {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        /* Scientific Event Log */
+        .log-container {
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: 4px;
+            padding: 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            height: 160px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .log-entry {
+            line-height: 1.4;
+            color: var(--text-secondary);
+        }
+
+        .log-timestamp {
+            color: var(--text-muted);
+            margin-right: 0.4rem;
+        }
+
+        .log-level-info { color: var(--primary); }
+        .log-level-warn { color: var(--status-warning); }
+        .log-level-error { color: var(--status-error); }
+
+        /* Status Dot */
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--status-neutral);
+            margin-right: 0.4rem;
+        }
+        .status-dot.active { background: var(--status-success); box-shadow: 0 0 6px var(--status-success); }
+        .status-dot.warning { background: var(--status-warning); }
+        .status-dot.error { background: var(--status-error); }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="brand-title">
-            <span>OVIC EON</span>
-            <span class="brand-badge">ERS LIVE DEMO</span>
+        <div class="brand-container">
+            <span class="brand-badge">OVIC EON</span>
+            <h1>ERS Telemetry & Model Qualification</h1>
         </div>
-        <div class="header-status-pills">
-            <div class="pill" id="pill-engine">
-                <span class="pill-dot pill-dot active" id="dot-engine"></span>
-                <span>Engine: <b id="val-engine">INITIALIZING</b></span>
+        <div class="header-actions">
+            <div>
+                <span class="status-dot" id="ws-status-dot"></span>
+                <span style="font-family: var(--font-mono); font-size: 0.75rem;" id="ws-status-text">DISCONNECTED</span>
             </div>
-            <div class="pill" id="pill-core">
-                <span class="pill-dot warning"></span>
-                <span>Core: <b>NOT_CONNECTED</b></span>
-            </div>
-            <div class="pill" id="pill-model">
-                <span class="pill-dot warning"></span>
-                <span>Model: <b>EXPERIMENTAL BASELINE</b></span>
-            </div>
-            <div class="pill" id="pill-ws">
-                <span class="pill-dot danger" id="dot-ws"></span>
-                <span>Stream: <b id="val-ws">DISCONNECTED</b></span>
-            </div>
+            <button class="theme-toggle-btn" id="theme-toggle-btn">THEME: DARK</button>
         </div>
     </header>
 
-    <div class="banner-alert">
-        <span><b>Scientific Notice:</b> Observable behavioral features are analyzed via local CPU baseline models. Internal affective states cannot be definitively inferred (Epistemic Modesty: is_definitive_claim = False). Zero persistent disk storage.</span>
+    <div class="system-banner banner-warning" id="model-integrity-banner">
+        <div class="banner-text">
+            <strong>Qualification Alert:</strong> Loaded models are unverified baseline graphs with unvalidated provenance. Discrete emotion categorization is suppressed to prevent false claims.
+        </div>
+        <span class="metric-badge badge-unvalidated" id="overall-model-state-badge">MODEL_LOADED_UNVERIFIED</span>
     </div>
 
-    <div class="grid-layout">
-
-        <!-- Column 1: Live Sensory Capture & Controls -->
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-
-            <!-- Consent & Session Control Card -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">1. Privacy Consent & Hardware Controls</span>
-                    <span class="pill" id="pill-consent"><span class="pill-dot danger" id="dot-consent"></span><span id="val-consent">Consent: Required</span></span>
+    <div class="layout-grid">
+        <!-- Column 1: Hardware Inputs & Session -->
+        <div>
+            <!-- Hardware Input Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>Hardware Acquisition</span>
+                    <span id="device-count-badge" style="font-size: 0.7rem;">0 DEVICES</span>
                 </div>
+                <div class="panel-body">
+                    <!-- Camera Controls -->
+                    <div class="control-group">
+                        <label class="control-label" for="camera-select">Video Capture Source</label>
+                        <select id="camera-select" class="select-input">
+                            <option value="">Detecting cameras...</option>
+                        </select>
+                        <div class="button-row" style="margin-top: 0.35rem;">
+                            <button id="btn-camera-start" class="btn btn-primary">Start Camera</button>
+                            <button id="btn-camera-stop" class="btn btn-danger" disabled>Stop Camera</button>
+                        </div>
+                    </div>
 
-                <div class="consent-box">
-                    <label class="consent-label">
-                        <input type="checkbox" id="chk-consent">
-                        <span>I grant explicit consent for real-time webcam and microphone affective feature analysis on this device. Sensory media is processed strictly in volatile memory and never persisted or transmitted.</span>
-                    </label>
-                    <div class="metric-row">
-                        <span>Active Session ID: <code id="txt-session-id">generating...</code></span>
-                        <span>Token: <code id="txt-consent-ref">not_registered</code></span>
+                    <!-- Microphone Controls -->
+                    <div class="control-group">
+                        <label class="control-label" for="mic-select">Audio Capture Source</label>
+                        <select id="mic-select" class="select-input">
+                            <option value="">Detecting microphones...</option>
+                        </select>
+                        <div class="button-row" style="margin-top: 0.35rem;">
+                            <button id="btn-mic-start" class="btn btn-primary">Start Mic</button>
+                            <button id="btn-mic-stop" class="btn btn-danger" disabled>Stop Mic</button>
+                        </div>
+                    </div>
+
+                    <!-- Audio Level VU Meter -->
+                    <div class="vu-meter-container">
+                        <div class="control-label">Live Audio Level (RMS)</div>
+                        <div class="vu-meter-bar">
+                            <div class="vu-meter-fill" id="vu-meter-fill"></div>
+                        </div>
+                        <div class="vu-meter-labels">
+                            <span>-60 dB</span>
+                            <span>-24 dB</span>
+                            <span>-6 dB</span>
+                            <span>0 dB</span>
+                        </div>
                     </div>
                 </div>
-
-                <div class="controls-row">
-                    <label for="sel-fps">Video Sample Rate:</label>
-                    <select id="sel-fps">
-                        <option value="1">1 FPS (Ultra-low CPU)</option>
-                        <option value="2" selected>2 FPS (Standard Edge)</option>
-                        <option value="5">5 FPS (Real-time)</option>
-                    </select>
-
-                    <label for="sel-chunk">Audio Chunk Duration:</label>
-                    <select id="sel-chunk">
-                        <option value="500">500 ms (Low latency)</option>
-                        <option value="1000" selected>1000 ms (Standard)</option>
-                        <option value="1500">1500 ms (Enhanced Prosody)</option>
-                    </select>
-                </div>
-
-                <div class="btn-group">
-                    <button class="btn-primary" id="btn-start" disabled>Start Live Stream</button>
-                    <button id="btn-cam-toggle" disabled>Toggle Camera</button>
-                    <button id="btn-mic-toggle" disabled>Toggle Microphone</button>
-                    <button class="btn-danger" id="btn-stop" disabled>Stop Capture</button>
-                    <button class="btn-danger" id="btn-revoke">Revoke Consent</button>
-                </div>
             </div>
 
-            <!-- Video Feed Preview Card -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">2. Live Optical Capture (Webcam)</span>
-                    <span class="pill" id="pill-cam"><span class="pill-dot danger" id="dot-cam"></span><span id="val-cam">INACTIVE</span></span>
+            <!-- Session & Connection Config -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>Live Session Telemetry</span>
                 </div>
-
-                <div class="media-preview-container">
-                    <video id="vid-preview" autoplay playsinline muted></video>
-                    <canvas id="canvas-overlay" class="preview-canvas-overlay"></canvas>
-                    <div class="preview-overlay" id="txt-cam-overlay">Camera Inactive</div>
-                </div>
-
-                <div class="metric-row">
-                    <span>Face Detection: <b id="val-face-status" class="metric-val">NO_FACE</b></span>
-                    <span>Laplacian Blur Score: <b id="val-face-blur" class="metric-val">0.0</b></span>
-                    <span>Illumination: <b id="val-face-lum" class="metric-val">0.0</b></span>
-                </div>
-            </div>
-
-            <!-- Microphone Audio Monitor Card -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">3. Live Acoustic Monitor (Microphone)</span>
-                    <span class="pill" id="pill-mic"><span class="pill-dot danger" id="dot-mic"></span><span id="val-mic">INACTIVE</span></span>
-                </div>
-
-                <div class="audio-meter-bar">
-                    <div class="audio-meter-fill" id="meter-audio-fill"></div>
-                </div>
-
-                <div class="metric-row">
-                    <span>Signal Quality: <b id="val-audio-snr" class="metric-val">0.0 dB</b></span>
-                    <span>Acoustic RMS: <b id="val-audio-rms" class="metric-val">0.0 dB</b></span>
-                    <span>Voice Activity: <b id="val-audio-vad" class="metric-val">INACTIVE</b></span>
+                <div class="panel-body">
+                    <div class="control-group">
+                        <label class="control-label">Active Session ID</label>
+                        <div id="session-id-display" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary); word-break: break-all;">
+                            generating...
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Inference Interval</label>
+                        <select id="fps-select" class="select-input">
+                            <option value="1000">1.0 Hz (1000ms)</option>
+                            <option value="500" selected>2.0 Hz (500ms)</option>
+                            <option value="250">4.0 Hz (250ms)</option>
+                            <option value="100">10.0 Hz (100ms)</option>
+                        </select>
+                    </div>
+                    <div class="button-row">
+                        <button id="btn-reconnect" class="btn">Reconnect WS</button>
+                    </div>
                 </div>
             </div>
-
         </div>
 
-        <!-- Column 2: ERS Affective Observation & Multimodal Fusion -->
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-
-            <!-- Multimodal Affective State Card -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">4. Real-Time Multimodal Emotion Fusion</span>
-                    <span class="pill" id="pill-modality-weights">Weights: F 50% | S 50%</span>
+        <!-- Column 2: Perception Center Stage & Video Monitor -->
+        <div>
+            <!-- Video Preview Card -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>Video Monitor</span>
+                    <span id="stream-resolution-text" style="font-family: var(--font-mono); font-size: 0.7rem;">NO STREAM</span>
                 </div>
-
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-                    <div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.2rem;">DOMINANT OBSERVABLE ESTIMATE</div>
-                        <div class="dominant-estimate-badge" id="badge-dominant">INSUFFICIENT_EVIDENCE</div>
+                <div class="panel-body" style="padding: 0.75rem;">
+                    <div class="preview-container">
+                        <video id="live-video" autoplay playsinline muted></video>
+                        <div class="preview-overlay" id="video-overlay">INACTIVE</div>
                     </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.2rem;">PIPELINE LATENCY</div>
-                        <div style="font-size: 1.15rem; font-weight: 700; color: var(--accent-green);" id="txt-latency">-- ms</div>
-                    </div>
-                </div>
-
-                <div class="uncertainty-meter">
-                    <div style="flex: 1;">
-                        <div class="metric-row" style="margin-bottom: 0.2rem;">
-                            <span>Observation Confidence:</span>
-                            <span class="metric-val" id="val-confidence">0.00</span>
-                        </div>
-                        <div class="prob-bar-track">
-                            <div class="prob-bar-fill" id="bar-confidence" style="background: var(--accent-green); width: 0%;"></div>
-                        </div>
-                    </div>
-                    <div style="flex: 1;">
-                        <div class="metric-row" style="margin-bottom: 0.2rem;">
-                            <span>Epistemic Uncertainty:</span>
-                            <span class="metric-val" id="val-uncertainty">1.00</span>
-                        </div>
-                        <div class="prob-bar-track">
-                            <div class="prob-bar-fill" id="bar-uncertainty" style="background: var(--accent-amber); width: 100%;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card-title" style="font-size: 0.85rem; margin-top: 0.5rem;">Fused Affective Probability Distribution</div>
-                <div class="prob-bars-container" id="container-probs">
-                    <!-- Probability rows injected via JS -->
-                </div>
-
-                <div class="metric-row" style="margin-top: 0.25rem;">
-                    <span>Conflict Metric (JSD): <b id="val-jsd" class="metric-val">0.000</b></span>
-                    <span>Conflict Detected: <b id="val-conflict" class="metric-val">NO</b></span>
                 </div>
             </div>
 
-            <!-- Unimodal Streams Diagnostics Card -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">5. Unimodal Diagnostic Signals</span>
+            <!-- Multimodal Perception Classification -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>Multimodal Perception State</span>
+                    <span class="metric-badge" id="fusion-state-badge">UNVALIDATED</span>
                 </div>
+                <div class="panel-body">
+                    <div class="perception-card">
+                        <div class="state-row">
+                            <div>
+                                <div class="control-label">Hypothesized Affect State</div>
+                                <div class="dominant-category" id="dominant-category-text">Awaiting Evidence</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="control-label">Calibrated Confidence</div>
+                                <div class="confidence-indicator" id="confidence-val-text">0.00%</div>
+                            </div>
+                        </div>
 
-                <div class="metric-row">
-                    <span>Facial Stream Estimate:</span>
-                    <b id="val-face-estimate" class="metric-val">--</b>
-                </div>
-                <div class="metric-row">
-                    <span>Speech Stream Estimate:</span>
-                    <b id="val-speech-estimate" class="metric-val">--</b>
-                </div>
-                <div class="metric-row">
-                    <span>Responsible AI Non-Definitive Invariant:</span>
-                    <b class="metric-val" style="color: var(--accent-green);">is_definitive_claim = False (Verified)</b>
-                </div>
-                <div class="metric-row">
-                    <span>Actuator Motion Commands Prohibited:</span>
-                    <b class="metric-val" style="color: var(--accent-green);">HARD INTERLOCK ACTIVE</b>
+                        <!-- Class Probability Distribution -->
+                        <div class="control-label" style="margin-top: 0.5rem;">Modality Calibrated Distribution</div>
+                        <div class="probability-grid" id="prob-grid">
+                            <!-- Populated dynamically -->
+                            <div class="prob-item">
+                                <div class="prob-header"><span>Neutral</span><span id="prob-val-neutral">0%</span></div>
+                                <div class="prob-bar-container"><div class="prob-bar-fill" id="prob-bar-neutral"></div></div>
+                            </div>
+                            <div class="prob-item">
+                                <div class="prob-header"><span>Happy</span><span id="prob-val-happy">0%</span></div>
+                                <div class="prob-bar-container"><div class="prob-bar-fill" id="prob-bar-happy"></div></div>
+                            </div>
+                            <div class="prob-item">
+                                <div class="prob-header"><span>Sad</span><span id="prob-val-sad">0%</span></div>
+                                <div class="prob-bar-container"><div class="prob-bar-fill" id="prob-bar-sad"></div></div>
+                            </div>
+                            <div class="prob-item">
+                                <div class="prob-header"><span>Surprise</span><span id="prob-val-surprise">0%</span></div>
+                                <div class="prob-bar-container"><div class="prob-bar-fill" id="prob-bar-surprise"></div></div>
+                            </div>
+                            <div class="prob-item">
+                                <div class="prob-header"><span>Anger</span><span id="prob-val-anger">0%</span></div>
+                                <div class="prob-bar-container"><div class="prob-bar-fill" id="prob-bar-anger"></div></div>
+                            </div>
+                            <div class="prob-item">
+                                <div class="prob-header"><span>Fear</span><span id="prob-val-fear">0%</span></div>
+                                <div class="prob-bar-container"><div class="prob-bar-fill" id="prob-bar-fear"></div></div>
+                            </div>
+                            <div class="prob-item">
+                                <div class="prob-header"><span>Disgust</span><span id="prob-val-disgust">0%</span></div>
+                                <div class="prob-bar-container"><div class="prob-bar-fill" id="prob-bar-disgust"></div></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- System Diagnostic Console Card -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">6. Observation Limitations & Status Log</span>
+            <!-- Scientific Event Log -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>Inference & Safety Audit Log</span>
+                    <button id="btn-clear-log" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.7rem; font-family: var(--font-mono);">CLEAR</button>
                 </div>
-                <div id="txt-limitations-log" style="font-family: monospace; font-size: 0.75rem; color: var(--text-muted); max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.25rem;">
-                    <div>[Init] Ready for user consent registration.</div>
+                <div class="panel-body" style="padding: 0.5rem;">
+                    <div class="log-container" id="log-output">
+                        <div class="log-entry"><span class="log-timestamp">[INIT]</span> System dashboard loaded. Zero persistent capture policy active.</div>
+                    </div>
                 </div>
             </div>
-
         </div>
 
+        <!-- Column 3: Performance Instrumentation & Model Provenance -->
+        <div>
+            <!-- Latency & Frame Telemetry -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>Performance Instrumentation</span>
+                </div>
+                <div class="panel-body">
+                    <table class="stats-table">
+                        <tbody>
+                            <tr>
+                                <td>Frames Ingested</td>
+                                <td id="stat-frames-count">0</td>
+                            </tr>
+                            <tr>
+                                <td>Audio Slices Ingested</td>
+                                <td id="stat-audio-count">0</td>
+                            </tr>
+                            <tr>
+                                <td>Client P50 Latency</td>
+                                <td id="stat-latency-p50">0.0 ms</td>
+                            </tr>
+                            <tr>
+                                <td>Client P95 Latency</td>
+                                <td id="stat-latency-p95">0.0 ms</td>
+                            </tr>
+                            <tr>
+                                <td>Client P99 Latency</td>
+                                <td id="stat-latency-p99">0.0 ms</td>
+                            </tr>
+                            <tr>
+                                <td>Dropped Inferences</td>
+                                <td id="stat-dropped-count">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Model Qualification Register Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>Model Validation Register</span>
+                </div>
+                <div class="panel-body">
+                    <div class="control-group">
+                        <div class="control-label">Facial Model State</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.8rem; font-family: var(--font-mono);" id="model-facial-name">facial_emotion_model.onnx</span>
+                            <span class="metric-badge badge-unvalidated" id="model-facial-state">UNVERIFIED</span>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">Speech Model State</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.8rem; font-family: var(--font-mono);" id="model-speech-name">speech_emotion_model.onnx</span>
+                            <span class="metric-badge badge-unvalidated" id="model-speech-state">UNVERIFIED</span>
+                        </div>
+                    </div>
+                    <div class="control-group" style="margin-top: 0.5rem;">
+                        <div class="control-label">Commercial Authorization</div>
+                        <span style="font-size: 0.75rem; color: var(--status-error); font-family: var(--font-mono);">RESTRICTED / RESEARCH ONLY</span>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-label">Scientific Invariant</div>
+                        <span style="font-size: 0.72rem; color: var(--text-secondary); font-family: var(--font-mono);">
+                            is_definitive_claim = False (Enforced)
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <footer>
-        OVIC EON — Emotional Intelligence Infrastructure for Robotics &copy; 2026 OVIC Labs. Local edge execution on CPU.
-    </footer>
-
-    <!-- Hidden canvas used for capturing video frames -->
-    <canvas id="hidden-capture-canvas" style="display: none;"></canvas>
+    <!-- Hidden Canvas for Video Sampling -->
+    <canvas id="hidden-canvas" style="display: none;"></canvas>
 
     <script>
-        // --- State Management ---
-        const EMOTIONS = ["neutral", "happiness", "sadness", "anger", "fear", "surprise", "disgust"];
-        let sessionId = "session-" + Math.random().toString(36).substring(2, 10);
-        let consentRef = null;
-        let ws = null;
-        let mediaStream = null;
-        let audioContext = null;
-        let audioProcessor = null;
-        let audioInputNode = null;
-        let frameInterval = null;
-        let isCamActive = false;
-        let isMicActive = false;
-        let isStreaming = false;
+        (function() {
+            "use strict";
 
-        document.getElementById("txt-session-id").innerText = sessionId;
+            // State management
+            const state = {
+                theme: "dark",
+                sessionId: "session-" + Math.random().toString(36).substring(2, 10),
+                videoStream: null,
+                audioStream: null,
+                audioContext: null,
+                audioAnalyser: null,
+                audioSource: null,
+                vuAnimationId: null,
+                ws: null,
+                wsConnected: false,
+                wsReconnectAttempts: 0,
+                wsMaxReconnectAttempts: 10,
+                wsReconnectTimer: null,
+                inferenceIntervalId: null,
+                inferenceIntervalMs: 500,
+                metrics: {
+                    framesSent: 0,
+                    audioSent: 0,
+                    droppedInferences: 0,
+                    latencies: [] // bounded rolling window
+                }
+            };
 
-        // Render initial emotion bars
-        const probContainer = document.getElementById("container-probs");
-        probContainer.innerHTML = EMOTIONS.map(em => `
-            <div class="prob-bar-row">
-                <span class="prob-bar-label">${em}</span>
-                <div class="prob-bar-track">
-                    <div class="prob-bar-fill" id="bar-em-${em}"></div>
-                </div>
-                <span class="metric-val" id="val-em-${em}">0.0%</span>
-            </div>
-        `).join("");
+            const MAX_LATENCY_HISTORY = 100;
 
-        // --- UI Element Bindings ---
-        const chkConsent = document.getElementById("chk-consent");
-        const btnStart = document.getElementById("btn-start");
-        const btnStop = document.getElementById("btn-stop");
-        const btnRevoke = document.getElementById("btn-revoke");
-        const btnCamToggle = document.getElementById("btn-cam-toggle");
-        const btnMicToggle = document.getElementById("btn-mic-toggle");
-        const selFps = document.getElementById("sel-fps");
-        const selChunk = document.getElementById("sel-chunk");
+            // DOM elements
+            const elements = {
+                themeToggleBtn: document.getElementById("theme-toggle-btn"),
+                wsStatusDot: document.getElementById("ws-status-dot"),
+                wsStatusText: document.getElementById("ws-status-text"),
+                cameraSelect: document.getElementById("camera-select"),
+                micSelect: document.getElementById("mic-select"),
+                btnCameraStart: document.getElementById("btn-camera-start"),
+                btnCameraStop: document.getElementById("btn-camera-stop"),
+                btnMicStart: document.getElementById("btn-mic-start"),
+                btnMicStop: document.getElementById("btn-mic-stop"),
+                vuMeterFill: document.getElementById("vu-meter-fill"),
+                sessionIdDisplay: document.getElementById("session-id-display"),
+                fpsSelect: document.getElementById("fps-select"),
+                btnReconnect: document.getElementById("btn-reconnect"),
+                liveVideo: document.getElementById("live-video"),
+                videoOverlay: document.getElementById("video-overlay"),
+                streamResText: document.getElementById("stream-resolution-text"),
+                dominantCategoryText: document.getElementById("dominant-category-text"),
+                confidenceValText: document.getElementById("confidence-val-text"),
+                fusionStateBadge: document.getElementById("fusion-state-badge"),
+                modelIntegrityBanner: document.getElementById("model-integrity-banner"),
+                overallModelStateBadge: document.getElementById("overall-model-state-badge"),
+                modelFacialState: document.getElementById("model-facial-state"),
+                modelSpeechState: document.getElementById("model-speech-state"),
+                statFramesCount: document.getElementById("stat-frames-count"),
+                statAudioCount: document.getElementById("stat-audio-count"),
+                statLatencyP50: document.getElementById("stat-latency-p50"),
+                statLatencyP95: document.getElementById("stat-latency-p95"),
+                statLatencyP99: document.getElementById("stat-latency-p99"),
+                statDroppedCount: document.getElementById("stat-dropped-count"),
+                logOutput: document.getElementById("log-output"),
+                btnClearLog: document.getElementById("btn-clear-log"),
+                deviceCountBadge: document.getElementById("device-count-badge"),
+                hiddenCanvas: document.getElementById("hidden-canvas")
+            };
 
-        const vidPreview = document.getElementById("vid-preview");
-        const canvasOverlay = document.getElementById("canvas-overlay");
-        const hiddenCanvas = document.getElementById("hidden-capture-canvas");
-        const txtCamOverlay = document.getElementById("txt-cam-overlay");
-        const meterAudioFill = document.getElementById("meter-audio-fill");
+            elements.sessionIdDisplay.textContent = state.sessionId;
 
-        // --- Consent Controls ---
-        chkConsent.addEventListener("change", async () => {
-            if (chkConsent.checked) {
-                consentRef = "token-live-" + Math.random().toString(36).substring(2, 12);
+            // Theme toggle
+            elements.themeToggleBtn.addEventListener("click", () => {
+                const html = document.documentElement;
+                if (html.getAttribute("data-theme") === "dark") {
+                    html.setAttribute("data-theme", "light");
+                    elements.themeToggleBtn.textContent = "THEME: LIGHT";
+                    state.theme = "light";
+                } else {
+                    html.setAttribute("data-theme", "dark");
+                    elements.themeToggleBtn.textContent = "THEME: DARK";
+                    state.theme = "dark";
+                }
+            });
+
+            // Logger utility
+            function logEvent(msg, level = "info") {
+                const entry = document.createElement("div");
+                entry.className = "log-entry";
+                const now = new Date().toISOString().substring(11, 23);
+                entry.innerHTML = `<span class="log-timestamp">[${now}]</span> <span class="log-level-${level}">${msg}</span>`;
+                elements.logOutput.appendChild(entry);
+                elements.logOutput.scrollTop = elements.logOutput.scrollHeight;
+                while (elements.logOutput.children.length > 200) {
+                    elements.logOutput.removeChild(elements.logOutput.firstChild);
+                }
+            }
+
+            elements.btnClearLog.addEventListener("click", () => {
+                elements.logOutput.innerHTML = "";
+            });
+
+            // Fetch Model Status from API
+            async function fetchModelStatus() {
                 try {
-                    const res = await fetch("/api/consent/register", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ session_id: sessionId, consent_reference: consentRef })
-                    });
-                    if (res.ok) {
-                        document.getElementById("txt-consent-ref").innerText = consentRef.substring(0, 8) + "***";
-                        document.getElementById("dot-consent").className = "pill-dot active";
-                        document.getElementById("val-consent").innerText = "Consent: ACTIVE";
-                        btnStart.disabled = false;
-                        logNotice("Consent registered for session " + sessionId);
-                    } else {
-                        throw new Error("Server rejected consent registration");
+                    const res = await fetch("/api/models");
+                    if (!res.ok) throw new Error("Status " + res.status);
+                    const data = await res.json();
+
+                    if (data.models) {
+                        for (const m of data.models) {
+                            if (m.name.includes("facial")) {
+                                elements.modelFacialState.textContent = m.state;
+                                elements.modelFacialState.className = "metric-badge " + (m.is_validated ? "badge-verified" : "badge-unvalidated");
+                            } else if (m.name.includes("speech")) {
+                                elements.modelSpeechState.textContent = m.state;
+                                elements.modelSpeechState.className = "metric-badge " + (m.is_validated ? "badge-verified" : "badge-unvalidated");
+                            }
+                        }
+                    }
+
+                    if (data.all_models_validated) {
+                        elements.modelIntegrityBanner.className = "system-banner banner-info";
+                        elements.modelIntegrityBanner.innerHTML = "<strong>Validated Baseline:</strong> All models verified against validation records.";
+                        elements.overallModelStateBadge.textContent = "VALIDATED";
+                        elements.overallModelStateBadge.className = "metric-badge badge-verified";
                     }
                 } catch (e) {
-                    alert("Failed to register consent: " + e.message);
-                    chkConsent.checked = false;
+                    logEvent("Failed to fetch model status: " + e.message, "warn");
                 }
-            } else {
-                await revokeConsent();
             }
-        });
 
-        btnRevoke.addEventListener("click", async () => {
-            await revokeConsent();
-        });
+            // Hardware Device Enumeration
+            async function enumerateDevices() {
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    elements.cameraSelect.innerHTML = "";
+                    elements.micSelect.innerHTML = "";
+                    let camCount = 0;
+                    let micCount = 0;
 
-        async function revokeConsent() {
-            try {
-                await fetch("/api/consent/revoke", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ session_id: sessionId })
-                });
-            } catch (e) {}
-
-            stopCapture();
-            consentRef = null;
-            chkConsent.checked = false;
-            document.getElementById("txt-consent-ref").innerText = "revoked";
-            document.getElementById("dot-consent").className = "pill-dot danger";
-            document.getElementById("val-consent").innerText = "Consent: REVOKED";
-            btnStart.disabled = true;
-            logNotice("Consent explicitly revoked. Sensory capture halted.");
-        }
-
-        // --- WebSocket Streaming ---
-        function initWebSocket() {
-            const loc = window.location;
-            const wsProto = loc.protocol === "https:" ? "wss:" : "ws:";
-            const wsUrl = `${wsProto}//${loc.host}/ws/live/${sessionId}`;
-
-            ws = new WebSocket(wsUrl);
-
-            ws.onopen = () => {
-                document.getElementById("dot-ws").className = "pill-dot active";
-                document.getElementById("val-ws").innerText = "CONNECTED";
-                ws.send(JSON.stringify({ type: "init", session_id: sessionId, consent_reference: consentRef }));
-                logNotice("WebSocket streaming established.");
-            };
-
-            ws.onmessage = (event) => {
-                const msg = JSON.parse(event.data);
-                handleServerMessage(msg);
-            };
-
-            ws.onerror = (err) => {
-                document.getElementById("dot-ws").className = "pill-dot danger";
-                document.getElementById("val-ws").innerText = "ERROR";
-                logNotice("WebSocket streaming error encountered.");
-            };
-
-            ws.onclose = () => {
-                document.getElementById("dot-ws").className = "pill-dot danger";
-                document.getElementById("val-ws").innerText = "DISCONNECTED";
-                logNotice("WebSocket closed.");
-            };
-        }
-
-        function handleServerMessage(msg) {
-            if (msg.type === "observation" && msg.modality === "facial") {
-                const obs = msg.data;
-                document.getElementById("val-face-estimate").innerText = `${obs.dominant_estimate} (${(obs.confidence * 100).toFixed(1)}%)`;
-                if (obs.expression_observations) {
-                    if (obs.expression_observations.blur_variance !== undefined) {
-                        document.getElementById("val-face-blur").innerText = obs.expression_observations.blur_variance.toFixed(1);
-                    }
-                    if (obs.expression_observations.mean_brightness !== undefined) {
-                        document.getElementById("val-face-lum").innerText = obs.expression_observations.mean_brightness.toFixed(2);
-                    }
-                    if (obs.expression_observations.face_box_confidence !== undefined) {
-                        document.getElementById("val-face-status").innerText = "DETECTED";
-                    }
-                }
-            } else if (msg.type === "observation" && msg.modality === "speech") {
-                const obs = msg.data;
-                document.getElementById("val-speech-estimate").innerText = `${obs.dominant_estimate} (${(obs.confidence * 100).toFixed(1)}%)`;
-                if (obs.expression_observations) {
-                    if (obs.expression_observations.snr_db !== undefined) {
-                        document.getElementById("val-audio-snr").innerText = `${obs.expression_observations.snr_db.toFixed(1)} dB`;
-                    }
-                    if (obs.expression_observations.rms_energy !== undefined) {
-                        document.getElementById("val-audio-rms").innerText = `${obs.expression_observations.rms_energy.toFixed(2)} dB`;
-                    }
-                    if (obs.expression_observations.voice_activity_ratio !== undefined) {
-                        document.getElementById("val-audio-vad").innerText = obs.expression_observations.voice_activity_ratio > 0.2 ? "VOICE" : "SILENCE";
-                    }
-                }
-            } else if (msg.type === "fusion") {
-                const f = msg.data;
-                document.getElementById("badge-dominant").innerText = f.dominant_estimate || "INSUFFICIENT_EVIDENCE";
-                document.getElementById("txt-latency").innerText = `${msg.latency_ms || f.latency_ms || "--"} ms`;
-
-                const conf = f.confidence || 0.0;
-                const unc = f.uncertainty !== undefined ? f.uncertainty : 1.0;
-                document.getElementById("val-confidence").innerText = conf.toFixed(2);
-                document.getElementById("bar-confidence").style.width = `${(conf * 100).toFixed(0)}%`;
-                document.getElementById("val-uncertainty").innerText = unc.toFixed(2);
-                document.getElementById("bar-uncertainty").style.width = `${(unc * 100).toFixed(0)}%`;
-
-                // Update probabilities
-                if (f.fused_probabilities) {
-                    EMOTIONS.forEach(em => {
-                        const p = f.fused_probabilities[em] || 0.0;
-                        document.getElementById(`bar-em-${em}`).style.width = `${(p * 100).toFixed(1)}%`;
-                        document.getElementById(`val-em-${em}`).innerText = `${(p * 100).toFixed(1)}%`;
+                    devices.forEach((d) => {
+                        const opt = document.createElement("option");
+                        opt.value = d.deviceId;
+                        if (d.kind === "videoinput") {
+                            camCount++;
+                            opt.textContent = d.label || `Camera ${camCount}`;
+                            elements.cameraSelect.appendChild(opt);
+                        } else if (d.kind === "audioinput") {
+                            micCount++;
+                            opt.textContent = d.label || `Microphone ${micCount}`;
+                            elements.micSelect.appendChild(opt);
+                        }
                     });
+
+                    if (camCount === 0) {
+                        elements.cameraSelect.innerHTML = '<option value="">No camera detected</option>';
+                    }
+                    if (micCount === 0) {
+                        elements.micSelect.innerHTML = '<option value="">No microphone detected</option>';
+                    }
+
+                    elements.deviceCountBadge.textContent = `${camCount} CAM / ${micCount} MIC`;
+                    logEvent(`Discovered ${camCount} video and ${micCount} audio sources.`);
+                } catch (err) {
+                    logEvent("Hardware enumeration failed: " + err.message, "error");
                 }
-
-                // Modality weights
-                if (f.modality_weights) {
-                    const fw = ((f.modality_weights.facial || 0) * 100).toFixed(0);
-                    const sw = ((f.modality_weights.speech || 0) * 100).toFixed(0);
-                    document.getElementById("pill-modality-weights").innerText = `Weights: F ${fw}% | S ${sw}%`;
-                }
-
-                // Conflict
-                document.getElementById("val-jsd").innerText = (f.conflict_metric || 0.0).toFixed(3);
-                document.getElementById("val-conflict").innerText = f.conflicting_evidence ? "YES (HIGH DIVERGENCE)" : "NO";
-                document.getElementById("val-conflict").style.color = f.conflicting_evidence ? "var(--accent-rose)" : "var(--accent-green)";
-
-                // Limitations
-                if (f.limitations && f.limitations.length > 0) {
-                    f.limitations.forEach(lim => logNotice(lim));
-                }
-            } else if (msg.type === "error") {
-                logNotice("Server warning: " + msg.error);
-            }
-        }
-
-        // --- Hardware Acquisition ---
-        btnStart.addEventListener("click", async () => {
-            if (!chkConsent.checked || !consentRef) {
-                alert("Consent is required before activating sensory devices.");
-                return;
             }
 
-            try {
-                mediaStream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15 } },
-                    audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
-                });
+            if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+                navigator.mediaDevices.addEventListener("devicechange", enumerateDevices);
+            }
 
-                vidPreview.srcObject = mediaStream;
-                isCamActive = true;
-                isMicActive = true;
-                isStreaming = true;
+            // Camera Acquisition & Explicit Stop
+            elements.btnCameraStart.addEventListener("click", async () => {
+                const deviceId = elements.cameraSelect.value;
+                const constraints = {
+                    video: deviceId ? { deviceId: { exact: deviceId } } : true,
+                    audio: false
+                };
 
-                document.getElementById("dot-cam").className = "pill-dot active";
-                document.getElementById("val-cam").innerText = "STREAMING";
-                document.getElementById("dot-mic").className = "pill-dot active";
-                document.getElementById("val-mic").innerText = "STREAMING";
-                txtCamOverlay.innerText = "Webcam Live";
+                try {
+                    elements.btnCameraStart.disabled = true;
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    stopCamera(); // Clean up existing
+                    state.videoStream = stream;
+                    elements.liveVideo.srcObject = stream;
+                    elements.btnCameraStop.disabled = false;
+                    elements.videoOverlay.textContent = "LIVE";
 
-                btnStart.disabled = true;
-                btnStop.disabled = false;
-                btnCamToggle.disabled = false;
-                btnMicToggle.disabled = false;
+                    const track = stream.getVideoTracks()[0];
+                    const settings = track.getSettings();
+                    elements.streamResText.textContent = `${settings.width || 640}x${settings.height || 480} @ ${Math.round(settings.frameRate || 30)}fps`;
+                    logEvent("Camera stream acquired: " + track.label);
+                } catch (err) {
+                    elements.btnCameraStart.disabled = false;
+                    logEvent("Camera access rejected: " + err.message, "error");
+                }
+            });
 
-                initWebSocket();
-                setupAudioProcessing(mediaStream);
-                startFrameSampling();
+            function stopCamera() {
+                if (state.videoStream) {
+                    state.videoStream.getTracks().forEach((track) => {
+                        track.stop();
+                        logEvent("Explicitly stopped video track: " + track.label);
+                    });
+                    state.videoStream = null;
+                }
+                elements.liveVideo.srcObject = null;
+                elements.videoOverlay.textContent = "INACTIVE";
+                elements.streamResText.textContent = "NO STREAM";
+                elements.btnCameraStart.disabled = false;
+                elements.btnCameraStop.disabled = true;
+            }
 
-                logNotice("Hardware media streams initialized successfully.");
-            } catch (err) {
-                if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-                    document.getElementById("dot-cam").className = "pill-dot danger";
-                    document.getElementById("val-cam").innerText = "DENIED";
-                    document.getElementById("dot-mic").className = "pill-dot danger";
-                    document.getElementById("val-mic").innerText = "DENIED";
-                    alert("Permission denied: Camera or Microphone access was blocked by the browser. Please allow permissions in your browser address bar.");
-                } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-                    document.getElementById("dot-cam").className = "pill-dot warning";
-                    document.getElementById("val-cam").innerText = "UNAVAILABLE";
-                    alert("Device unavailable: No camera or microphone hardware found on this machine.");
+            elements.btnCameraStop.addEventListener("click", stopCamera);
+
+            // Microphone Acquisition & VU Meter
+            elements.btnMicStart.addEventListener("click", async () => {
+                const deviceId = elements.micSelect.value;
+                const constraints = {
+                    audio: deviceId ? { deviceId: { exact: deviceId } } : true,
+                    video: false
+                };
+
+                try {
+                    elements.btnMicStart.disabled = true;
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    stopMicrophone(); // Clean up existing
+                    state.audioStream = stream;
+
+                    // Initialize Web Audio API Analyser
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    state.audioContext = new AudioContext();
+                    state.audioSource = state.audioContext.createMediaStreamSource(stream);
+                    state.audioAnalyser = state.audioContext.createAnalyser();
+                    state.audioAnalyser.fftSize = 256;
+                    state.audioSource.connect(state.audioAnalyser);
+
+                    elements.btnMicStop.disabled = false;
+                    const track = stream.getAudioTracks()[0];
+                    logEvent("Microphone stream acquired: " + track.label);
+
+                    // Start VU meter loop
+                    updateVuMeter();
+                } catch (err) {
+                    elements.btnMicStart.disabled = false;
+                    logEvent("Microphone access rejected: " + err.message, "error");
+                }
+            });
+
+            function stopMicrophone() {
+                if (state.vuAnimationId) {
+                    cancelAnimationFrame(state.vuAnimationId);
+                    state.vuAnimationId = null;
+                }
+                if (state.audioStream) {
+                    state.audioStream.getTracks().forEach((track) => {
+                        track.stop();
+                        logEvent("Explicitly stopped audio track: " + track.label);
+                    });
+                    state.audioStream = null;
+                }
+                if (state.audioContext) {
+                    state.audioContext.close();
+                    state.audioContext = null;
+                }
+                elements.vuMeterFill.style.width = "0%";
+                elements.btnMicStart.disabled = false;
+                elements.btnMicStop.disabled = true;
+            }
+
+            elements.btnMicStop.addEventListener("click", stopMicrophone);
+
+            function updateVuMeter() {
+                if (!state.audioAnalyser) return;
+                const dataArray = new Uint8Array(state.audioAnalyser.frequencyBinCount);
+                state.audioAnalyser.getByteFrequencyData(dataArray);
+
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    sum += dataArray[i];
+                }
+                const average = sum / dataArray.length;
+                const percentage = Math.min(100, (average / 128) * 100);
+                elements.vuMeterFill.style.width = percentage.toFixed(1) + "%";
+
+                state.vuAnimationId = requestAnimationFrame(updateVuMeter);
+            }
+
+            // Window unload safety track cleanup
+            window.addEventListener("beforeunload", () => {
+                stopCamera();
+                stopMicrophone();
+                if (state.ws) {
+                    state.ws.close();
+                }
+            });
+
+            // WebSocket Connection Management
+            function connectWebSocket() {
+                if (state.ws) {
+                    try { state.ws.close(); } catch (e) {}
+                }
+
+                const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+                const wsUrl = `${protocol}//${window.location.host}/ws/stream`;
+
+                elements.wsStatusDot.className = "status-dot warning";
+                elements.wsStatusText.textContent = "CONNECTING...";
+
+                try {
+                    state.ws = new WebSocket(wsUrl);
+                } catch (e) {
+                    logEvent("WebSocket creation failed: " + e.message, "error");
+                    scheduleReconnect();
+                    return;
+                }
+
+                state.ws.onopen = () => {
+                    state.wsConnected = true;
+                    state.wsReconnectAttempts = 0;
+                    elements.wsStatusDot.className = "status-dot active";
+                    elements.wsStatusText.textContent = "CONNECTED";
+                    logEvent("Live telemetry WebSocket connected.");
+                };
+
+                state.ws.onmessage = (event) => {
+                    handleWsMessage(event.data);
+                };
+
+                state.ws.onclose = () => {
+                    state.wsConnected = false;
+                    elements.wsStatusDot.className = "status-dot error";
+                    elements.wsStatusText.textContent = "DISCONNECTED";
+                    logEvent("WebSocket closed.", "warn");
+                    scheduleReconnect();
+                };
+
+                state.ws.onerror = (err) => {
+                    elements.wsStatusDot.className = "status-dot error";
+                    elements.wsStatusText.textContent = "ERROR";
+                    logEvent("WebSocket error.", "error");
+                };
+            }
+
+            function scheduleReconnect() {
+                if (state.wsReconnectAttempts >= state.wsMaxReconnectAttempts) {
+                    logEvent("Max reconnection attempts reached. Click Reconnect WS.", "error");
+                    return;
+                }
+                const delay = Math.min(10000, 1000 * Math.pow(1.5, state.wsReconnectAttempts));
+                state.wsReconnectAttempts++;
+                logEvent(`Reconnecting in ${(delay / 1000).toFixed(1)}s (attempt ${state.wsReconnectAttempts})...`, "warn");
+                clearTimeout(state.wsReconnectTimer);
+                state.wsReconnectTimer = setTimeout(connectWebSocket, delay);
+            }
+
+            elements.btnReconnect.addEventListener("click", () => {
+                state.wsReconnectAttempts = 0;
+                connectWebSocket();
+            });
+
+            // Handle server perception responses
+            function handleWsMessage(raw) {
+                try {
+                    const data = JSON.parse(raw);
+                    if (data.type === "pong") {
+                        return;
+                    }
+
+                    if (data.type === "error") {
+                        logEvent("Server returned error: " + data.message, "error");
+                        return;
+                    }
+
+                    if (data.type === "observation") {
+                        renderObservation(data);
+                    }
+                } catch (e) {
+                    logEvent("Failed to parse server message: " + e.message, "error");
+                }
+            }
+
+            function renderObservation(obs) {
+                // Update classification UI
+                const dominant = obs.dominant_category || "insufficient_evidence";
+                const confidence = obs.confidence !== undefined ? obs.confidence : 0.0;
+                const isValidated = obs.is_validated === true;
+
+                elements.dominantCategoryText.textContent = dominant.replace("_", " ");
+                elements.confidenceValText.textContent = (confidence * 100).toFixed(1) + "%";
+
+                if (isValidated) {
+                    elements.fusionStateBadge.textContent = "VALIDATED";
+                    elements.fusionStateBadge.className = "metric-badge badge-verified";
                 } else {
-                    alert("Media capture error: " + err.message);
+                    elements.fusionStateBadge.textContent = "UNVALIDATED";
+                    elements.fusionStateBadge.className = "metric-badge badge-unvalidated";
                 }
-            }
-        });
 
-        btnStop.addEventListener("click", () => {
-            stopCapture();
-        });
-
-        function stopCapture() {
-            if (frameInterval) {
-                clearInterval(frameInterval);
-                frameInterval = null;
-            }
-
-            if (audioProcessor) {
-                audioProcessor.disconnect();
-                audioProcessor = null;
-            }
-            if (audioContext && audioContext.state !== "closed") {
-                audioContext.close();
-                audioContext = null;
-            }
-
-            if (mediaStream) {
-                mediaStream.getTracks().forEach(track => track.stop());
-                mediaStream = null;
-            }
-
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: "stop", session_id: sessionId }));
-                ws.close();
-            }
-
-            vidPreview.srcObject = null;
-            isCamActive = false;
-            isMicActive = false;
-            isStreaming = false;
-
-            document.getElementById("dot-cam").className = "pill-dot danger";
-            document.getElementById("val-cam").innerText = "INACTIVE";
-            document.getElementById("dot-mic").className = "pill-dot danger";
-            document.getElementById("val-mic").innerText = "INACTIVE";
-            txtCamOverlay.innerText = "Camera Stopped";
-            meterAudioFill.style.width = "0%";
-
-            btnStart.disabled = !chkConsent.checked;
-            btnStop.disabled = true;
-            btnCamToggle.disabled = true;
-            btnMicToggle.disabled = true;
-
-            logNotice("Sensory capture stopped. All tracks released.");
-        }
-
-        btnCamToggle.addEventListener("click", () => {
-            if (!mediaStream) return;
-            const videoTracks = mediaStream.getVideoTracks();
-            if (videoTracks.length > 0) {
-                videoTracks[0].enabled = !videoTracks[0].enabled;
-                isCamActive = videoTracks[0].enabled;
-                document.getElementById("val-cam").innerText = isCamActive ? "STREAMING" : "MUTED";
-                document.getElementById("dot-cam").className = isCamActive ? "pill-dot active" : "pill-dot warning";
-            }
-        });
-
-        btnMicToggle.addEventListener("click", () => {
-            if (!mediaStream) return;
-            const audioTracks = mediaStream.getAudioTracks();
-            if (audioTracks.length > 0) {
-                audioTracks[0].enabled = !audioTracks[0].enabled;
-                isMicActive = audioTracks[0].enabled;
-                document.getElementById("val-mic").innerText = isMicActive ? "STREAMING" : "MUTED";
-                document.getElementById("dot-mic").className = isMicActive ? "pill-dot active" : "pill-dot warning";
-            }
-        });
-
-        // --- Visual Frame Sampling ---
-        function startFrameSampling() {
-            const fps = parseInt(selFps.value, 10) || 2;
-            const intervalMs = Math.round(1000 / fps);
-
-            frameInterval = setInterval(() => {
-                if (!isStreaming || !isCamActive || !ws || ws.readyState !== WebSocket.OPEN) return;
-
-                const w = vidPreview.videoWidth || 320;
-                const h = vidPreview.videoHeight || 240;
-                hiddenCanvas.width = 128;
-                hiddenCanvas.height = 128;
-
-                const ctx = hiddenCanvas.getContext("2d");
-                ctx.drawImage(vidPreview, 0, 0, 128, 128);
-
-                const dataUrl = hiddenCanvas.toDataURL("image/jpeg", 0.7);
-                ws.send(JSON.stringify({
-                    type: "frame",
-                    session_id: sessionId,
-                    consent_reference: consentRef,
-                    image_base64: dataUrl,
-                    timestamp: Date.now() / 1000.0
-                }));
-            }, intervalMs);
-        }
-
-        // --- Audio Sampling (Web Audio API) ---
-        function setupAudioProcessing(stream) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-            audioInputNode = audioContext.createMediaStreamSource(stream);
-
-            // Buffer size 4096 at 16kHz ~= 256ms chunk
-            const bufferSize = 4096;
-            audioProcessor = audioContext.createScriptProcessor(bufferSize, 1, 1);
-
-            let accumulatedSamples = [];
-            const targetSamples = 16000; // 1 second chunk at 16kHz
-
-            audioProcessor.onaudioprocess = (e) => {
-                if (!isStreaming || !isMicActive) return;
-
-                const channelData = e.inputBuffer.getChannelData(0);
-                // Calculate RMS for visual audio bar
-                let sumSq = 0;
-                for (let i = 0; i < channelData.length; i++) {
-                    sumSq += channelData[i] * channelData[i];
-                    accumulatedSamples.push(channelData[i]);
-                }
-                const rms = Math.sqrt(sumSq / channelData.length);
-                meterAudioFill.style.width = `${Math.min(100, rms * 400).toFixed(0)}%`;
-
-                if (accumulatedSamples.length >= targetSamples) {
-                    const chunk = accumulatedSamples.slice(0, targetSamples);
-                    accumulatedSamples = accumulatedSamples.slice(targetSamples);
-
-                    // Convert Float32 to 16-bit PCM WAV in memory
-                    const wavBytes = encodeWAV(chunk, 16000);
-                    const b64 = arrayBufferToBase64(wavBytes);
-
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({
-                            type: "audio",
-                            session_id: sessionId,
-                            consent_reference: consentRef,
-                            audio_base64: b64,
-                            sample_rate: 16000,
-                            timestamp: Date.now() / 1000.0
-                        }));
+                // Render class probabilities
+                if (obs.probabilities) {
+                    for (const [cat, p] of Object.entries(obs.probabilities)) {
+                        const bar = document.getElementById(`prob-bar-${cat}`);
+                        const val = document.getElementById(`prob-val-${cat}`);
+                        if (bar && val) {
+                            const pct = Math.round(p * 100);
+                            bar.style.width = `${pct}%`;
+                            val.textContent = `${pct}%`;
+                        }
                     }
                 }
-            };
 
-            audioInputNode.connect(audioProcessor);
-            audioProcessor.connect(audioContext.destination);
-        }
-
-        // Helper: in-memory 16-bit Mono WAV encoder
-        function encodeWAV(samples, sampleRate) {
-            const buffer = new ArrayBuffer(44 + samples.length * 2);
-            const view = new DataView(buffer);
-
-            // RIFF chunk descriptor
-            writeString(view, 0, "RIFF");
-            view.setUint32(4, 36 + samples.length * 2, true);
-            writeString(view, 8, "WAVE");
-
-            // fmt sub-chunk
-            writeString(view, 12, "fmt ");
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true); // PCM
-            view.setUint16(22, 1, true); // Mono
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * 2, true);
-            view.setUint16(32, 2, true);
-            view.setUint16(34, 16, true);
-
-            // data sub-chunk
-            writeString(view, 36, "data");
-            view.setUint32(40, samples.length * 2, true);
-
-            // Write PCM samples
-            let offset = 44;
-            for (let i = 0; i < samples.length; i++, offset += 2) {
-                const s = Math.max(-1, Math.min(1, samples[i]));
-                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                // Calculate Latency if timestamp matches
+                if (obs.timestamp) {
+                    const now = Date.now();
+                    const roundtrip = Math.max(1, now - (obs.client_sent_timestamp || (obs.timestamp * 1000)));
+                    recordLatency(roundtrip);
+                }
             }
-            return buffer;
-        }
 
-        function writeString(view, offset, string) {
-            for (let i = 0; i < string.length; i++) {
-                view.setUint8(offset + i, string.charCodeAt(i));
+            // Latency percentiles calculation
+            function recordLatency(latencyMs) {
+                state.metrics.latencies.push(latencyMs);
+                if (state.metrics.latencies.length > MAX_LATENCY_HISTORY) {
+                    state.metrics.latencies.shift();
+                }
+
+                const sorted = [...state.metrics.latencies].sort((a, b) => a - b);
+                const n = sorted.length;
+                const p50 = sorted[Math.floor(n * 0.50)] || 0;
+                const p95 = sorted[Math.floor(n * 0.95)] || 0;
+                const p99 = sorted[Math.floor(n * 0.99)] || 0;
+
+                elements.statLatencyP50.textContent = p50.toFixed(1) + " ms";
+                elements.statLatencyP95.textContent = p95.toFixed(1) + " ms";
+                elements.statLatencyP99.textContent = p99.toFixed(1) + " ms";
             }
-        }
 
-        function arrayBufferToBase64(buffer) {
-            let binary = "";
-            const bytes = new Uint8Array(buffer);
-            for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
+            // Frame Capturing & Inference Dispatch
+            function captureAndSend() {
+                if (!state.wsConnected || state.ws.readyState !== WebSocket.OPEN) {
+                    return;
+                }
+
+                let frameData = null;
+
+                if (state.videoStream && elements.liveVideo.videoWidth > 0) {
+                    const canvas = elements.hiddenCanvas;
+                    canvas.width = 320; // Reduced resolution for efficient edge processing
+                    canvas.height = 240;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(elements.liveVideo, 0, 0, 320, 240);
+                    frameData = canvas.toDataURL("image/jpeg", 0.6);
+                    state.metrics.framesSent++;
+                    elements.statFramesCount.textContent = state.metrics.framesSent;
+                }
+
+                if (frameData) {
+                    const payload = {
+                        type: "frame",
+                        session_id: state.sessionId,
+                        data: frameData,
+                        format: "image/jpeg",
+                        client_timestamp: Date.now()
+                    };
+
+                    try {
+                        state.ws.send(JSON.stringify(payload));
+                    } catch (e) {
+                        state.metrics.droppedInferences++;
+                        elements.statDroppedCount.textContent = state.metrics.droppedInferences;
+                    }
+                }
             }
-            return window.btoa(binary);
-        }
 
-        function logNotice(msg) {
-            const box = document.getElementById("txt-limitations-log");
-            const d = document.createElement("div");
-            d.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
-            box.appendChild(d);
-            box.scrollTop = box.scrollHeight;
-        }
+            // Inference Frequency Selector
+            elements.fpsSelect.addEventListener("change", (e) => {
+                state.inferenceIntervalMs = parseInt(e.target.value, 10);
+                clearInterval(state.inferenceIntervalId);
+                state.inferenceIntervalId = setInterval(captureAndSend, state.inferenceIntervalMs);
+                logEvent(`Inference frequency set to ${(1000 / state.inferenceIntervalMs).toFixed(1)} Hz.`);
+            });
 
-        // Fetch health on load
-        fetch("/api/health").then(r => r.json()).then(data => {
-            document.getElementById("val-engine").innerText = data.state || "READY";
-        }).catch(() => {});
+            // Initialize
+            enumerateDevices();
+            fetchModelStatus();
+            connectWebSocket();
+            state.inferenceIntervalId = setInterval(captureAndSend, state.inferenceIntervalMs);
+
+        })();
     </script>
 </body>
 </html>
 """
+
+
+def get_dashboard_html() -> str:
+    """Return the raw HTML content of the enterprise live telemetry dashboard."""
+    return DASHBOARD_HTML

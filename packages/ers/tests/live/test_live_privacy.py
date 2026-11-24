@@ -42,7 +42,7 @@ async def test_instant_revocation_mid_stream(live_manager: LiveSessionManager) -
     # Process first 3 frames successfully
     for i in range(3):
         res = await live_manager.process_frame(session_id, face_b64, token)
-        assert res["status"] in ("ok", "insufficient_evidence")
+        assert res["status"] in ("ok", "insufficient_evidence", "model_unvalidated")
         assert res["is_definitive_claim"] is False
 
     # Revoke consent mid-stream
@@ -71,8 +71,8 @@ async def test_concurrent_session_isolation(live_manager: LiveSessionManager) ->
     # Both process successfully
     res_a = await live_manager.process_frame(session_a, face_b64, token_a)
     res_b = await live_manager.process_frame(session_b, face_b64, token_b)
-    assert res_a["status"] in ("ok", "insufficient_evidence")
-    assert res_b["status"] in ("ok", "insufficient_evidence")
+    assert res_a["status"] in ("ok", "insufficient_evidence", "model_unvalidated")
+    assert res_b["status"] in ("ok", "insufficient_evidence", "model_unvalidated")
 
     # Revoke Alice's consent only
     live_manager.revoke_session_consent(session_a)
@@ -81,7 +81,7 @@ async def test_concurrent_session_isolation(live_manager: LiveSessionManager) ->
     res_a2 = await live_manager.process_frame(session_a, face_b64, token_a)
     res_b2 = await live_manager.process_frame(session_b, face_b64, token_b)
     assert res_a2["status"] == "consent_rejected"
-    assert res_b2["status"] in ("ok", "insufficient_evidence")
+    assert res_b2["status"] in ("ok", "insufficient_evidence", "model_unvalidated")
 
 
 @pytest.mark.asyncio

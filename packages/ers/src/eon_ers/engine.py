@@ -238,7 +238,14 @@ class ERSEngine:
 
         # Apply temporal smoothing
         smoothed_probs = self.tracker.record_observation(inp.session_id, obs)
-        smoothed_dominant = max(smoothed_probs.items(), key=lambda it: it[1])[0]
+        # Epistemic honesty: If observation is unvalidated or abstaining, suppress discrete categorization
+        if not obs.is_validated or obs.status in (
+            ObservationStatus.INSUFFICIENT_EVIDENCE,
+            ObservationStatus.MODEL_UNVALIDATED,
+        ):
+            smoothed_dominant = obs.dominant_estimate
+        else:
+            smoothed_dominant = max(smoothed_probs.items(), key=lambda it: it[1])[0]
 
         smoothed_obs = EmotionObservation(
             observation_id=obs.observation_id,
@@ -255,6 +262,8 @@ class ERSEngine:
             processing_latency_ms=obs.processing_latency_ms,
             limitations=obs.limitations,
             status=obs.status,
+            model_state=obs.model_state,
+            is_validated=obs.is_validated,
             is_definitive_claim=False,
         )
 
@@ -307,7 +316,14 @@ class ERSEngine:
         )
 
         smoothed_probs = self.tracker.record_observation(inp.session_id, obs)
-        smoothed_dominant = max(smoothed_probs.items(), key=lambda it: it[1])[0]
+        # Epistemic honesty: If observation is unvalidated or abstaining, suppress discrete categorization
+        if not obs.is_validated or obs.status in (
+            ObservationStatus.INSUFFICIENT_EVIDENCE,
+            ObservationStatus.MODEL_UNVALIDATED,
+        ):
+            smoothed_dominant = obs.dominant_estimate
+        else:
+            smoothed_dominant = max(smoothed_probs.items(), key=lambda it: it[1])[0]
 
         smoothed_obs = EmotionObservation(
             observation_id=obs.observation_id,
@@ -324,6 +340,8 @@ class ERSEngine:
             processing_latency_ms=obs.processing_latency_ms,
             limitations=obs.limitations,
             status=obs.status,
+            model_state=obs.model_state,
+            is_validated=obs.is_validated,
             is_definitive_claim=False,
         )
 

@@ -61,7 +61,20 @@ class ObservationStatus(str, Enum):
     DEGRADED = "degraded"
     INSUFFICIENT_EVIDENCE = "insufficient_evidence"
     MODEL_UNAVAILABLE = "model_unavailable"
+    MODEL_UNVALIDATED = "model_unvalidated"
     FAILED = "failed"
+
+
+class ModelState(str, Enum):
+    """Explicit lifecycle and scientific qualification states of a model."""
+
+    MODEL_MISSING = "MODEL_MISSING"
+    MODEL_LOADING = "MODEL_LOADING"
+    MODEL_LOADED_UNVERIFIED = "MODEL_LOADED_UNVERIFIED"
+    MODEL_LOADED_VALIDATED = "MODEL_LOADED_VALIDATED"
+    MODEL_UNAVAILABLE = "MODEL_UNAVAILABLE"
+    MODEL_INFERENCE_FAILED = "MODEL_INFERENCE_FAILED"
+    MODEL_EXPERIMENTAL = "MODEL_EXPERIMENTAL"
 
 
 class DeviceType(str, Enum):

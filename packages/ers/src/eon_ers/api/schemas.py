@@ -78,6 +78,59 @@ class ConsentStatusResponse(BaseModel):
     masked_reference: str | None = Field(default=None)
 
 
+class ModelStatusDetail(BaseModel):
+    """Detailed model lifecycle, provenance, and validation status report."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    model_id: str = Field(...)
+    modality: str = Field(...)
+    version: str = Field(...)
+    state: str = Field(...)
+    is_validated: bool = Field(...)
+    provenance: str = Field(...)
+    license: str = Field(...)
+    artifact_sha256: str | None = Field(default=None)
+    known_limitations: list[str] = Field(default_factory=list)
+
+
+class ModelStatusResponse(BaseModel):
+    """System-wide model qualification catalog."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    models: list[ModelStatusDetail] = Field(default_factory=list)
+    overall_qualification: str = Field(...)
+    timestamp: float = Field(...)
+
+
+class DeviceStatusResponse(BaseModel):
+    """Connected sensor hardware status."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    camera_active: bool = Field(default=False)
+    microphone_active: bool = Field(default=False)
+    has_consent: bool = Field(default=False)
+    session_id: str | None = Field(default=None)
+
+
+class PerformanceTelemetryResponse(BaseModel):
+    """Real-time performance metrics and percentiles."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(...)
+    frame_latency_ms: float = Field(default=0.0)
+    audio_latency_ms: float = Field(default=0.0)
+    fusion_latency_ms: float = Field(default=0.0)
+    p50_ms: float = Field(default=0.0)
+    p95_ms: float = Field(default=0.0)
+    p99_ms: float = Field(default=0.0)
+    memory_rss_mb: float | None = Field(default=None)
+    timestamp: float = Field(...)
+
+
 class HealthResponse(BaseModel):
     """Component health and lifecycle status report."""
 

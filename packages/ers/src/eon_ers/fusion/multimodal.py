@@ -73,12 +73,15 @@ class MultimodalFusionPipeline:
                 quality_summary=quality_summary,
                 limitations=limitations
                 + ["Both sensory modalities are missing or rejected by temporal alignment."],
+                contributing_model_states={},
+                is_validated=False,
                 is_definitive_claim=False,
             )
 
         # 3. Unimodal fallback: only one modality present
         if aligned_face is not None and aligned_speech is None:
             weights = {Modality.FACIAL.value: 1.0, Modality.SPEECH.value: 0.0}
+            c_states = {Modality.FACIAL.value: aligned_face.model_state.value}
             return FusionResult(
                 timestamp=now,
                 facial_observation=aligned_face,
@@ -94,11 +97,14 @@ class MultimodalFusionPipeline:
                 quality_summary=quality_summary,
                 limitations=limitations
                 + ["Speech modality was absent; result reflects facial-only observation."],
+                contributing_model_states=c_states,
+                is_validated=aligned_face.is_validated,
                 is_definitive_claim=False,
             )
 
         if aligned_face is None and aligned_speech is not None:
             weights = {Modality.FACIAL.value: 0.0, Modality.SPEECH.value: 1.0}
+            c_states = {Modality.SPEECH.value: aligned_speech.model_state.value}
             return FusionResult(
                 timestamp=now,
                 facial_observation=None,
@@ -114,6 +120,8 @@ class MultimodalFusionPipeline:
                 quality_summary=quality_summary,
                 limitations=limitations
                 + ["Facial modality was absent; result reflects speech-only observation."],
+                contributing_model_states=c_states,
+                is_validated=aligned_speech.is_validated,
                 is_definitive_claim=False,
             )
 
@@ -179,11 +187,33 @@ class MultimodalFusionPipeline:
             )
         )
 
-        # Check for insufficient evidence
-        if (
+        # Check contributing validation states
+        face_val = aligned_face.is_validated if aligned_face else False
+        speech_val = aligned_speech.is_validated if aligned_speech else False
+        is_fused_validated = face_val or speech_val
+
+        contributing_states: dict[str, str] = {}
+        if aligned_face is not None:
+            contributing_states[Modality.FACIAL.value] = aligned_face.model_state.value
+        if aligned_speech is not None:
+            contributing_states[Modality.SPEECH.value] = aligned_speech.model_state.value
+
+        # Scientific Honesty: If neither contributing modality is validated,
+        # we strictly suppress discrete classification to prevent fabricated emotion claims.
+        if not is_fused_validated:
+            dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
+            fused_confidence = 0.0
+            fused_uncertainty = 1.0
+            limitations.append(
+                "Contributing sensory models are unvalidated; discrete multimodal emotion classification suppressed."
+            )
+        elif (
             fused_confidence < self.config.confidence_threshold
             or fused_uncertainty > self.config.uncertainty_threshold
         ):
+            dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
+            fused_confidence = 0.0
+            fused_uncertainty = 1.0
             limitations.append(
                 f"Abstention triggered: Fused confidence {fused_confidence:.2f} < {self.config.confidence_threshold} or uncertainty {fused_uncertainty:.2f} > {self.config.uncertainty_threshold}."
             )
@@ -202,5 +232,7 @@ class MultimodalFusionPipeline:
             missing_modalities=missing_modalities,
             quality_summary=quality_summary,
             limitations=limitations,
+            contributing_model_states=contributing_states,
+            is_validated=is_fused_validated,
             is_definitive_claim=False,
         )
