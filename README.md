@@ -98,17 +98,28 @@ print(f"Uncertainty:      {result.uncertainty:.3f}")
 print(f"Definitive Claim: {result.is_definitive_claim}")  # Always False
 ```
 
-### 3. Running Examples
+### 3. Running Examples & Live Demonstration
 
-Two complete, standalone examples are included in `packages/ers/examples/`:
+Executable examples and the interactive real-time live sensory demonstration are included:
 
 ```bash
-# Run basic quickstart demonstration
+# 1. Run interactive live webcam and microphone demonstration
+python packages/ers/examples/live_demo.py --open-browser
+
+# Alternatively via CLI:
+# eon-ers-live --open-browser
+
+# 2. Run basic quickstart demonstration
 python packages/ers/examples/quickstart.py
 
-# Run multimodal fusion demonstration (audio + video)
+# 3. Run multimodal fusion demonstration (audio + video)
 python packages/ers/examples/multimodal_fusion.py
+
+# 4. Run fine-grained live stage latency benchmark
+python packages/ers/benchmarks/benchmark_live_stages.py
 ```
+
+See [docs/ers/ERS_LIVE_DEMO_GUIDE.md](docs/ers/ERS_LIVE_DEMO_GUIDE.md) and [docs/ers/ERS_LIVE_INPUT_ARCHITECTURE.md](docs/ers/ERS_LIVE_INPUT_ARCHITECTURE.md) for full details.
 
 ---
 

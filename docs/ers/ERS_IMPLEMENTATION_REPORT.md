@@ -254,3 +254,16 @@ packages/ers/tests/unit/test_quality.py::test_audio_quality_valid_signal PASSED 
 
 For complete issue-by-issue analysis, root causes, test additions, and technical evidence, see the dedicated requalification report:
 - [ERS Issues 1–6 Requalification Report](file:///d:/eon/docs/ers/ERS_ISSUES_1_TO_6_REQUALIFICATION_REPORT.md)
+
+---
+
+## 8. Phase 3.1.2: Live Sensory Input Integration
+
+Phase 3.1.2 delivers real-time local webcam and microphone integration via a dedicated FastAPI WebSocket/REST streaming server and responsive browser dashboard (`packages/ers/src/eon_ers/live/`).
+
+Key documentation and reports:
+- [ERS Live Demonstration Guide](file:///d:/eon/docs/ers/ERS_LIVE_DEMO_GUIDE.md)
+- [ERS Live Input Architecture](file:///d:/eon/docs/ers/ERS_LIVE_INPUT_ARCHITECTURE.md)
+- [ERS Live Privacy & Consent Invariants](file:///d:/eon/docs/ers/ERS_LIVE_PRIVACY_AND_CONSENT.md)
+- [ERS Live Test & Benchmark Report](file:///d:/eon/docs/ers/ERS_LIVE_TEST_REPORT.md)
+
