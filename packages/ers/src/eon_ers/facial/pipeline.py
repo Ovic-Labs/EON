@@ -10,10 +10,16 @@ from eon_ers.config import ERSConfig
 from eon_ers.contracts import EmotionObservation, ERSInput
 from eon_ers.facial.adapters import (
     BaseFacialModelAdapter,
-    HeuristicFacialFeatureAdapter,
+    ExperimentalRegionalFeatureAdapter,
     ONNXFacialModelAdapter,
 )
-from eon_ers.facial.features import FacialFeatureExtractor
+from eon_ers.facial.detection import (
+    BaseFaceDetector,
+    FaceDetectionStatus,
+    HeuristicFaceDetector,
+)
+from eon_ers.facial.features import ExperimentalRegionalFeatureExtractor
+from eon_ers.facial.landmarks import BaseLandmarkDetector, HeuristicLandmarkDetector
 from eon_ers.facial.preprocessing import FacialPreprocessor
 from eon_ers.quality.face_quality import FaceQualityEvaluator
 from eon_ers.types import EmotionCategory, Modality, ObservationStatus, QualityGrade
@@ -26,6 +32,8 @@ class FacialPipeline:
         self,
         config: ERSConfig,
         model_adapter: BaseFacialModelAdapter | None = None,
+        face_detector: BaseFaceDetector | None = None,
+        landmark_detector: BaseLandmarkDetector | None = None,
     ) -> None:
         self.config = config
         self.quality_evaluator = FaceQualityEvaluator(
@@ -34,8 +42,10 @@ class FacialPipeline:
             blur_threshold=config.blur_threshold,
             min_brightness=config.min_brightness,
         )
+        self.face_detector = face_detector or HeuristicFaceDetector()
+        self.landmark_detector = landmark_detector or HeuristicLandmarkDetector()
         self.preprocessor = FacialPreprocessor(target_size=(64, 64))
-        self.feature_extractor = FacialFeatureExtractor()
+        self.feature_extractor = ExperimentalRegionalFeatureExtractor()
 
         # Initialize configured model adapter
         if model_adapter is not None:
@@ -47,8 +57,9 @@ class FacialPipeline:
                 num_threads=config.num_threads,
             )
         else:
-            # High-fidelity FACS Action Unit feature adapter
-            self.model_adapter = HeuristicFacialFeatureAdapter(model_id="ers-facs-heuristic-v1")
+            self.model_adapter = ExperimentalRegionalFeatureAdapter(
+                model_id="ers-regional-heuristic-v1"
+            )
 
     def process(self, inp: ERSInput) -> EmotionObservation:
         """Execute facial expression processing pipeline on sensory input."""
@@ -107,10 +118,53 @@ class FacialPipeline:
         if not quality.is_acceptable:
             limitations.extend(quality.reasons)
 
-        # 3. Face presence & features
-        # Compute features from image
+        # 3. Face detection & boundary validation
+        detect_res = self.face_detector.detect(pil_img)
+        if detect_res.status == FaceDetectionStatus.NO_FACE_DETECTED:
+            latency_ms = (time.perf_counter() - start_time) * 1000.0
+            inp.scrub_media_payload()
+            return EmotionObservation(
+                observation_id=inp.observation_id,
+                timestamp=inp.timestamp,
+                modality=Modality.FACIAL,
+                expression_observations={"face_detection_status": detect_res.status.value},
+                emotion_probabilities={EmotionCategory.INSUFFICIENT_EVIDENCE.value: 1.0},
+                dominant_estimate=EmotionCategory.INSUFFICIENT_EVIDENCE.value,
+                confidence=0.0,
+                uncertainty=1.0,
+                quality_score=quality.score,
+                model_id=self.model_adapter.model_id,
+                model_version=self.model_adapter.model_version,
+                processing_latency_ms=latency_ms,
+                limitations=limitations + ["No face detected in sensory frame."],
+                status=ObservationStatus.INSUFFICIENT_EVIDENCE,
+                is_definitive_claim=False,
+            )
+
+        if detect_res.status == FaceDetectionStatus.MULTIPLE_FACES_DETECTED:
+            limitations.append("Multiple faces detected in sensory frame; primary face selected.")
+
+        primary_box = detect_res.primary_face
+
+        # 4. Landmark detection
+        landmark_res = None
+        if primary_box is not None:
+            landmark_res = self.landmark_detector.detect_landmarks(pil_img, primary_box)
+
+        # 5. Feature extraction
         evidence_features = self.feature_extractor.extract_features(pil_img)
         evidence_features.update(quality.metrics)
+        if primary_box is not None:
+            evidence_features["face_box_confidence"] = primary_box.confidence
+            evidence_features["face_box_area"] = round(primary_box.area, 4)
+        if landmark_res is not None:
+            evidence_features["landmarks_count"] = len(landmark_res.landmarks)
+
+        # Check adapter experimental status
+        if self.model_adapter.is_experimental:
+            limitations.append(
+                "Adapter uses experimental uncalibrated regional descriptors; not validated FACS Action Units."
+            )
 
         # Check model availability
         if not self.model_adapter.is_available:
@@ -134,7 +188,7 @@ class FacialPipeline:
                 is_definitive_claim=False,
             )
 
-        # 4. Model inference
+        # 6. Model inference
         tensor = self.preprocessor.preprocess(pil_img)
         try:
             probabilities = self.model_adapter.predict(tensor, evidence_features)
@@ -159,7 +213,7 @@ class FacialPipeline:
                 is_definitive_claim=False,
             )
 
-        # 5. Calculate confidence and uncertainty
+        # 7. Calculate confidence and uncertainty
         probs_array = np.array(list(probabilities.values()), dtype=np.float64)
         dominant_cat = max(probabilities.items(), key=lambda item: item[1])[0]
         raw_confidence = float(probabilities[dominant_cat])
@@ -193,20 +247,27 @@ class FacialPipeline:
         # Abstention evaluation
         status = ObservationStatus.OK
         if (
-            confidence < self.config.confidence_threshold
+            self.model_adapter.is_experimental
+            or confidence < self.config.confidence_threshold
             or uncertainty > self.config.uncertainty_threshold
         ):
             status = ObservationStatus.INSUFFICIENT_EVIDENCE
-            limitations.append(
-                f"Low confidence ({confidence:.2f} < {self.config.confidence_threshold}) or high uncertainty ({uncertainty:.2f} > {self.config.uncertainty_threshold})."
-            )
+            if self.model_adapter.is_experimental:
+                limitations.append(
+                    "Abstaining from classification: unvalidated experimental feature adapter."
+                )
+            else:
+                limitations.append(
+                    f"Low confidence ({confidence:.2f} < {self.config.confidence_threshold}) "
+                    f"or high uncertainty ({uncertainty:.2f} > {self.config.uncertainty_threshold})."
+                )
 
         if quality.grade == QualityGrade.DEGRADED:
             status = ObservationStatus.DEGRADED
 
         latency_ms = (time.perf_counter() - start_time) * 1000.0
 
-        # 6. Ephemeral media scrubbing
+        # Ephemeral media scrubbing
         inp.scrub_media_payload()
 
         return EmotionObservation(

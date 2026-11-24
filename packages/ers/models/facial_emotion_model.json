@@ -6,8 +6,14 @@
   "framework": "onnx",
   "artifact_path": "packages/ers/models/facial_emotion_model.onnx",
   "sha256_checksum": "0e8955c5187b2b9f69f9638e005b09abdbb1412951024e535fdefef48cc7d81b",
-  "license": "Apache-2.0",
-  "commercial_use_allowed": true,
+  "license": "UNVERIFIED (Synthetic graph topology; weights unverified)",
+  "commercial_use_allowed": false,
+  "commercial_use_status": "RESTRICTED",
+  "provenance_status": "UNVERIFIED",
+  "training_dataset_provenance": "UNVERIFIED (Synthetic parameter initialization; no empirical training dataset)",
+  "training_procedure": "UNVERIFIED (Handcrafted ONNX graph structure for runtime integration testing)",
+  "validation_status": "UNVERIFIED (Execution-tested only; zero empirical accuracy claims)",
+  "license_evidence": "UNVERIFIED (Synthetic architecture created for integration; no commercial weight license)",
   "source": "OVIC Labs Edge ML Research Baseline",
   "input_specification": {
     "name": "input_image",
@@ -22,7 +28,8 @@
   "cpu_supported": true,
   "accelerator_support": ["CPUExecutionProvider"],
   "known_limitations": [
-    "Trained for frontal facial crops; extreme head poses (>45 deg) decrease accuracy.",
-    "Probabilistic estimate only, not a psychiatric ground truth claim."
+    "Synthetic baseline weights used for pipeline integration testing only.",
+    "Not trained on empirical affective datasets; predictions are uncalibrated.",
+    "Probabilistic estimate only, not a psychiatric or ground-truth internal claim."
   ]
 }

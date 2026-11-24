@@ -5,7 +5,7 @@ from eon_ers.config import ERSConfig
 from eon_ers.contracts import ERSInput
 from eon_ers.core.adapter import CoreEventBusAdapter
 from eon_ers.engine import ERSEngine
-from eon_ers.exceptions import ERSModelExecutionError
+from eon_ers.exceptions import ERSModelIntegrityError
 from eon_ers.models.loader import ModelLoader
 from eon_ers.models.manifest import ModelManifest
 from eon_ers.types import Modality, ObservationStatus
@@ -15,6 +15,7 @@ from eon_ers.types import Modality, ObservationStatus
 async def test_malformed_image_graceful_handling() -> None:
     config = ERSConfig()
     async with ERSEngine(config) as engine:
+        engine.register_consent("session-sec-1", "sec-token")
         inp = ERSInput(
             session_id="session-sec-1",
             modality=Modality.FACIAL,
@@ -32,6 +33,7 @@ async def test_malformed_image_graceful_handling() -> None:
 async def test_malformed_audio_graceful_handling() -> None:
     config = ERSConfig()
     async with ERSEngine(config) as engine:
+        engine.register_consent("session-sec-2", "sec-token")
         inp = ERSInput(
             session_id="session-sec-2",
             modality=Modality.SPEECH,
@@ -53,16 +55,38 @@ def test_model_checksum_verification_mismatch_raises() -> None:
         framework="onnx",
         artifact_path="packages/ers/models/facial_emotion_model.onnx",
         sha256_checksum="0" * 64,  # Intentionally falsified checksum
-        license="Apache-2.0",
-        commercial_use_allowed=True,
+        license="UNVERIFIED",
+        commercial_use_allowed=False,
         source="unit-test",
-        input_specification={"name": "x", "shape": [1, 1, 64, 64], "dtype": "float32"},
-        output_specification={"name": "y", "shape": [1, 7], "classes": []},
+        input_specification={"name": "input_image", "shape": [1, 1, 64, 64], "dtype": "float32"},
+        output_specification={"name": "logits", "shape": [1, 7], "classes": []},
     )
 
-    with pytest.raises(ERSModelExecutionError) as exc_info:
+    with pytest.raises(ERSModelIntegrityError) as exc_info:
         ModelLoader.load_onnx_session(manifest)
-    assert "SHA-256 mismatch" in str(exc_info.value)
+    assert "SHA-256 digest mismatch" in str(exc_info.value)
+
+
+def test_model_tensor_contract_mismatch_raises() -> None:
+    # Use real checksum of facial model but bogus input shape specification
+    manifest = ModelManifest(
+        model_id="shape-mismatch-model",
+        name="Shape Mismatch Model",
+        version="1.0.0",
+        modality=Modality.FACIAL,
+        framework="onnx",
+        artifact_path="packages/ers/models/facial_emotion_model.onnx",
+        sha256_checksum="0e8955c5187b2b9f69f9638e005b09abdbb1412951024e535fdefef48cc7d81b",
+        license="UNVERIFIED",
+        commercial_use_allowed=False,
+        source="unit-test",
+        input_specification={"name": "input_image", "shape": [1, 1, 32, 32], "dtype": "float32"},
+        output_specification={"name": "logits", "shape": [1, 7], "classes": []},
+    )
+
+    with pytest.raises(ERSModelIntegrityError) as exc_info:
+        ModelLoader.load_onnx_session(manifest)
+    assert "tensor contract violation" in str(exc_info.value)
 
 
 @pytest.mark.asyncio

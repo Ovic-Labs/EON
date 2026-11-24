@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import abc
+import json
 import os
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-from eon_ers.exceptions import ERSModelUnavailableError
+from eon_ers.exceptions import ERSModelIntegrityError, ERSModelUnavailableError
+from eon_ers.models.loader import ModelLoader
+from eon_ers.models.manifest import ModelManifest
 from eon_ers.types import EmotionCategory
 
 SUPPORTED_EMOTIONS = [
@@ -40,6 +44,16 @@ class BaseSpeechModelAdapter(abc.ABC):
     def is_available(self) -> bool:
         """Whether model weights and runtime dependencies are available."""
 
+    @property
+    def is_experimental(self) -> bool:
+        """Whether the adapter relies on uncalibrated experimental heuristics."""
+        return False
+
+    @property
+    def is_validated(self) -> bool:
+        """Whether the adapter has been empirically validated against affective speech benchmarks."""
+        return False
+
     @abc.abstractmethod
     def predict(
         self, signal: np.ndarray, sample_rate: int, features: dict[str, float]
@@ -53,7 +67,7 @@ class ONNXSpeechModelAdapter(BaseSpeechModelAdapter):
     def __init__(
         self,
         model_path: str | None,
-        model_id: str = "speech-onnx-cpu-v1",
+        model_id: str = "ers-speech-onnx-cpu-v1",
         model_version: str = "1.0.0",
         num_threads: int = 4,
     ) -> None:
@@ -63,12 +77,33 @@ class ONNXSpeechModelAdapter(BaseSpeechModelAdapter):
         self._num_threads = num_threads
         self._session: Any = None
         self._is_loaded = False
+        self._manifest: ModelManifest | None = None
         self._init_session()
 
     def _init_session(self) -> None:
         if not self._model_path or not os.path.isfile(self._model_path):
             self._is_loaded = False
             return
+
+        manifest_path = Path(self._model_path).with_suffix(".json")
+        if manifest_path.is_file():
+            try:
+                with open(manifest_path, encoding="utf-8") as f:
+                    data = json.load(f)
+                self._manifest = ModelManifest.model_validate(data)
+                self._session = ModelLoader.load_onnx_session(
+                    self._manifest,
+                    num_threads=self._num_threads,
+                    expected_classes=SUPPORTED_EMOTIONS,
+                )
+                self._is_loaded = True
+                return
+            except (ERSModelIntegrityError, ERSModelUnavailableError):
+                self._is_loaded = False
+                raise
+            except Exception:
+                self._is_loaded = False
+                return
 
         try:
             import onnxruntime as ort
@@ -96,6 +131,18 @@ class ONNXSpeechModelAdapter(BaseSpeechModelAdapter):
     def is_available(self) -> bool:
         return self._is_loaded
 
+    @property
+    def is_experimental(self) -> bool:
+        return False
+
+    @property
+    def is_validated(self) -> bool:
+        return (
+            self._manifest.validation_status.upper() == "VERIFIED"
+            if self._manifest is not None
+            else False
+        )
+
     def predict(
         self, signal: np.ndarray, sample_rate: int, features: dict[str, float]
     ) -> dict[str, float]:
@@ -104,7 +151,7 @@ class ONNXSpeechModelAdapter(BaseSpeechModelAdapter):
                 f"ONNX speech model {self._model_id} is not loaded or weights are unavailable."
             )
 
-        # Convert acoustic feature dictionary into standard 1D input feature vector
+        # Convert acoustic feature dictionary into standard 12-dim input vector
         feature_keys = [
             "f0_mean_hz",
             "f0_std_hz",
@@ -139,15 +186,18 @@ class ONNXSpeechModelAdapter(BaseSpeechModelAdapter):
         return result
 
 
-class AcousticFeatureProsodyAdapter(BaseSpeechModelAdapter):
-    """Scientifically grounded prosody-to-affect classifier mapping acoustic dynamics.
+class ExperimentalAcousticProsodyAdapter(BaseSpeechModelAdapter):
+    """Experimental acoustic prosody heuristic adapter.
 
-    Evaluates F0 dynamics, RMS intensity, and spectral centroid without requiring
-    text transcription or speech-to-text.
+    SCIENTIFIC RIGOR NOTICE:
+    This adapter evaluates acoustic feature heuristics (pitch dynamism, intensity).
+    It is NOT calibrated or empirically validated as an acoustic emotion classifier.
+    It returns uncalibrated baseline distributions to avoid fabricating emotion classifications
+    from unvalidated prosodic equations.
     """
 
     def __init__(
-        self, model_id: str = "ers-prosody-acoustic-v1", model_version: str = "1.0.0"
+        self, model_id: str = "ers-prosody-experimental-v1", model_version: str = "1.0.0"
     ) -> None:
         self._model_id = model_id
         self._model_version = model_version
@@ -164,55 +214,24 @@ class AcousticFeatureProsodyAdapter(BaseSpeechModelAdapter):
     def is_available(self) -> bool:
         return True
 
+    @property
+    def is_experimental(self) -> bool:
+        return True
+
+    @property
+    def is_validated(self) -> bool:
+        return False
+
     def predict(
         self, signal: np.ndarray, sample_rate: int, features: dict[str, float]
     ) -> dict[str, float]:
-        f0_std = features.get("f0_std_hz", 0.0)
-        energy_mean = features.get("energy_rms_mean", 0.0)
-        energy_std = features.get("energy_std", 0.0)
-        centroid = features.get("spectral_centroid_hz", 1000.0)
-        zcr = features.get("zero_crossing_rate", 0.05)
-        vad = features.get("voice_activity_ratio", 0.5)
+        """Compute an uncalibrated baseline distribution reflecting epistemic uncertainty."""
+        uniform_p = round(1.0 / len(SUPPORTED_EMOTIONS), 4)
+        return {cat: uniform_p for cat in SUPPORTED_EMOTIONS}
 
-        # Normalized feature indicators:
-        # High pitch dynamism indicates arousal (Happiness or Anger or Fear)
-        pitch_dynamic = float(np.clip(f0_std / 50.0, 0.0, 1.0))
-        # High energy indicates vocal intensity
-        energy_high = float(np.clip(energy_mean * 12.0, 0.0, 1.0))
-        # High centroid indicates vocal sharpness / brightness
-        spectral_sharp = float(np.clip((centroid - 800.0) / 2500.0, 0.0, 1.0))
-        # Low energy and flat pitch indicate sadness / subdued affect
-        low_activation = float(np.clip(1.0 - (energy_high * 0.7 + pitch_dynamic * 0.3), 0.0, 1.0))
 
-        # Logit activations
-        scores = {
-            EmotionCategory.NEUTRAL.value: 0.20
-            + 0.50 * (1.0 - pitch_dynamic) * (1.0 - abs(energy_high - 0.3)),
-            EmotionCategory.HAPPINESS.value: 0.10
-            + 0.45 * pitch_dynamic
-            + 0.35 * energy_high
-            + 0.20 * spectral_sharp,
-            EmotionCategory.SADNESS.value: 0.10 + 0.65 * low_activation + 0.25 * (1.0 - vad),
-            EmotionCategory.ANGER.value: 0.10
-            + 0.55 * energy_high
-            + 0.35 * spectral_sharp
-            + 0.10 * (1.0 - pitch_dynamic),
-            EmotionCategory.FEAR.value: 0.05
-            + 0.45 * pitch_dynamic
-            + 0.35 * zcr * 8.0
-            + 0.20 * spectral_sharp,
-            EmotionCategory.SURPRISE.value: 0.05 + 0.55 * pitch_dynamic + 0.30 * energy_std * 8.0,
-            EmotionCategory.DISGUST.value: 0.05
-            + 0.40 * low_activation
-            + 0.20 * (1.0 - spectral_sharp),
-        }
-
-        vals = np.array(list(scores.values()), dtype=np.float32)
-        exp_vals = np.exp(vals * 2.5)
-        probs = exp_vals / np.sum(exp_vals)
-
-        result = {cat: round(float(probs[i]), 4) for i, cat in enumerate(scores.keys())}
-        return result
+# Backwards compatibility alias
+AcousticFeatureProsodyAdapter = ExperimentalAcousticProsodyAdapter
 
 
 class DeterministicTestSpeechAdapter(BaseSpeechModelAdapter):
@@ -249,6 +268,14 @@ class DeterministicTestSpeechAdapter(BaseSpeechModelAdapter):
     @property
     def is_available(self) -> bool:
         return not self._simulate_unavailable
+
+    @property
+    def is_experimental(self) -> bool:
+        return False
+
+    @property
+    def is_validated(self) -> bool:
+        return True
 
     def predict(
         self, signal: np.ndarray, sample_rate: int, features: dict[str, float]

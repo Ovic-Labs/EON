@@ -21,6 +21,10 @@ class ERSModelExecutionError(ERSError):
     """Raised when model inference execution fails unexpectedly."""
 
 
+class ERSModelIntegrityError(ERSError):
+    """Raised when model artifact checksum, tensor contract, or manifest verification fails."""
+
+
 class ERSQualityRejectionError(ERSError):
     """Raised when input signal quality falls below the minimum usable threshold."""
 

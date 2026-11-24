@@ -45,6 +45,7 @@ async def test_end_to_end_real_onnx_pipelines() -> None:
         speech_model_path="packages/ers/models/speech_emotion_model.onnx",
     )
     async with ERSEngine(config) as engine:
+        engine.register_consent("integ-session-01", "token-2026")
         # 1. Facial execution
         face_inp = ERSInput(
             session_id="integ-session-01",
@@ -121,6 +122,7 @@ async def test_multimodal_missing_modality_fallback() -> None:
         speech_model_path="packages/ers/models/speech_emotion_model.onnx",
     )
     async with ERSEngine(config) as engine:
+        engine.register_consent("sess-single", "token")
         face_inp = ERSInput(
             session_id="sess-single",
             modality=Modality.FACIAL,

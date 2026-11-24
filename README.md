@@ -133,24 +133,31 @@ python packages/ers/benchmarks/benchmark_cpu.py
 
 ### Test Suite Summary
 
-- **Total Tests:** 31 passed (100% pass rate)
-- **Unit Tests:** Input contracts, quality validators, fusion weighting, temporal trackers
+- **Total Tests:** 54 passed (100% pass rate)
+- **Unit Tests:** Input contracts, quality validators, fusion weighting, temporal trackers, Core protocol, facial detection/landmarks
 - **Integration Tests:** End-to-end facial, speech, and multimodal async pipelines
-- **Privacy Tests:** Active consent revocation, zero raw media retention in output, PII redactor
-- **Security Tests:** Actuator command interlocks, oversized payload rejection, model manifest tampering detection
+- **Privacy Tests:** Strict consent registration, arbitrary reference rejection, active revocation, zero raw media retention, PII redactor
+- **Security Tests:** Actuator command interlocks, oversized payload rejection, model manifest checksum & tensor contract verification
 
-### Intel Core Ultra 5 225U CPU Benchmark (p50 Latency)
+### CPU Benchmark Verification (Host Machine Execution)
 
-| Pipeline Component | Cold Start | Warm Inference (p50) | Target | Margin |
+Measured via `python packages/ers/benchmarks/benchmark_cpu.py` (30 measured iterations, 4 intra-op threads) and serialized in `packages/ers/benchmarks/cpu_benchmark_results.json`:
+
+- **Host Processor:** `Intel64 Family 6 Model 181 Stepping 0, GenuineIntel` (14 logical / 12 physical cores)
+- **Peak RSS:** **138.63 MB** (Measured via `psutil.Process().memory_info().rss`)
+- **CPU Utilization:** 25.7%
+
+| Pipeline Component | Cold Start | Warm Inference (p50) | Target | Performance Margin |
 |---|---|---|---|---|
-| Facial Pipeline | 9.08 ms | **2.64 ms** | < 25.0 ms | **89.4% under budget** |
-| Speech Pipeline | 5.48 ms | **5.50 ms** | < 25.0 ms | **78.0% under budget** |
-| Multimodal Fusion | 10.60 ms | **11.02 ms** | < 30.0 ms | **63.3% under budget** |
+| Facial Pipeline | 17.70 ms | **2.62 ms** | < 25.0 ms | **89.5% under budget** |
+| Speech Pipeline | 12.99 ms | **4.39 ms** | < 25.0 ms | **82.4% under budget** |
+| Multimodal Fusion | 9.03 ms | **11.38 ms** | < 30.0 ms | **62.1% under budget** |
 
 ---
 
 ## Documentation
 
+- [Issues 1–6 Requalification Report](docs/ers/ERS_ISSUES_1_TO_6_REQUALIFICATION_REPORT.md): Complete technical corrections, root causes, and evidence.
 - [Developer Guide](docs/ers/DEVELOPER_GUIDE.md): Architecture overview, lifecycle states, pipeline diagrams, and extension guidelines.
 - [API Reference](docs/ers/API_REFERENCE.md): Detailed schemas, classes, methods, and error codes.
 - [Implementation Report](docs/ers/ERS_IMPLEMENTATION_REPORT.md): Full Phase 3.1 qualification report, hardware benchmarks, and verification evidence.

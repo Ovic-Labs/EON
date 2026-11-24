@@ -12,7 +12,11 @@ from eon_ers.types import Modality
 
 
 class ModelManifest(BaseModel):
-    """Cryptographically verifiable specification for local model artifacts."""
+    """Cryptographically verifiable specification for local model artifacts.
+
+    Enforces strict provenance, licensing evidence, input/output tensor contracts,
+    and cryptographic SHA-256 integrity verification.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -26,13 +30,39 @@ class ModelManifest(BaseModel):
         ..., min_length=64, max_length=64, description="SHA-256 digest of weights file."
     )
     license: str = Field(..., description="Open source or commercial software license.")
-    commercial_use_allowed: bool = Field(..., description="Whether commercial use is permissible.")
+    commercial_use_allowed: bool = Field(
+        default=False, description="Whether commercial use is permissible."
+    )
+    commercial_use_status: str = Field(
+        default="RESTRICTED",
+        description="Commercial qualification status (e.g., 'RESTRICTED', 'UNVERIFIED', 'APPROVED').",
+    )
+    provenance_status: str = Field(
+        default="UNVERIFIED",
+        description="Provenance verification status (e.g., 'VERIFIED', 'UNVERIFIED', 'SYNTHETIC').",
+    )
+    training_dataset_provenance: str = Field(
+        default="UNVERIFIED",
+        description="Exact dataset name, licensing, and lineage used for training.",
+    )
+    training_procedure: str = Field(
+        default="UNVERIFIED",
+        description="Training and optimization methodology, loss function, and epoch count.",
+    )
+    validation_status: str = Field(
+        default="UNVERIFIED",
+        description="Independent evaluation status and benchmark qualification evidence.",
+    )
+    license_evidence: str = Field(
+        default="UNVERIFIED",
+        description="Documentation or legal proof authorizing model weights distribution.",
+    )
     source: str = Field(..., description="Originating repository, lab, or trained architecture.")
     input_specification: dict[str, Any] = Field(
-        ..., description="Expected input tensor shape and dtype."
+        ..., description="Expected input tensor shape, name, and dtype."
     )
     output_specification: dict[str, Any] = Field(
-        ..., description="Expected output tensor shape and classes."
+        ..., description="Expected output tensor shape, name, and classes."
     )
     cpu_supported: bool = Field(default=True, description="Whether CPU inference is supported.")
     accelerator_support: list[str] = Field(
@@ -58,3 +88,61 @@ class ModelManifest(BaseModel):
 
         computed = hasher.hexdigest().lower()
         return computed == self.sha256_checksum.lower()
+
+    def validate_tensor_contracts(self, session: Any) -> tuple[bool, str]:
+        """Validate that the loaded ONNX session inputs and outputs match the manifest."""
+        try:
+            inputs = session.get_inputs()
+            outputs = session.get_outputs()
+
+            # Validate input tensor specification
+            expected_in_name = self.input_specification.get("name")
+            expected_in_shape = self.input_specification.get("shape")
+            if not inputs:
+                return False, "ONNX model has no input tensors."
+
+            actual_in = inputs[0]
+            if expected_in_name and actual_in.name != expected_in_name:
+                return (
+                    False,
+                    f"Input tensor name mismatch: expected '{expected_in_name}', got '{actual_in.name}'.",
+                )
+
+            if expected_in_shape and actual_in.shape != expected_in_shape:
+                return (
+                    False,
+                    f"Input tensor shape mismatch: expected {expected_in_shape}, got {actual_in.shape}.",
+                )
+
+            # Validate output tensor specification
+            expected_out_name = self.output_specification.get("name")
+            expected_out_shape = self.output_specification.get("shape")
+            if not outputs:
+                return False, "ONNX model has no output tensors."
+
+            actual_out = outputs[0]
+            if expected_out_name and actual_out.name != expected_out_name:
+                return (
+                    False,
+                    f"Output tensor name mismatch: expected '{expected_out_name}', got '{actual_out.name}'.",
+                )
+
+            if expected_out_shape and actual_out.shape != expected_out_shape:
+                return (
+                    False,
+                    f"Output tensor shape mismatch: expected {expected_out_shape}, got {actual_out.shape}.",
+                )
+
+            return True, "Tensor contracts verified."
+        except Exception as exc:
+            return False, f"Tensor contract validation exception: {exc}"
+
+    def validate_class_ordering(self, expected_classes: list[str]) -> tuple[bool, str]:
+        """Validate that output classes defined in manifest match the required ordering."""
+        manifest_classes = self.output_specification.get("classes", [])
+        if manifest_classes != expected_classes:
+            return (
+                False,
+                f"Class ordering mismatch: manifest classes {manifest_classes} != expected {expected_classes}",
+            )
+        return True, "Class ordering verified."
