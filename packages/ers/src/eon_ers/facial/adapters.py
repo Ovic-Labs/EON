@@ -13,7 +13,8 @@ import numpy as np
 from eon_ers.exceptions import ERSModelIntegrityError, ERSModelUnavailableError
 from eon_ers.models.loader import ModelLoader
 from eon_ers.models.manifest import ModelManifest
-from eon_ers.types import EmotionCategory
+from eon_ers.models.validation_record import ModelValidationRecord
+from eon_ers.types import EmotionCategory, ModelState
 
 SUPPORTED_EMOTIONS = [
     EmotionCategory.NEUTRAL.value,
@@ -53,6 +54,17 @@ class BaseFacialModelAdapter(abc.ABC):
     def is_validated(self) -> bool:
         """Whether the adapter has been empirically validated against affective benchmarks."""
         return False
+
+    @property
+    def model_state(self) -> ModelState:
+        """Explicit model qualification state."""
+        if not self.is_available:
+            return ModelState.MODEL_UNAVAILABLE
+        if self.is_experimental:
+            return ModelState.MODEL_EXPERIMENTAL
+        if self.is_validated:
+            return ModelState.MODEL_LOADED_VALIDATED
+        return ModelState.MODEL_LOADED_UNVERIFIED
 
     @abc.abstractmethod
     def predict(self, tensor: np.ndarray, evidence_features: dict[str, float]) -> dict[str, float]:
@@ -136,12 +148,27 @@ class ONNXFacialModelAdapter(BaseFacialModelAdapter):
 
     @property
     def is_validated(self) -> bool:
-        # Unverified synthetic baseline weights are not empirically validated
-        return (
-            self._manifest.validation_status.upper() == "VERIFIED"
-            if self._manifest is not None
-            else False
-        )
+        # A manifest claiming VERIFIED is not sufficient alone without an empirical validation record
+        if not self._is_loaded or not self._model_path:
+            return False
+        val_file = Path(self._model_path).with_suffix(".validation.json")
+        if val_file.is_file():
+            try:
+                record = ModelValidationRecord.load_from_file(val_file)
+                return record.is_validated and record.verify_artifact_binding(self._model_path)
+            except Exception:
+                return False
+        return False
+
+    @property
+    def model_state(self) -> ModelState:
+        if not self._model_path or not os.path.isfile(self._model_path):
+            return ModelState.MODEL_MISSING
+        if not self._is_loaded:
+            return ModelState.MODEL_UNAVAILABLE
+        if self.is_validated:
+            return ModelState.MODEL_LOADED_VALIDATED
+        return ModelState.MODEL_LOADED_UNVERIFIED
 
     def predict(self, tensor: np.ndarray, evidence_features: dict[str, float]) -> dict[str, float]:
         if not self._is_loaded or self._session is None:

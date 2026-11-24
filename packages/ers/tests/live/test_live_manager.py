@@ -104,7 +104,7 @@ async def test_process_frame_valid(live_manager: LiveSessionManager) -> None:
     face_b64 = create_sample_face_b64()
     result = await live_manager.process_frame(session_id, face_b64, consent_ref)
 
-    assert result["status"] in ("ok", "insufficient_evidence")
+    assert result["status"] in ("ok", "insufficient_evidence", "model_unvalidated")
     assert result["modality"] == Modality.FACIAL.value
     assert "dominant_estimate" in result
     assert "emotion_probabilities" in result
@@ -158,7 +158,7 @@ async def test_process_audio_valid(live_manager: LiveSessionManager) -> None:
     audio_b64 = create_sample_audio_b64()
     result = await live_manager.process_audio(session_id, audio_b64, 16000, consent_ref)
 
-    assert result["status"] == "ok"
+    assert result["status"] in ("ok", "insufficient_evidence", "model_unvalidated")
     assert result["modality"] == Modality.SPEECH.value
     assert "dominant_estimate" in result
     assert result["is_definitive_claim"] is False

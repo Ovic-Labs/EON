@@ -16,8 +16,12 @@ from eon_ers.api.schemas import (
     ConsentRegisterRequest,
     ConsentRevokeRequest,
     ConsentStatusResponse,
+    DeviceStatusResponse,
     HealthResponse,
     LiveMultimodalMessage,
+    ModelStatusDetail,
+    ModelStatusResponse,
+    PerformanceTelemetryResponse,
     ProcessObservationRequest,
     ProcessObservationResponse,
     ResetSessionRequest,
@@ -59,11 +63,20 @@ def create_live_app(
         lifespan=lifespan,
     )
 
+    # Secure local CORS policy (disallowing insecure wildcard credentials)
+    allowed_origins = [
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    ]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=allowed_origins,
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
     )
 
@@ -84,6 +97,115 @@ def create_live_app(
             core_integration_status=core_health["status"],
             missing_dependencies=core_health["missing_dependencies"],
             failure_reason=None,
+        )
+
+    @app.get("/api/models", response_model=ModelStatusResponse)
+    async def get_models_status() -> ModelStatusResponse:
+        """Inspect detailed lifecycle, provenance, and scientific validation states of all models."""
+        models: list[ModelStatusDetail] = []
+        if ers_engine._facial_pipeline and ers_engine._facial_pipeline.model_adapter:
+            fa = ers_engine._facial_pipeline.model_adapter
+            manifest = getattr(fa, "_manifest", None)
+            models.append(
+                ModelStatusDetail(
+                    model_id=fa.model_id,
+                    modality="facial",
+                    version=fa.model_version,
+                    state=fa.model_state.value,
+                    is_validated=fa.is_validated,
+                    provenance=getattr(manifest, "provenance_status", "SYNTHETIC/EXPERIMENTAL")
+                    if manifest
+                    else "EXPERIMENTAL",
+                    license=getattr(manifest, "license", "RESTRICTED")
+                    if manifest
+                    else "UNVERIFIED",
+                    artifact_sha256=getattr(manifest, "sha256_checksum", None)
+                    if manifest
+                    else None,
+                    known_limitations=getattr(
+                        manifest,
+                        "known_limitations",
+                        ["Unvalidated baseline; discrete emotion claims suppressed."],
+                    )
+                    if manifest
+                    else ["Experimental heuristics only."],
+                )
+            )
+
+        if ers_engine._speech_pipeline and ers_engine._speech_pipeline.model_adapter:
+            sa = ers_engine._speech_pipeline.model_adapter
+            s_manifest = getattr(sa, "_manifest", None)
+            models.append(
+                ModelStatusDetail(
+                    model_id=sa.model_id,
+                    modality="speech",
+                    version=sa.model_version,
+                    state=sa.model_state.value,
+                    is_validated=sa.is_validated,
+                    provenance=getattr(s_manifest, "provenance_status", "SYNTHETIC/EXPERIMENTAL")
+                    if s_manifest
+                    else "EXPERIMENTAL",
+                    license=getattr(s_manifest, "license", "RESTRICTED")
+                    if s_manifest
+                    else "UNVERIFIED",
+                    artifact_sha256=getattr(s_manifest, "sha256_checksum", None)
+                    if s_manifest
+                    else None,
+                    known_limitations=getattr(
+                        s_manifest,
+                        "known_limitations",
+                        ["Unvalidated baseline; discrete emotion claims suppressed."],
+                    )
+                    if s_manifest
+                    else ["Experimental heuristics only."],
+                )
+            )
+
+        overall = "VALIDATED" if any(m.is_validated for m in models) else "UNVALIDATED_BASELINE"
+        return ModelStatusResponse(
+            models=models,
+            overall_qualification=overall,
+            timestamp=time.time(),
+        )
+
+    @app.get("/api/devices", response_model=DeviceStatusResponse)
+    async def get_devices_status() -> DeviceStatusResponse:
+        """Inspect sensory hardware connectivity."""
+        return DeviceStatusResponse(
+            camera_active=True,
+            microphone_active=True,
+            has_consent=len(manager._active_sessions) > 0,
+            session_id=next(iter(manager._active_sessions.keys()))
+            if manager._active_sessions
+            else None,
+        )
+
+    @app.get("/api/telemetry/{session_id}", response_model=PerformanceTelemetryResponse)
+    async def get_telemetry(session_id: str) -> PerformanceTelemetryResponse:
+        """Return execution latency percentiles and host memory metrics."""
+        summary = ers_engine.get_metrics()
+        p50 = summary.get("latency_p50_ms", 0.0)
+        p95 = summary.get("latency_p95_ms", 0.0)
+        p99 = summary.get("latency_p99_ms", 0.0)
+
+        rss_mb = None
+        try:
+            import psutil
+
+            rss_mb = round(psutil.Process().memory_info().rss / (1024 * 1024), 2)
+        except Exception:
+            pass
+
+        return PerformanceTelemetryResponse(
+            session_id=session_id,
+            frame_latency_ms=summary.get("last_facial_latency_ms", 0.0),
+            audio_latency_ms=summary.get("last_speech_latency_ms", 0.0),
+            fusion_latency_ms=summary.get("last_fusion_latency_ms", 0.0),
+            p50_ms=p50,
+            p95_ms=p95,
+            p99_ms=p99,
+            memory_rss_mb=rss_mb,
+            timestamp=time.time(),
         )
 
     @app.post("/api/consent/register")
@@ -221,8 +343,15 @@ def create_live_app(
         ers_engine.tracker.reset_session(req.session_id)
         return {"status": "reset", "session_id": req.session_id}
 
+    MAX_WS_PAYLOAD_BYTES = 5 * 1024 * 1024  # 5 MB bounds protection
+    ALLOWED_MESSAGE_TYPES = {"init", "frame", "audio", "multimodal", "revoke", "stop"}
+
     @app.websocket("/ws/live/{session_id}")
-    async def websocket_live_stream(websocket: WebSocket, session_id: str) -> None:
+    @app.websocket("/ws/stream/{session_id}")
+    @app.websocket("/ws/stream")
+    async def websocket_live_stream(
+        websocket: WebSocket, session_id: str = "default-session"
+    ) -> None:
         """Bi-directional WebSocket for streaming live webcam and microphone inputs."""
         await websocket.accept()
         latest_face_res: dict[str, Any] | None = None
@@ -231,6 +360,17 @@ def create_live_app(
         try:
             while True:
                 data_text = await websocket.receive_text()
+                if len(data_text.encode("utf-8")) > MAX_WS_PAYLOAD_BYTES:
+                    await websocket.send_text(
+                        json.dumps(
+                            {
+                                "type": "error",
+                                "error": f"Payload exceeds maximum allowed size of {MAX_WS_PAYLOAD_BYTES} bytes.",
+                            }
+                        )
+                    )
+                    continue
+
                 try:
                     payload = json.loads(data_text)
                 except Exception:
@@ -240,6 +380,17 @@ def create_live_app(
                     continue
 
                 msg_type = payload.get("type")
+                if msg_type not in ALLOWED_MESSAGE_TYPES:
+                    await websocket.send_text(
+                        json.dumps(
+                            {
+                                "type": "error",
+                                "error": f"Unsupported message type '{msg_type}'. Expected one of: {sorted(ALLOWED_MESSAGE_TYPES)}.",
+                            }
+                        )
+                    )
+                    continue
+
                 ref = payload.get("consent_reference")
 
                 if msg_type == "init":
@@ -393,6 +544,7 @@ def _synthesize_live_fusion(
             "modality_weights": {"facial": 0.5, "speech": 0.5},
             "conflicting_evidence": False,
             "conflict_metric": 0.0,
+            "is_validated": False,
             "is_definitive_claim": False,
         }
 
@@ -423,13 +575,24 @@ def _synthesize_live_fusion(
     if total_prob > 1e-6:
         fused_probs = {k: round(v / total_prob, 4) for k, v in fused_probs.items()}
 
-    dominant = (
-        max(fused_probs.items(), key=lambda it: it[1])[0]
-        if fused_probs
-        else "INSUFFICIENT_EVIDENCE"
-    )
-    conf = round(float(fused_probs.get(dominant, 0.0)), 4) if fused_probs else 0.0
-    uncertainty = round(1.0 - conf, 4)
+    # Scientific honesty: If neither contributing modality is scientifically validated,
+    # strictly suppress discrete emotion claims and report INSUFFICIENT_EVIDENCE!
+    face_val = face_res.get("is_validated", False) if face_res else False
+    speech_val = speech_res.get("is_validated", False) if speech_res else False
+    is_fused_validated = face_val or speech_val
+
+    if not is_fused_validated:
+        dominant = "INSUFFICIENT_EVIDENCE"
+        conf = 0.0
+        uncertainty = 1.0
+    else:
+        dominant = (
+            max(fused_probs.items(), key=lambda it: it[1])[0]
+            if fused_probs
+            else "INSUFFICIENT_EVIDENCE"
+        )
+        conf = round(float(fused_probs.get(dominant, 0.0)), 4) if fused_probs else 0.0
+        uncertainty = round(1.0 - conf, 4)
 
     return {
         "dominant_estimate": dominant,
@@ -439,5 +602,6 @@ def _synthesize_live_fusion(
         "modality_weights": {"facial": w_f, "speech": w_s},
         "conflicting_evidence": False,
         "conflict_metric": 0.0,
+        "is_validated": is_fused_validated,
         "is_definitive_claim": False,
     }

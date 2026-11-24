@@ -215,8 +215,16 @@ class FacialPipeline:
 
         # 7. Calculate confidence and uncertainty
         probs_array = np.array(list(probabilities.values()), dtype=np.float64)
-        dominant_cat = max(probabilities.items(), key=lambda item: item[1])[0]
-        raw_confidence = float(probabilities[dominant_cat])
+        is_uniform = (
+            (float(np.max(probs_array) - np.min(probs_array)) < 0.02)
+            if len(probs_array) > 0
+            else True
+        )
+        is_unvalidated = not self.model_adapter.is_validated
+        is_experimental = self.model_adapter.is_experimental
+
+        raw_dominant = max(probabilities.items(), key=lambda item: item[1])[0]
+        raw_confidence = float(probabilities[raw_dominant])
 
         # Confidence attenuated by signal quality
         confidence = float(np.clip(raw_confidence * quality.score, 0.0, 1.0))
@@ -244,23 +252,48 @@ class FacialPipeline:
             )
         )
 
-        # Abstention evaluation
+        # Epistemic honesty & abstention evaluation:
+        # If model is unvalidated, experimental, uniform, or below threshold,
+        # we strictly suppress discrete classification to prevent fabricated emotion claims.
         status = ObservationStatus.OK
-        if (
-            self.model_adapter.is_experimental
-            or confidence < self.config.confidence_threshold
+        dominant_cat = raw_dominant
+
+        if is_unvalidated:
+            status = ObservationStatus.MODEL_UNVALIDATED
+            dominant_cat = EmotionCategory.UNKNOWN.value
+            confidence = 0.0
+            uncertainty = 1.0
+            limitations.append(
+                "Model is unvalidated; discrete emotion categorization suppressed to prevent fabricated predictions."
+            )
+        elif is_experimental:
+            status = ObservationStatus.INSUFFICIENT_EVIDENCE
+            dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
+            confidence = 0.0
+            uncertainty = 1.0
+            limitations.append(
+                "Abstaining from classification: unvalidated experimental feature adapter."
+            )
+        elif is_uniform:
+            status = ObservationStatus.INSUFFICIENT_EVIDENCE
+            dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
+            confidence = 0.0
+            uncertainty = 1.0
+            limitations.append(
+                "Uniform probability distribution across categories; insufficient evidence for classification."
+            )
+        elif (
+            confidence < self.config.confidence_threshold
             or uncertainty > self.config.uncertainty_threshold
         ):
             status = ObservationStatus.INSUFFICIENT_EVIDENCE
-            if self.model_adapter.is_experimental:
-                limitations.append(
-                    "Abstaining from classification: unvalidated experimental feature adapter."
-                )
-            else:
-                limitations.append(
-                    f"Low confidence ({confidence:.2f} < {self.config.confidence_threshold}) "
-                    f"or high uncertainty ({uncertainty:.2f} > {self.config.uncertainty_threshold})."
-                )
+            dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
+            confidence = 0.0
+            uncertainty = 1.0
+            limitations.append(
+                f"Low confidence ({confidence:.2f} < {self.config.confidence_threshold}) "
+                f"or high uncertainty ({uncertainty:.2f} > {self.config.uncertainty_threshold})."
+            )
 
         if quality.grade == QualityGrade.DEGRADED:
             status = ObservationStatus.DEGRADED
@@ -285,5 +318,7 @@ class FacialPipeline:
             processing_latency_ms=round(latency_ms, 2),
             limitations=limitations,
             status=status,
+            model_state=self.model_adapter.model_state,
+            is_validated=self.model_adapter.is_validated,
             is_definitive_claim=False,
         )

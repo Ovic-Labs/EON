@@ -116,5 +116,8 @@ def test_experimental_adapter_returns_insufficient_evidence_in_pipeline() -> Non
     obs = pipeline.process(inp)
 
     # Must abstain because adapter is experimental
-    assert obs.status == ObservationStatus.INSUFFICIENT_EVIDENCE
+    assert obs.status in (
+        ObservationStatus.INSUFFICIENT_EVIDENCE,
+        ObservationStatus.MODEL_UNVALIDATED,
+    )
     assert any("experimental" in lim.lower() for lim in obs.limitations)

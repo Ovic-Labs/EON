@@ -1,0 +1,109 @@
+{
+  "record_id": "VAL-ers-speech-onnx-cpu-v1-1795520066",
+  "model_id": "ers-speech-onnx-cpu-v1",
+  "model_version": "1.0.0",
+  "artifact_sha256": "c5c8538e69d6f66e4724a7ca118b61c3c3e39686ba6adb53443bcb099fc0b0a2",
+  "is_validated": false,
+  "training_dataset": "UNVERIFIED (Synthetic parameter initialization; no empirical training dataset)",
+  "training_dataset_version": "1.0.0",
+  "dataset_license": "OVIC Internal Testing License",
+  "commercial_use_allowed": false,
+  "commercial_use_restrictions": [
+    "Research and pipeline testing only. Commercial deployment prohibited."
+  ],
+  "preprocessing_specification": {
+    "name": "acoustic_features",
+    "shape": [
+      1,
+      12
+    ],
+    "dtype": "float32"
+  },
+  "label_mapping": [
+    "neutral",
+    "happiness",
+    "sadness",
+    "anger",
+    "fear",
+    "surprise",
+    "disgust"
+  ],
+  "evaluation_dataset": "synthetic_speech_fixture_suite",
+  "evaluation_split": "test",
+  "evaluation_script": "eon_ers.evaluation.evaluator",
+  "evaluation_script_version": "1.0.0",
+  "evaluation_metrics": {
+    "accuracy": 0.1429,
+    "balanced_accuracy": 0.1429,
+    "macro_precision": 0.0204,
+    "macro_recall": 0.1429,
+    "macro_f1": 0.0357,
+    "total_samples": 175.0
+  },
+  "per_class_metrics": {
+    "neutral": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 25.0
+    },
+    "happiness": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 25.0
+    },
+    "sadness": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 25.0
+    },
+    "anger": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 25.0
+    },
+    "fear": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 25.0
+    },
+    "surprise": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 25.0
+    },
+    "disgust": {
+      "precision": 0.1429,
+      "recall": 1.0,
+      "f1": 0.25,
+      "support": 25.0
+    }
+  },
+  "calibration_metrics": {
+    "ece": 0.8571,
+    "brier_score": 1.7143
+  },
+  "confidence_distribution": {
+    "p25": 1.0,
+    "p50": 1.0,
+    "p75": 1.0,
+    "p95": 1.0,
+    "mean": 1.0
+  },
+  "abstention_rate": 0.0,
+  "evaluator": "OVIC Labs Scientific Qualification Runner",
+  "validation_timestamp": "2026-11-24T11:34:26Z",
+  "validation_notes": [
+    "Evaluation conducted on synthetic acoustic prosody feature suite.",
+    "Baseline ONNX weights contain unverified parameters.",
+    "Accuracy qualification status: UNVALIDATED (qualification thresholds not met).",
+    "Evaluation used synthetic validation fixtures; not empirical accuracy qualification.",
+    "Model weights have unverified provenance; prohibited from production validation.",
+    "Model failed accuracy thresholds (Macro-F1 0.0357 < 0.40). Classifications must be suppressed as INSUFFICIENT_EVIDENCE."
+  ]
+}

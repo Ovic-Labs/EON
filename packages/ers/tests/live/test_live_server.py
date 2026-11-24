@@ -39,8 +39,8 @@ def test_dashboard_endpoint(client: TestClient) -> None:
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert "OVIC EON" in response.text
-    assert "ERS Live Input Demonstration" in response.text
-    assert "Epistemic Modesty" in response.text
+    assert "ERS Telemetry" in response.text
+    assert "is_definitive_claim = False" in response.text
 
 
 def test_health_endpoint(client: TestClient) -> None:
@@ -107,7 +107,7 @@ def test_process_frame_rest_endpoint(client: TestClient) -> None:
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert data["status"] in ("ok", "insufficient_evidence")
+    assert data["status"] in ("ok", "insufficient_evidence", "model_unvalidated")
     assert data["modality"] == "facial"
     assert data["is_definitive_claim"] is False
     assert "dominant_estimate" in data
@@ -136,7 +136,7 @@ def test_process_audio_rest_endpoint(client: TestClient) -> None:
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert data["status"] == "ok"
+    assert data["status"] in ("ok", "insufficient_evidence", "model_unvalidated")
     assert data["modality"] == "speech"
     assert data["is_definitive_claim"] is False
 
