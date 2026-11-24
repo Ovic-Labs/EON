@@ -1,0 +1,21 @@
+"""Core adapter module for ERS."""
+
+from eon_ers.core.adapter import (
+    TOPIC_FUSION_COMPLETED,
+    TOPIC_INPUT_RECEIVED,
+    TOPIC_MODEL_UNAVAILABLE,
+    TOPIC_OBSERVATION_CREATED,
+    TOPIC_PROCESSING_DEGRADED,
+    TOPIC_PROCESSING_FAILED,
+    CoreEventBusAdapter,
+)
+
+__all__ = [
+    "CoreEventBusAdapter",
+    "TOPIC_FUSION_COMPLETED",
+    "TOPIC_INPUT_RECEIVED",
+    "TOPIC_MODEL_UNAVAILABLE",
+    "TOPIC_OBSERVATION_CREATED",
+    "TOPIC_PROCESSING_DEGRADED",
+    "TOPIC_PROCESSING_FAILED",
+]
