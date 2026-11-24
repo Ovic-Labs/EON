@@ -1,0 +1,40 @@
+{
+  "hardware_target": "Intel Core Ultra 5 225U",
+  "device": "cpu",
+  "num_threads": 4,
+  "iterations": 30,
+  "initialization_ms": 73.49,
+  "peak_rss_mb": 0.0,
+  "cold_latencies_ms": {
+    "facial": 3.98,
+    "speech": 7.37,
+    "multimodal": 8.68
+  },
+  "warm_facial_latency_ms": {
+    "mean": 2.12,
+    "p50": 2.08,
+    "p90": 3.25,
+    "p95": 3.48,
+    "p99": 3.95,
+    "min": 1.22,
+    "max": 4.07
+  },
+  "warm_speech_latency_ms": {
+    "mean": 5.39,
+    "p50": 4.73,
+    "p90": 7.46,
+    "p95": 7.81,
+    "p99": 8.05,
+    "min": 4.17,
+    "max": 8.08
+  },
+  "warm_multimodal_latency_ms": {
+    "mean": 10.67,
+    "p50": 10.75,
+    "p90": 12.37,
+    "p95": 13.46,
+    "p99": 14.08,
+    "min": 7.08,
+    "max": 14.15
+  }
+}

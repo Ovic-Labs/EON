@@ -1,0 +1,62 @@
+name: ERS CI
+
+on:
+  push:
+    branches: ["main", "feature/**"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy pydantic numpy scipy pillow onnxruntime pytest pytest-asyncio pytest-cov build
+
+      - name: Run Ruff Lint
+        run: ruff check .
+
+      - name: Run Ruff Format Check
+        run: ruff format --check .
+
+      - name: Run Mypy
+        run: mypy packages/ers/src
+
+  test-and-build:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ERS and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "packages/ers[dev,ml]"
+          pip install build
+
+      - name: Run Pytest Suite
+        run: pytest packages/ers/tests -v --cov=eon_ers --cov-report=term-missing
+
+      - name: Build Distribution Packages
+        run: python -m build packages/ers --outdir dist/
+

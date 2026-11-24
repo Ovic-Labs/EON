@@ -1,0 +1,28 @@
+{
+  "model_id": "ers-speech-onnx-cpu-v1",
+  "name": "ERS Lightweight Acoustic Prosody MLP",
+  "version": "1.0.0",
+  "modality": "speech",
+  "framework": "onnx",
+  "artifact_path": "packages/ers/models/speech_emotion_model.onnx",
+  "sha256_checksum": "c5c8538e69d6f66e4724a7ca118b61c3c3e39686ba6adb53443bcb099fc0b0a2",
+  "license": "Apache-2.0",
+  "commercial_use_allowed": true,
+  "source": "OVIC Labs Edge Acoustic ML Research Baseline",
+  "input_specification": {
+    "name": "acoustic_features",
+    "shape": [1, 12],
+    "dtype": "float32"
+  },
+  "output_specification": {
+    "name": "logits",
+    "shape": [1, 7],
+    "classes": ["neutral", "happiness", "sadness", "anger", "fear", "surprise", "disgust"]
+  },
+  "cpu_supported": true,
+  "accelerator_support": ["CPUExecutionProvider"],
+  "known_limitations": [
+    "Requires minimum acoustic SNR >= 3.0 dB.",
+    "Acoustic prosody indicates expressive arousal/valence, not subjective truth."
+  ]
+}

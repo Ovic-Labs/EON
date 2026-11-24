@@ -1,0 +1,28 @@
+{
+  "model_id": "ers-facial-onnx-cpu-v1",
+  "name": "ERS Lightweight Facial Emotion ConvNet",
+  "version": "1.0.0",
+  "modality": "facial",
+  "framework": "onnx",
+  "artifact_path": "packages/ers/models/facial_emotion_model.onnx",
+  "sha256_checksum": "0e8955c5187b2b9f69f9638e005b09abdbb1412951024e535fdefef48cc7d81b",
+  "license": "Apache-2.0",
+  "commercial_use_allowed": true,
+  "source": "OVIC Labs Edge ML Research Baseline",
+  "input_specification": {
+    "name": "input_image",
+    "shape": [1, 1, 64, 64],
+    "dtype": "float32"
+  },
+  "output_specification": {
+    "name": "logits",
+    "shape": [1, 7],
+    "classes": ["neutral", "happiness", "sadness", "anger", "fear", "surprise", "disgust"]
+  },
+  "cpu_supported": true,
+  "accelerator_support": ["CPUExecutionProvider"],
+  "known_limitations": [
+    "Trained for frontal facial crops; extreme head poses (>45 deg) decrease accuracy.",
+    "Probabilistic estimate only, not a psychiatric ground truth claim."
+  ]
+}
