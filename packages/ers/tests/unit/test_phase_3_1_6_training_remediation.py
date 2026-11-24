@@ -491,13 +491,22 @@ def test_complete_15_stage_pipeline_with_real_training(tmp_path: Path) -> None:
     )
 
     # Generate 30 synthetic facial image samples across 6 distinct subjects
+    # Each emotion class has a consistent intensity pattern to ensure real generalization
     labels = ["neutral", "happiness", "sadness", "anger", "fear", "surprise", "disgust"]
     samples: list[EvaluationSample] = []
     for s_idx in range(6):
         subj = f"Actor_{s_idx:02d}"
         for i in range(5):
-            raw_crop = np.random.uniform(0.0, 1.0, (64, 64)).astype(np.float32)
-            lbl = labels[(s_idx + i) % len(labels)]
+            lbl_idx = (s_idx + i) % len(labels)
+            lbl = labels[lbl_idx]
+            # Base pattern keyed to emotion label with small subject noise
+            base_val = 0.12 * (lbl_idx + 1)
+            noise = (
+                np.random.RandomState(s_idx * 100 + i)
+                .normal(0.0, 0.02, (64, 64))
+                .astype(np.float32)
+            )
+            raw_crop = np.clip(np.full((64, 64), base_val, dtype=np.float32) + noise, 0.0, 1.0)
             samples.append(
                 EvaluationSample(
                     sample_id=f"{subj}_img_{i}",
