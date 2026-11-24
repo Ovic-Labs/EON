@@ -60,6 +60,8 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 
 ### 1.5 Architecture Documentation (`docs/architecture/`)
 
+For the dedicated, comprehensive index of all Phase 2 architecture specifications, ADRs, diagrams, and reports, see the [Architecture Documentation Index](architecture/README.md).
+
 #### 1.5.1 Foundations & Layered Architecture (Sub-phases 2.1 & 2.2)
 
 | Document | Document ID | Description |
@@ -360,6 +362,20 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | [Phase 2.3–2.10 Architecture Correction Audit](architecture/PHASE_2_3_TO_2_10_CORRECTION_AUDIT.md) | EON-AUDIT-PH2-001 | Defect audit, reconciliation, and requalification report for Sub-phases 2.3–2.10 |
 | [Phase 2.3–2.10 Master Qualification Report](architecture/PHASE_2_3_TO_2_10_FINAL_QUALIFICATION_REPORT.md) | EON-QUAL-PH2-FINAL-001 | Master consolidated qualification report for Sub-phases 2.3 through 2.10 |
 | [Phase 2.11–2.20 Final Consolidated Qualification Report](architecture/PHASE_2_11_TO_2_20_FINAL_QUALIFICATION_REPORT.md) | EON-QUAL-PH2-FINAL-002 | Master consolidated qualification report for Sub-phases 2.11 through 2.20 |
+
+#### 1.5.21 Complete Architecture Audit and Requalification Reports (`docs/audit/`)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Phase 2 Deliverables Inventory](audit/PHASE_2_11_TO_2_20_AUDIT_INVENTORY.md) | `EON-AUDIT-INV-001` | Complete 111-file deliverables register, audit status, and action plan |
+| [Privacy Deletion Claims Audit](audit/PRIVACY_DELETION_CLAIMS_AUDIT.md) | `EON-AUDIT-PRIV-001` | Multi-tier deletion lifecycle, SSD wear-leveling realities, and 12-class taxonomy |
+| [ROS 2 Compatibility Audit](audit/ROS2_COMPATIBILITY_AUDIT.md) | `EON-AUDIT-ROS2-001` | Reclassification of ROS 2 Iron as EOL/Legacy; Tier 1 Humble/Jazzy qualification |
+| [Documentation Consistency Audit](audit/DOCUMENTATION_CONSISTENCY_AUDIT.md) | `EON-AUDIT-DOC-001` | Comprehensive README, index, and cross-reference reconciliation audit |
+| [Commit and Qualification Evidence Audit](audit/COMMIT_AND_QUALIFICATION_EVIDENCE_AUDIT.md) | `EON-AUDIT-EVD-001` | Git history verification, CI workflow IDs, and empirical evidence integrity |
+| [Edge Resource Budget Audit](audit/EDGE_RESOURCE_BUDGET_AUDIT.md) | `EON-AUDIT-RES-001` | 2GB memory cap breakdown, profiles A/B/C, and reproducible benchmark protocol |
+| [Full Phase 2 Architecture Consistency Audit](audit/PHASE_2_FULL_ARCHITECTURE_CONSISTENCY_AUDIT.md) | `EON-AUDIT-CONSIST-001` | Cross-cutting audit of state models, API catalogs, RAL safety, and diagrams |
+| [Phase 2 Requirements Traceability Matrix](audit/PHASE_2_REQUIREMENTS_TRACEABILITY.md) | `EON-AUDIT-RTM-001` | Complete traceability mapping from PRD/SRS requirements to Phase 2 architecture |
+| [Phase 2 Final Requalification Report](audit/PHASE_2_FINAL_REQUALIFICATION_REPORT.md) | `EON-QUAL-PH2-FINAL-003` | Master Phase 2 requalification report and unconditional acceptance decision |
 
 ### 1.6 Engineering Implementation Reports (`docs/engineering/`)
 

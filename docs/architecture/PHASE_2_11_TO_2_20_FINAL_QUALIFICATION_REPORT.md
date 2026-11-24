@@ -24,7 +24,7 @@ The architecture strictly embodies all non-negotiable core principles:
 2. **Zero Mandatory External AI APIs:** No reliance on third-party cloud LLMs or proprietary cloud vision services; all cognitive and affective loops execute locally on edge compute.
 3. **Seven-Engine Boundary Preservation:** Pure acyclic, unidirectional event flows across ERS, EMS, ERE, PSE, SIE, ERG, and HBU.
 4. **Physical Robot Safety Boundary:** All motion proposals are immutable non-authoritative proposals (`is_authoritative = false`). The physical robot manufacturer's safety controller retains 100% final authority.
-5. **Privacy-by-Design & Zero Media Retention:** Raw visual and audio frames exist strictly in volatile memory ring buffers (`/dev/shm`) and are never written to disk by default. Physical flash wear-leveling realities are addressed through mathematical cryptographic shredding.
+5. **Privacy-by-Design & Zero Media Retention:** Raw visual and audio frames exist strictly in volatile memory ring buffers (`/dev/shm`) and are never written to disk by default. Physical flash wear-leveling realities are addressed through cryptographic erasure via per-subject AES-256-GCM envelope encryption and a formal multi-tier deletion lifecycle.
 
 > [!IMPORTANT]
 > **Implementation Status Boundary:** Phase 2 is an architecture and engineering design phase. All components, interfaces, and algorithms specified herein are classified as **DESIGNED — NOT IMPLEMENTED**. No production runtime implementation or physical robot actuation is claimed.
@@ -57,7 +57,11 @@ The architecture strictly embodies all non-negotiable core principles:
 
 - **Starting Commit (`main` baseline):** `34bfc8766aa8d08560127e997a38753d71ae2ca4`
 - **Working Branch:** `architecture/phase-2-11-to-2-20`
-- **Final Audit SHA:** `347d752ed090f33271d4f159d673da1677e61a28`
+- **Feature Commit (PR #3):** `0d713eeb7b772625d98ee0d1c1c336a29e89ff0f`
+- **Merge Commit on `main` (PR #3):** `87e7b73e94edd12e3491635898727e6e04b817ba`
+- **GitHub Actions Verification:**
+  - Run ID `45348672875`: Documentation Qualification (5 jobs passed: validate-docs, markdownlint, ruff, mypy, pytest)
+  - Run ID `45348670171`: CodeQL Analysis (passed)
 
 ---
 

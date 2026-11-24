@@ -5,7 +5,7 @@
 **Status:** `DESIGNED — NOT IMPLEMENTED (Phase 2 Architecture Baseline)`  
 **Target Audience:** Robotics Software Engineers, C++ Systems Developers, Embedded AI Engineers  
 **Traceability:** PRD Section 4.5, SRS-ARCH-010, ADR-020, ADR-014, ADR-013  
-**Compatibility:** EON Core v0.1.0, Python SDK (`eon-sdk`), ROS 2 (Humble / Iron / Jazzy)
+**Compatibility:** EON Core v0.1.0, Python SDK (`eon-sdk`), ROS 2 (Humble / Jazzy; Legacy: Iron)
 
 ---
 

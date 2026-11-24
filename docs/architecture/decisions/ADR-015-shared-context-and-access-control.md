@@ -18,8 +18,8 @@ How should context be scoped, categorized, and protected so that engines receive
 Adopt a **Scoped Shared Context Architecture with EMS as Sole Memory Custodian**:
 1. **Eight Explicit Context Categories:** Context is partitioned into 8 typed categories (Session, Interaction, Short-Term, Long-Term, Environmental, Task, User Preferences, Transient Observations).
 2. **Role-Based Engine Access Control:** Only **EMS** has write/delete authority over persistent memory; other engines (ERE, SIE, ERG) possess read-only views filtered by least privilege. Perception engines (ERS, HBU) have zero access to long-term memory.
-3. **Cryptographic Shredding for Verifiable Erasure:** User records are encrypted using per-user symmetric keys. Deletion requests destroy the user key in `CryptoShredder`, rendering any persistent ciphertext permanently unrecoverable.
-4. **Realistic Erasure Demarcation:** The architecture explicitly recognizes hardware storage realities: cryptographic shredding guarantees mathematical unrecoverability, but cannot claim physical magnetic demagnetization of host SSD blocks.
+3. **Cryptographic Shredding for Verifiable Erasure:** User records are encrypted using per-user symmetric keys. Deletion requests destroy the user key in `CryptoShredder`, rendering persistent ciphertext cryptographically inaccessible under AES-256-GCM.
+4. **Realistic Erasure Demarcation:** The architecture explicitly recognizes hardware storage realities: cryptographic shredding renders ciphertext cryptographically inaccessible, but cannot claim physical magnetic demagnetization of host SSD blocks.
 
 ## 4. Alternatives Considered
 1. **Unrestricted Shared Global Blackboard:** Rejected because any compromised or buggy engine could read or overwrite another engine's private state or leak user data.

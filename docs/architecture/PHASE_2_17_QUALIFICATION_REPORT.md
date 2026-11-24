@@ -17,7 +17,8 @@ Phase 2.17 has established the complete Privacy Architecture for OVIC EON. The s
 The architecture enforces all core privacy and ethical mandates:
 1. **Zero Raw Media Disk Retention:** Camera feeds and audio buffers exist strictly in volatile RAM ring buffers (`/dev/shm`) and are never written to disk by default.
 2. **Epistemic Modesty Invariant:** Emotion estimates are formally specified as uncertain behavioral observations (`is_definitive_claim = false`), strictly prohibiting diagnostic or manipulative truth claims.
-3. **Truth-in-Specification Deletion:** Replaces false claims of physical SSD block zeroing with mathematical unrecoverability via per-subject AES-256-GCM envelope encryption, key destruction, and SQLite WAL truncation.
+3. **Truth-in-Specification Deletion:** Replaces false claims of physical SSD block zeroing with cryptographic erasure via per-subject AES-256-GCM envelope encryption, key destruction, SQLite WAL truncation, and a multi-tier deletion lifecycle distinguishing software guarantees from hardware dependencies.
+4. **Twelve-Class Data Sensitivity Taxonomy:** Formalizes 12 data sensitivity classes with explicit retention, storage medium, and cryptographic rules.
 
 In accordance with Phase 2 governance rules, this sub-phase is an **architecture and design specification** classified as **DESIGNED — NOT IMPLEMENTED**.
 
@@ -45,7 +46,8 @@ In accordance with Phase 2 governance rules, this sub-phase is an **architecture
 
 - [x] **Zero Raw Media Retention Mandated:** Defined in volatile memory architecture with disk write prohibition.
 - [x] **Granular 3-Tier Consent Model:** Formalized Anonymous, Ephemeral Session, and Consented Personalization tiers.
-- [x] **Mathematical Cryptographic Shredding:** Grounded in per-subject DEK destruction and WAL truncation.
+- [x] **Multi-Tier Deletion Lifecycle Defined:** Six-tier lifecycle formalizing logical tombstoning, cryptographic erasure, WAL truncation, hardware dependencies, in-memory zeroization, and backup lifecycles.
+- [x] **Twelve Data Sensitivity Classes Specified:** Complete taxonomy in `PRIVACY_DATA_CLASSIFICATION.md`.
 - [x] **Epistemic Modesty & Non-Diagnostic Guarantee:** Explicit `is_definitive_claim = false` contract.
 - [x] **Automated Verification Procedures:** Defined unit/integration tests for media absence and key destruction.
 

@@ -22,11 +22,11 @@ flowchart TD
         EncryptedStorage["Tier 3: Consented Personalization<br/>(Encrypted SQLite under Subject DEK)"]
     end
 
-    subgraph ShreddingAction["5. Right to be Forgotten (Shredding)"]
+    subgraph ShreddingAction["5. Multi-Tier Deletion Lifecycle"]
         UserRevoke["User Revocation Command"]
-        DEKDestroy["Destroy Subject DEK in Memory & Key Table"]
-        WALTruncate["PRAGMA wal_checkpoint(TRUNCATE)"]
-        Unrecoverable["Ciphertext Blocks on Flash Mathematically Undecipherable"]
+        DEKDestroy["Destroy Subject DEK in Memory & Key Table<br/>(sodium_memzero)"]
+        WALTruncate["PRAGMA wal_checkpoint(TRUNCATE) & VACUUM"]
+        CryptographicInaccessible["Ciphertext Cryptographically Inaccessible<br/>(Flash Sanitization Hardware-Dependent)"]
     end
 
     CameraFeed --> ShmRing
@@ -45,5 +45,5 @@ flowchart TD
 
     UserRevoke --> DEKDestroy
     DEKDestroy --> WALTruncate
-    WALTruncate --> Unrecoverable
+    WALTruncate --> CryptographicInaccessible
     EncryptedStorage -.-> UserRevoke

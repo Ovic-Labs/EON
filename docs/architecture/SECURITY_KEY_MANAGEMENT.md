@@ -10,7 +10,7 @@
 
 ## 1. Two-Tier Envelope Encryption Hierarchy
 
-To safeguard stored user context while enabling instantaneous, mathematically guaranteed cryptographic deletion (Right to be Forgotten):
+To safeguard stored user context while enabling instantaneous, cryptographically verified deletion (Right to be Forgotten):
 
 ```text
 +-------------------------------------------------------------------------+
@@ -35,7 +35,11 @@ To safeguard stored user context while enabling instantaneous, mathematically gu
 
 ## 2. Key Lifecycle and Cryptographic Shredding
 
-1. **Generation:** Each subject is assigned a unique, cryptographically random 256-bit Data Encryption Key (DEK) generated via `/dev/urandom`.
+1. **Generation:** Each subject is assigned a unique, cryptographically random 256-bit Data Encryption Key (DEK) generated via `/dev/urandom` (CSPRNG).
 2. **Storage:** The DEK is encrypted under the system KEK using AES-256-GCM and stored in the encrypted key table.
-3. **Usage:** When subject data is read or written, the DEK is decrypted into non-swappable volatile RAM (`mlock`).
-4. **Cryptographic Shredding:** Upon user deletion request, the encrypted DEK is permanently deleted from the database, followed by `PRAGMA wal_checkpoint(TRUNCATE)`. All ciphertext records referencing that subject become permanently undecipherable, overcoming SSD wear-leveling limits.
+3. **Usage:** When subject data is read or written, the DEK is decrypted into non-swappable volatile RAM pinned via `mlock()` / `VirtualLock()`.
+4. **Cryptographic Shredding:** Upon user deletion request:
+   - In-memory DEK instances are zeroed using `sodium_memzero()` or `explicit_bzero()`.
+   - The encrypted DEK record in `context.db` is overwritten with random bytes and deleted.
+   - An immediate `PRAGMA wal_checkpoint(TRUNCATE)` is executed to flush and truncate write-ahead log journals.
+   - All persistent ciphertext records referencing that subject become cryptographically inaccessible under AES-256-GCM, overcoming physical SSD wear-leveling limitations.

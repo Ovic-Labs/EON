@@ -16,7 +16,7 @@
   - Clang 14+, Clang 15+, Clang 16+ (Linux, macOS)
   - MSVC 2022 (v143 toolset, Windows 10/11)
 - **Build System:** Modern CMake 3.22+ (`cmake_minimum_required(VERSION 3.22)`).
-- **Robotics Middleware Integration:** `ament_cmake` package support for ROS 2 Humble / Iron / Jazzy.
+- **Robotics Middleware Integration:** `ament_cmake` package support for ROS 2 Humble and Jazzy (Legacy: Iron).
 
 ---
 

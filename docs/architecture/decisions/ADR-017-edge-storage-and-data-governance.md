@@ -19,7 +19,7 @@ Adopt an **Embedded Serverless Storage Architecture with Zero Raw Media Persiste
 1. **Volatile RAM Ingestion (`CONST-PRV-001`):** Raw camera video frames and audio chunks exist exclusively in volatile RAM ring buffers and are zero-wiped immediately following feature extraction. Zero raw multimedia is ever written to disk.
 2. **Serverless Embedded Relational Storage:** Standardize on embedded SQLite with Write-Ahead Logging (WAL) and SQLCipher for persistent user preferences, eliminating heavy database server daemons.
 3. **Cryptographic Shredding (`CONST-PRV-003`):** Every user profile is encrypted with an isolated symmetric key. User deletion requests permanently destroy this key from the secure key store.
-4. **Realistic Erasure Boundaries:** Document explicitly that cryptographic key destruction guarantees mathematical unrecoverability, acknowledging physical SSD wear-leveling realities without making unsupported hardware-level claims.
+4. **Realistic Erasure Boundaries:** Document explicitly that cryptographic key destruction guarantees cryptographic inaccessibility of ciphertext under AES-256-GCM, acknowledging physical SSD wear-leveling realities without making unsupported hardware-level claims.
 
 ## 4. Alternatives Considered
 1. **Dockerized PostgreSQL or MongoDB Container:** Heavy daemon overhead (>400 MB RAM idle) and high flash write frequency caused by write-ahead logs.

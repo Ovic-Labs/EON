@@ -17,7 +17,7 @@ Robotic affective computing processes human faces, voices, and emotional reactio
 We decide to mandate a strict **Privacy-by-Design Architecture**:
 1. **Zero Raw Media Disk Retention:** Camera feeds and audio buffers exist strictly in volatile RAM ring buffers (`/dev/shm`) and are discarded within $\le 100\text{ ms}$; zero raw media is written to non-volatile disk.
 2. **Epistemic Modesty Contract:** Inferred emotions are explicitly marked as uncertain behavioral observations (`is_definitive_claim = false`). Medical diagnosis or covert psychological profiling is architecturally prohibited.
-3. **Truth-in-Specification Deletion:** Replaces false physical SSD zeroing claims with mathematical unrecoverability via per-subject DEK destruction and SQLite `PRAGMA wal_checkpoint(TRUNCATE)`.
+3. **Truth-in-Specification Deletion:** Replaces false physical SSD zeroing claims with cryptographic erasure via per-subject DEK destruction, in-memory zeroization, and SQLite `PRAGMA wal_checkpoint(TRUNCATE)`, formalized in a multi-tier deletion lifecycle.
 4. **Granular Consent:** 3-tier model separating Anonymous Passerby, Ephemeral Session, and Consented Personalization.
 
 ## 3. Alternatives Considered

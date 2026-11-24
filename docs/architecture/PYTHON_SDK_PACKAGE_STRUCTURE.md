@@ -153,7 +153,7 @@ To ensure minimal overhead on embedded compute boards (e.g., NVIDIA Jetson, Rasp
 | **Local** | `[local]` | `psutil>=5.9.0`, `pyyaml>=6.0.1` | Robot Onboard Direct Binding | $+ 5\text{ MB}$ |
 | **Remote** | `[remote]` | `websockets>=12.0`, `aiohttp>=3.9.0` | WebSocket Streaming / Teleop | $+ 8\text{ MB}$ |
 | **gRPC** | `[grpc]` | `grpcio>=1.59.0`, `protobuf>=4.24.0` | High-throughput binary RPC | $+ 30\text{ MB}$ |
-| **ROS 2** | `[ros2]` | `rclpy` (system bridge / stubs) | ROS 2 Humble/Iron integration | Zero pip add |
+| **ROS 2** | `[ros2]` | `rclpy` (system bridge / stubs) | ROS 2 Humble / Jazzy integration | Zero pip add |
 | **Dev** | `[dev]` | `pytest`, `pytest-asyncio`, `ruff`, `mypy`, `build` | Developer workstations & CI | Dev only |
 
 ### 4.2 Declarative `pyproject.toml` Architecture Specification

@@ -365,18 +365,17 @@ The project foundation has achieved formal production qualification across all f
 
 ### Development roadmap
 
-| Version | Milestone | Status |
-|---|---|---|
-| 0.1.0 | Phase 0 Foundation & Phase 1 Core Infrastructure | **FOUNDATION QUALIFIED** (Core Bus & Schemas Implemented) |
-| 0.2.0 | Seven engine interfaces & execution harness | Planned (Phase 1.4+) |
-| 0.3.0 | Initial engine implementations | Planned (Phase 2) |
-| 0.4.0 | Integrated runtime | Planned |
-| 0.5.0 | ROS 2 integration | Planned |
-| 0.6.0 | Integrated simulation | Planned |
-| 0.7.0 | SDK preview | Planned |
-| 0.8.0 | Performance and reliability qualification | Planned |
-| 0.9.0 | Enterprise evaluation candidate | Planned |
-| 1.0.0 | Production release, subject to qualification | Planned |
+| Version | Milestone | Scope & Description | Status |
+|---|---|---|---|
+| 0.1.0 | Phase 0 Foundation & Phase 1 Runtime Foundation | Product specification baseline (0.1–0.15) & Core EventBus, Schemas, Packaging (1.1–1.3) | **QUALIFIED & IMPLEMENTED** (203 tests passing) |
+| 0.1.5 | Phase 1 Technical Research & Feasibility | Scientific feasibility across emotion, empathy, memory, and hardware (1.1–1.18) | **QUALIFIED WITH CONDITIONS** |
+| 0.2.0 | Phase 2 Complete System Architecture | Layered architecture, 7 engine boundaries, SDKs, ROS 2, edge deploy, privacy, ADR-001–028 (2.1–2.20) | **QUALIFIED ARCHITECTURE BASELINE** |
+| 0.3.0 | Phase 3 Intelligence Engines Runtime Foundation | Execution harness, model adapter pipelines, and initial perception engine runtimes (ERS, HBU) | Planned (Phase 3.1–3.3) |
+| 0.4.0 | Phase 3 Cognitive & Behavioral Engines | Emotional memory (EMS), empathy (ERE), personality (PSE), social interaction (SIE), response (ERG) | Planned (Phase 3.4–3.6) |
+| 0.5.0 | Phase 3 C++ SDK & ROS 2 Bridge Integration | Native `libeonsdk` and `eon_ros2_bridge` runtime integration and lifecycle synchronization | Planned (Phase 3.7) |
+| 0.6.0 | Hardware-in-the-Loop Simulation & Benchmarks | Isaac Sim, Gazebo, and physical reference hardware benchmark qualification | Planned |
+| 0.7.0 | Enterprise Evaluation Candidate | Edge multi-robot fleet pilot testing and security hardening | Planned |
+| 1.0.0 | Production Release | Full production certification and deployment qualification | Planned |
 
 ---
 
@@ -384,7 +383,7 @@ The project foundation has achieved formal production qualification across all f
 
 The documentation is organized around product definition, engineering requirements, architecture, implementation, and qualification.
 
-For a structured index and reading guide across all Phase 0 specifications, see the [Documentation Index](docs/README.md).
+For a structured index and reading guide across all specifications, see the central [Documentation Index](docs/README.md) and the dedicated [Architecture Documentation Index](docs/architecture/README.md).
 
 ### Product documentation
 
@@ -463,6 +462,18 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [Phase 2.3–2.10 Architecture Correction Audit](docs/architecture/PHASE_2_3_TO_2_10_CORRECTION_AUDIT.md)
 - [Phase 2.3–2.10 Master Qualification Report](docs/architecture/PHASE_2_3_TO_2_10_FINAL_QUALIFICATION_REPORT.md)
 - [Phase 2.11–2.20 Final Consolidated Qualification Report](docs/architecture/PHASE_2_11_TO_2_20_FINAL_QUALIFICATION_REPORT.md)
+
+### Complete architecture audit and requalification reports
+
+- [Phase 2 Deliverables Inventory](docs/audit/PHASE_2_11_TO_2_20_AUDIT_INVENTORY.md)
+- [Privacy Deletion Claims Audit](docs/audit/PRIVACY_DELETION_CLAIMS_AUDIT.md)
+- [ROS 2 Compatibility Audit](docs/audit/ROS2_COMPATIBILITY_AUDIT.md)
+- [Documentation Consistency Audit](docs/audit/DOCUMENTATION_CONSISTENCY_AUDIT.md)
+- [Commit and Qualification Evidence Audit](docs/audit/COMMIT_AND_QUALIFICATION_EVIDENCE_AUDIT.md)
+- [Edge Resource Budget Audit](docs/audit/EDGE_RESOURCE_BUDGET_AUDIT.md)
+- [Full Phase 2 Architecture Consistency Audit](docs/audit/PHASE_2_FULL_ARCHITECTURE_CONSISTENCY_AUDIT.md)
+- [Phase 2 Requirements Traceability Matrix](docs/audit/PHASE_2_REQUIREMENTS_TRACEABILITY.md)
+- [Phase 2 Final Requalification Report](docs/audit/PHASE_2_FINAL_REQUALIFICATION_REPORT.md)
 
 ### Additional documentation
 

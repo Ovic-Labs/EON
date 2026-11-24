@@ -36,8 +36,8 @@ Human interaction with autonomous robots encompasses varying degrees of familiar
 ## 2. Instantaneous Consent Revocation (Right to be Forgotten)
 
 1. **Revocation Mechanism:** A user or administrator can issue a revocation command via REST API (`POST /api/v1/context/{subject_id}/purge`), ROS 2 service (`eon_msgs/srv/PurgeSubjectContext`), or voice command ("Robot, delete all my data").
-2. **Cryptographic Shredding Execution:**
-   - The subject’s unique Data Encryption Key (DEK) is overwritten and destroyed in the key table.
-   - Associated database records are deleted.
-   - An explicit `PRAGMA wal_checkpoint(TRUNCATE)` is executed to purge WAL log residues.
-   - Any historical backup containing the ciphertext records becomes mathematically unrecoverable.
+2. **Multi-Tier Deletion Execution:**
+   - **Logical Tombstoning:** Subject records are immediately flagged as tombstoned, preventing exposure in subsequent API or reasoning operations.
+   - **Cryptographic Shredding:** The subject’s unique Data Encryption Key (DEK) is overwritten with cryptographic pseudorandom noise and destroyed in the secure key table; active in-memory DEK copies are zeroed using `sodium_memzero()`.
+   - **WAL Journal Checkpointing:** An explicit `PRAGMA wal_checkpoint(TRUNCATE)` is executed to purge WAL log residues from secondary storage.
+   - **Snapshot and Backup Independence:** Any historical backup or filesystem snapshot containing the ciphertext records becomes cryptographically inaccessible without the destroyed DEK. However, physical backup media and volume snapshots are retained until their independently configured snapshot retention schedule expires.

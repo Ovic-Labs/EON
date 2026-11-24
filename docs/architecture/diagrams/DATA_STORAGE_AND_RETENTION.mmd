@@ -11,12 +11,12 @@ flowchart TD
         CiphertextRecords["Ciphertext Context Records (AES-256-GCM)"]
     end
 
-    subgraph DeletionLifecycle["Data Shredding & Retention Lifecycle"]
+    subgraph DeletionLifecycle["Multi-Tier Deletion Lifecycle"]
         RetentionPolicy["Retention Policy (Consented subjects only)"]
         PurgeRequest["User Purge Request (Right to be Forgotten)"]
-        DEKOverwritten["DEK Overwritten with Cryptographic Random Noise"]
+        DEKOverwritten["DEK Overwritten with Cryptographic Random Noise<br/>(In-Memory sodium_memzero)"]
         WALCheckpoint["PRAGMA wal_checkpoint(TRUNCATE)"]
-        ResidualCiphertext["Ciphertext on Flash Blocks is Permanently Undecipherable"]
+        ResidualCiphertext["Ciphertext Cryptographically Inaccessible<br/>(Physical Flash Erasure Hardware-Dependent)"]
     end
 
     RAM -->|Features Extracted| CryptographicEnvelope

@@ -1,4 +1,3 @@
-```mermaid
 graph TD
     subgraph AppLayer ["Client Application Layer"]
         UserApp["Robot Application / Script / HRI Node"]
@@ -56,4 +55,3 @@ graph TD
     HttpTransport -.->|"HTTPS / TLS 1.3"| ApiGateway
     WsTransport -.->|"WSS Event Stream"| ApiGateway
     GrpcTransport -.->|"gRPC / HTTP/2"| ApiGateway
-```

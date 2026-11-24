@@ -298,7 +298,7 @@ This specification formalizes the public REST endpoints and WebSocket channels e
     "status": "KEY_DESTROYED",
     "erasure_method": "CRYPTOGRAPHIC_SHREDDING",
     "shredded_key_id": "dek_usr_491a",
-    "mathematical_unrecoverability_guaranteed": true,
+    "cryptographic_erasure_verified": true,
     "timestamp": "2026-11-23T12:07:00.000000Z"
   }
   ```

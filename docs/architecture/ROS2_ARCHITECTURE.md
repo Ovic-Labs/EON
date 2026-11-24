@@ -5,7 +5,7 @@
 **Status:** `DESIGNED — NOT IMPLEMENTED (Phase 2 Architecture Baseline)`  
 **Target Audience:** Robotics Software Engineers, ROS 2 Architects, Systems Integrators  
 **Traceability:** PRD Section 4.5, SRS-ARCH-011, ADR-021, ADR-014, ADR-020  
-**Compatibility:** ROS 2 Humble (LTS), ROS 2 Iron, ROS 2 Jazzy (LTS)
+**Compatibility:** ROS 2 Humble (LTS, Ubuntu 22.04), ROS 2 Jazzy (LTS, Ubuntu 24.04), Rolling Ridley; Legacy: ROS 2 Iron (EOL)
 
 ---
 
