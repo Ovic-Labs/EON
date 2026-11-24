@@ -1,0 +1,35 @@
+flowchart LR
+    subgraph Publishers["Event Publishers"]
+        SensorPub["Perception Ingress<br/>(Camera / Audio Feeds)"]
+        EnginePub["Intelligence Engines<br/>(ERS, EMS, HBU)"]
+        ClientPub["Client SDKs<br/>(C++ / Python)"]
+    end
+
+    subgraph EventEnvelopeDef["Event Envelope Structure"]
+        Envelope["EventEnvelope<br/>- event_id: UUIDv4<br/>- topic: String<br/>- timestamp_ns: uint64<br/>- priority: LOW | NORMAL | HIGH | CRITICAL<br/>- payload: Bytes / Protobuf"]
+    end
+
+    subgraph PriorityQueues["Priority-Lane Queues (Bounded)"]
+        CritLane["CRITICAL Priority Lane<br/>(Emergency / Safety Signals - NEVER DROPPED)"]
+        HighLane["HIGH Priority Lane<br/>(State Transitions / LifeCycle Events)"]
+        NormLane["NORMAL Priority Lane<br/>(Affect & Behaviour Inferences)"]
+        LowLane["LOW Priority Lane<br/>(Telemetry & Background Logs)"]
+    end
+
+    subgraph DropPolicySubsystem["Backpressure & Drop Policy"]
+        PolicyCheck{"Queue Saturated?"}
+        DropOldest["DROP_OLDEST Policy<br/>(Discards stale perceptual frames)"]
+    end
+
+    subgraph Subscribers["Event Subscribers"]
+        ReasoningEngines["Reasoning Engines (ERE, PSE, SIE)"]
+        ResponseEngine["Response Generator (ERG)"]
+        TelemetryLogger["Diagnostics Logger"]
+    end
+
+    Publishers --> Envelope
+    Envelope --> PriorityQueues
+
+    PriorityQueues --> PolicyCheck
+    PolicyCheck -->|Yes| DropOldest
+    PolicyCheck -->|No| Subscribers

@@ -1,0 +1,33 @@
+flowchart TD
+    subgraph FaultTrigger["Fault Triggers"]
+        Crash["Engine Process Crash / Segfault"]
+        Deadlock["Thread Deadlock / Infinite Loop"]
+        BufferOverrun["Perceptual Ingress Queue Flooding"]
+        SensorLoss["Camera / Mic Disconnection"]
+    end
+
+    subgraph ContainmentBoundaries["Containment & Isolation Boundaries"]
+        ThreadIsolation["Worker Thread Isolation<br/>(Crash in ERS does not crash Core Event Bus)"]
+        Watchdog["Systemd Watchdog (2.0s Heartbeat)<br/>(Kills & restarts deadlocked daemons)"]
+        BoundedQueues["Bounded Ring Buffers<br/>(DROP_OLDEST drops stale frames without memory growth)"]
+        GracefulDegradation["Graceful Degradation<br/>(Loss of camera drops to audio-only affect mode)"]
+    end
+
+    subgraph SafetyPreservation["Robot Physical Safety Protection"]
+        FailSilent["Fail-Silent Contract<br/>(Proposal timeout expires after 200ms)"]
+        SafetyArbiter["Robot Safety Arbiter<br/>(Commands neutral resting posture)"]
+        ZeroMotionRisk["Zero Physical Motion Risk<br/>(EON cannot command physical motors)"]
+    end
+
+    Crash --> ThreadIsolation
+    Deadlock --> Watchdog
+    BufferOverrun --> BoundedQueues
+    SensorLoss --> GracefulDegradation
+
+    ThreadIsolation --> FailSilent
+    Watchdog --> FailSilent
+    BoundedQueues --> FailSilent
+    GracefulDegradation --> FailSilent
+
+    FailSilent --> SafetyArbiter
+    SafetyArbiter --> ZeroMotionRisk

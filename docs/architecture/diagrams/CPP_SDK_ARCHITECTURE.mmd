@@ -1,0 +1,48 @@
+flowchart TD
+    subgraph HostApplication["Host Robotics Application"]
+        HostNode["C++ Robotics Node / Controller"]
+    end
+
+    subgraph PublicAPI["libeonsdk (Public Header Interfaces)"]
+        EonClient["eon::client::EonClient"]
+        Publisher["eon::events::EventPublisher"]
+        Subscriber["eon::events::EventSubscriber"]
+        Lifecycle["eon::lifecycle::LifecycleMonitor"]
+        SHMView["eon::shm::SharedMemoryView"]
+        ResultMonad["eon::Result<T, EonError>"]
+    end
+
+    subgraph ABI_Barrier["ABI Stability & Pimpl Boundary"]
+        PimplImpl["Opaque Impl Classes (eon::client::EonClient::Impl)"]
+        C_API["Flat C-ABI Bridge (eon_c.h)"]
+    end
+
+    subgraph PrivateImplementation["Private SDK Core"]
+        ThreadPool["Worker Thread Pool (eon::ThreadPool)"]
+        LockFreeQueue["Lock-Free SPSC Queue"]
+        IPCClient["Socket Transport (POSIX UDS / Win32 Pipes)"]
+        ZeroCopySHM["POSIX /dev/shm Ring Buffer Client"]
+    end
+
+    subgraph DaemonTarget["EON Core Daemon"]
+        DaemonSocket["/var/run/eon/eon.sock"]
+    end
+
+    HostNode --> EonClient
+    HostNode --> Publisher
+    HostNode --> Subscriber
+    HostNode --> Lifecycle
+    HostNode --> SHMView
+
+    EonClient --> PimplImpl
+    Publisher --> PimplImpl
+    Subscriber --> PimplImpl
+    Lifecycle --> PimplImpl
+    C_API --> PimplImpl
+
+    PimplImpl --> ThreadPool
+    PimplImpl --> LockFreeQueue
+    PimplImpl --> IPCClient
+    SHMView --> ZeroCopySHM
+
+    IPCClient --> DaemonSocket

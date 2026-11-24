@@ -1,0 +1,32 @@
+flowchart TD
+    subgraph HostPlatform["Edge Robotics Hardware"]
+        CPU["Host CPU (x86_64 or aarch64 ARM64)"]
+        RAM["System RAM (4GB - 64GB)"]
+        NPU_GPU["Optional NPU / GPU Acceleration (OpenVINO / TensorRT)"]
+        Flash["Encrypted NVMe / eMMC Flash Storage"]
+    end
+
+    subgraph OSLayer["Embedded Linux OS Layer"]
+        Systemd["systemd (Process Supervision & Watchdogs)"]
+        Cgroups["cgroups v2 (memory.max, cpu.max limits)"]
+        Tmpfs["tmpfs RAM-backed /dev/shm (Ring Buffers)"]
+        LUKS["dm-crypt LUKS Volume Encryption"]
+    end
+
+    subgraph EonService["EON Edge Runtime Services"]
+        CoreDaemon["eond (EON Core Daemon, user: eon)"]
+        ModelSandbox["Inference Worker Pool (ONNX INT8 / FP16)"]
+        SQLiteDB["context.db (Per-Subject AES-256 Encrypted)"]
+    end
+
+    CPU --> Cgroups
+    RAM --> Tmpfs
+    Flash --> LUKS
+
+    Systemd -->|Watchdog 2.0s| CoreDaemon
+    Cgroups -->|Restricts RAM/CPU| CoreDaemon
+    Tmpfs <-->|Zero-Copy Frames| CoreDaemon
+    LUKS <-->|Protected DB Storage| SQLiteDB
+
+    CoreDaemon <--> ModelSandbox
+    ModelSandbox -.-> NPU_GPU

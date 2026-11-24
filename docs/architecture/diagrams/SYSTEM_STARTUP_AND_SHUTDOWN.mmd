@@ -1,0 +1,39 @@
+sequenceDiagram
+    autonumber
+    actor Operator as Robot Operator / Systemd
+    participant Core as EON Core Daemon (eond)
+    participant Watchdog as Systemd Watchdog
+    participant Shm as /dev/shm Ring Buffer
+    participant Context as Encrypted SQLite (context.db)
+    participant Engines as Seven Intelligence Engines
+    participant ROS2 as eon_ros2_bridge
+
+    %% Startup Sequence
+    Note over Operator,ROS2: PHASE 1: DETERMINISTIC SYSTEM STARTUP
+    Operator->>Core: systemd start eon.service
+    activate Core
+    Core->>Core: Load configuration & verify permissions (0660)
+    Core->>Shm: Allocate POSIX SHM ring buffers
+    Core->>Context: Open context.db & unwrap DEKs via TPM/KEK
+    Core->>Engines: Initialize 7 Engines (DISCOVERED -> INITIALIZING -> INITIALIZED)
+    Engines-->>Core: All engines successfully initialized
+    Core->>Engines: Transition(RUNNING)
+    Core->>Watchdog: sd_notify("READY=1") & Start 2.0s Heartbeat
+    Core->>ROS2: Open UDS IPC Socket (/var/run/eon/eon.sock)
+    ROS2->>Core: Connect() & Lifecycle Node on_configure() -> on_activate()
+    Note over Core,ROS2: EON SYSTEM OPERATIONAL (ACTIVE)
+
+    %% Shutdown Sequence
+    Note over Operator,ROS2: PHASE 2: DETERMINISTIC CLEAN SHUTDOWN
+    Operator->>Core: systemd stop eon.service (SIGTERM)
+    Core->>ROS2: Publish Lifecycle State: STOPPING
+    ROS2->>ROS2: on_deactivate() -> Cease publishing proposals (neutral posture)
+    Core->>Engines: Command Transition(STOPPING -> STOPPED)
+    Engines->>Engines: Drain active inference queues & unload models
+    Engines-->>Core: Engines stopped confirmation
+    Core->>Context: PRAGMA wal_checkpoint(PASSIVE) & Close database
+    Core->>Shm: Unmap & unlink /dev/shm segments
+    Core->>Watchdog: sd_notify("STOPPING=1")
+    Core->>Core: Close IPC Unix domain socket
+    Core-->>Operator: Process exit(0)
+    deactivate Core

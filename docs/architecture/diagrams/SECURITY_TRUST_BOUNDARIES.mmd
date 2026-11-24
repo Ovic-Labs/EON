@@ -1,0 +1,53 @@
+flowchart TD
+    subgraph Domain1["Domain 1: Physical Robot Safety & Actuation"]
+        SafetyHAL["Safety Controller HAL"]
+        EStop["Hardware E-Stop"]
+        Motors["Physical Motors"]
+    end
+
+    subgraph TrustBoundaryA["Trust Boundary A (Physical Motion Safety Gate)"]
+        BoundaryA["is_authoritative = false invariant<br/>Zero direct motor driver code in EON"]
+    end
+
+    subgraph Domain2["Domain 2: EON Core Protected Daemon"]
+        CoreProcess["eond Process (UID: eon, GID: eon)"]
+        EventBus["Core Event Bus & FSM"]
+        CryptoEngine["AES-256-GCM Envelope Encryption"]
+        LocalDB["context.db (Encrypted Under Subject DEK)"]
+    end
+
+    subgraph TrustBoundaryB["Trust Boundary B (Local IPC Privilege Barrier)"]
+        BoundaryB["Unix Domain Socket (/var/run/eon/eon.sock 0660)<br/>SO_PEERCRED UID/GID Verification & Capability Tokens"]
+    end
+
+    subgraph Domain3["Domain 3: Intelligence Engines & Client SDKs"]
+        Engines["7 Engines (ERS, EMS, ERE, PSE, SIE, ERG, HBU)"]
+        CppSDK["libeonsdk C++ Clients"]
+        ROS2Bridge["ROS 2 Bridge Nodes"]
+    end
+
+    subgraph TrustBoundaryC["Trust Boundary C (Cloud Network Perimeter)"]
+        BoundaryC["mTLS Mutual Authentication with X.509 Device Certs<br/>TLS 1.3 Transport Encryption & Privacy Filters"]
+    end
+
+    subgraph Domain4["Domain 4: Optional Cloud Platform"]
+        CloudGW["Envoy API Gateway"]
+        FleetCloud["Fleet Telemetry & Context Sync"]
+    end
+
+    Motors <--> EStop
+    SafetyHAL --> Motors
+    SafetyHAL <--> BoundaryA
+    BoundaryA <--> CoreProcess
+
+    CoreProcess <--> CryptoEngine
+    CryptoEngine <--> LocalDB
+    CoreProcess <--> BoundaryB
+
+    BoundaryB <--> Engines
+    BoundaryB <--> CppSDK
+    BoundaryB <--> ROS2Bridge
+
+    CoreProcess <--> BoundaryC
+    BoundaryC <--> CloudGW
+    CloudGW <--> FleetCloud

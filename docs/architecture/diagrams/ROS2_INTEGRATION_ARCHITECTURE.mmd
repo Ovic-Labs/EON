@@ -1,0 +1,35 @@
+flowchart TD
+    subgraph ROS2_Ecosystem["ROS 2 Middleware Graph"]
+        CamNode["Camera Publisher (/camera/image_raw)"]
+        AudioNode["Audio Publisher (/audio/channel0)"]
+        MotionArbiter["Nav2 / Motion Controller (/cmd_vel, Trajectories)"]
+        DiagnosticsAggregator["Diagnostics Aggregator (/diagnostics)"]
+    end
+
+    subgraph EonRos2Bridge["eon_ros2_bridge Package (Optional)"]
+        SensorBridge["eon_sensor_bridge_node<br/>(rclcpp_lifecycle::LifecycleNode)"]
+        ResponseBridge["eon_social_response_bridge_node<br/>(Publishes eon_msgs/MotionProposal)"]
+        DiagNode["eon_diagnostics_node<br/>(Publishes 7-State Operational Health)"]
+    end
+
+    subgraph NativeEonSdk["libeonsdk (C++ Client Core)"]
+        ClientInstance["eon::client::EonClient"]
+        ShmTransport["Zero-Copy Shared Memory Client"]
+        IpcTransport["Unix Domain Socket IPC Client"]
+    end
+
+    subgraph EonCoreDaemon["EON Core Runtime Service"]
+        CoreDaemon["eond Service"]
+    end
+
+    CamNode -->|sensor_msgs/Image (SensorData QoS)| SensorBridge
+    AudioNode -->|audio_msgs/AudioData| SensorBridge
+    SensorBridge --> ShmTransport
+    ResponseBridge <-- ClientInstance
+    ResponseBridge -->|eon_msgs/MotionProposal is_authoritative=false| MotionArbiter
+    DiagNode <-- ClientInstance
+    DiagNode -->|diagnostic_msgs/DiagnosticArray| DiagnosticsAggregator
+
+    ShmTransport --> CoreDaemon
+    IpcTransport <--> CoreDaemon
+    ClientInstance <--> IpcTransport

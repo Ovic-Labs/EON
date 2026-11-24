@@ -345,7 +345,8 @@ OVIC EON is being developed through controlled, milestone-based engineering with
   Research scope across all eighteen sub-phases (1.1–1.18) is completed and qualified, subject to documented conditions and outstanding live-hardware verification.
 - **Phase 1 Runtime Foundation:** `IMPLEMENTED & QUALIFIED`  
   Repository packaging scaffolding (Phase 1.1), foundational data schemas and serialization contracts (Phase 1.2), and the asynchronous in-memory core event bus (Phase 1.3) are implemented with complete regression test evidence.
-- **Phase 2 Architecture & System Engineering Design (Sub-phases 2.1–2.10):** `QUALIFIED — ARCHITECTURE & SUBSYSTEMS SPECIFIED`  
+- **Phase 2 Architecture & System Engineering Design (Sub-phases 2.1–2.20):** `QUALIFIED — COMPLETE SYSTEM ARCHITECTURE & ENGINEERING DESIGN`  
+  All twenty Phase 2 sub-phases (2.1–2.20) are complete and formally qualified. Establishes the full system architecture baseline including C++ SDK, ROS 2 integration, Robot Abstraction Layer (RAL), edge deployment, optional cloud, security/STRIDE, privacy-by-design, ADR-001 through ADR-028, 18 system diagrams, and scalability/failure isolation reviews.
   The 10-tier layered architecture, seven-engine boundary specifications, EON Core, Engine Lifecycle, Event-Driven Communication, Shared Context Management, Model Adapter Architecture, Data Architecture, API Architecture, Python SDK, 19 ADRs, and master qualification report (`EON-QUAL-PH2-FINAL-001`) are fully specified and qualified.
 - **Seven Intelligence Engines:** `NOT IMPLEMENTED (0%)`  
   Full software runtimes for ERS, EMS, ERE, PSE, SIE, ERG, and HBU are not yet implemented.
@@ -434,7 +435,7 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [ROS 2 Integration Architecture](docs/research/phase-1/ROS2_INTEGRATION_ARCHITECTURE.md)
 - [Phase 1 Master Qualification Report](docs/research/phase-1/PHASE_1_FINAL_QUALIFICATION_REPORT.md)
 
-### System architecture and engineering design (Phase 2 Sub-phases 2.1–2.10)
+### System architecture and engineering design (Phase 2 Sub-phases 2.1–2.20)
 
 - [System Layered Architecture](docs/architecture/SYSTEM_LAYERED_ARCHITECTURE.md)
 - [Inter-Layer Interfaces](docs/architecture/INTER_LAYER_INTERFACES.md)
@@ -451,9 +452,17 @@ For a structured index and reading guide across all Phase 0 specifications, see 
 - [Data Architecture](docs/architecture/DATA_ARCHITECTURE.md)
 - [API Architecture](docs/architecture/API_ARCHITECTURE.md)
 - [Python SDK Architecture](docs/architecture/PYTHON_SDK_ARCHITECTURE.md)
-- [Architecture Decision Records (ADR-001 through ADR-019)](docs/architecture/decisions/ADR-001-LAYERED-ARCHITECTURE.md)
+- [C++ SDK Architecture](docs/architecture/CPP_SDK_ARCHITECTURE.md)
+- [ROS 2 Architecture](docs/architecture/ROS2_ARCHITECTURE.md)
+- [Robot Abstraction Architecture](docs/architecture/ROBOT_ABSTRACTION_ARCHITECTURE.md)
+- [Edge Deployment Architecture](docs/architecture/EDGE_DEPLOYMENT_ARCHITECTURE.md)
+- [Optional Cloud Architecture](docs/architecture/CLOUD_ARCHITECTURE.md)
+- [Security Architecture](docs/architecture/SECURITY_ARCHITECTURE.md)
+- [Privacy Architecture](docs/architecture/PRIVACY_ARCHITECTURE.md)
+- [Architecture Decision Records (ADR-001 through ADR-028)](docs/architecture/decisions/ADR-001-LAYERED-ARCHITECTURE.md)
 - [Phase 2.3–2.10 Architecture Correction Audit](docs/architecture/PHASE_2_3_TO_2_10_CORRECTION_AUDIT.md)
 - [Phase 2.3–2.10 Master Qualification Report](docs/architecture/PHASE_2_3_TO_2_10_FINAL_QUALIFICATION_REPORT.md)
+- [Phase 2.11–2.20 Final Consolidated Qualification Report](docs/architecture/PHASE_2_11_TO_2_20_FINAL_QUALIFICATION_REPORT.md)
 
 ### Additional documentation
 

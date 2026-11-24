@@ -1,0 +1,42 @@
+flowchart TD
+    subgraph EonEngines["EON Intelligence Engines"]
+        ERS["ERS: Emotion Recognition"]
+        HBU["HBU: Behaviour Understanding"]
+        ERG["ERG: Emotion Response Generation"]
+    end
+
+    subgraph RAL["Robot Abstraction Layer (RAL)"]
+        SensorNormalizer["Sensor Normalization Engine<br/>(sRGB, 16kHz PCM, Odometry)"]
+        CapabilityModel["Robot Capability Manifest & Registry<br/>(Hardware Morphology Descriptor)"]
+        ExpressiveArbiter["Expressive Fallback Arbiter<br/>(Routes to alternative modalities)"]
+        ProposalFormatter["Proposal Formatter<br/>(Stamps is_authoritative = false)"]
+    end
+
+    subgraph HardwareAdapters["Hardware Adapter Plugins"]
+        ROS2Adapter["ROS 2 Bridge Adapter"]
+        GrpcAdapter["gRPC / Protobuf Adapter"]
+        SimAdapter["Simulation Adapter (Isaac / Gazebo)"]
+    end
+
+    subgraph PhysicalRobot["Physical Robot Platform (Hardware Vendor)"]
+        SafetyController["Certified Safety Controller<br/>(Collision Avoidance & Speed Limits)"]
+        EStopCircuit["Hardware E-Stop Relay"]
+        Motors["Motor Drives & Actuators"]
+    end
+
+    SensorNormalizer --> ERS
+    SensorNormalizer --> HBU
+    ERG --> ExpressiveArbiter
+    CapabilityModel --> ExpressiveArbiter
+    ExpressiveArbiter --> ProposalFormatter
+
+    ProposalFormatter --> ROS2Adapter
+    ProposalFormatter --> GrpcAdapter
+    ProposalFormatter --> SimAdapter
+
+    ROS2Adapter -->|SocialMotionProposal| SafetyController
+    GrpcAdapter -->|SocialMotionProposal| SafetyController
+    SimAdapter -->|Simulated Joint Proposals| SafetyController
+
+    SafetyController --> Motors
+    EStopCircuit -.->|Cuts Power Directly| Motors

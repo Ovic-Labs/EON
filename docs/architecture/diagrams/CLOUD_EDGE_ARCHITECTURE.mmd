@@ -1,0 +1,32 @@
+flowchart TD
+    subgraph EdgeAutonomous["Edge Robot Autonomous Domain"]
+        EdgeCore["EON Core Runtime (100% Autonomous Local Inference)"]
+        SyncAgent["Edge Cloud Sync Agent (Store-and-Forward Outbox)"]
+        LocalDB["Local Encrypted SQLite (context.db)"]
+    end
+
+    subgraph WAN_Boundary["Encrypted Network Boundary (mTLS / TLS 1.3)"]
+        NetworkLink["Internet / 4G / 5G / WiFi (Intermittent Link)"]
+    end
+
+    subgraph OptionalCloud["Optional OVIC Cloud Platform"]
+        CloudGateway["API Gateway (Envoy - mTLS Termination & Rate Limiting)"]
+        TenantService["Tenant Router & IAM (OAuth2 / OIDC)"]
+        FleetMgmt["Fleet Health Telemetry Service"]
+        ContextSync["Cross-Robot Context Sync Service (CRDT & Vector Clocks)"]
+        ArtifactRepo["OTA Model & Firmware Artifact Repository (Signed)"]
+        CloudDB["Multi-Tenant Database (PostgreSQL + TimescaleDB)"]
+    end
+
+    EdgeCore <--> LocalDB
+    LocalDB --> SyncAgent
+    SyncAgent <-->|Store & Forward Sync (NO Raw Media)| NetworkLink
+
+    NetworkLink <--> CloudGateway
+    CloudGateway --> TenantService
+    TenantService --> FleetMgmt
+    TenantService --> ContextSync
+    TenantService --> ArtifactRepo
+
+    FleetMgmt --> CloudDB
+    ContextSync --> CloudDB
