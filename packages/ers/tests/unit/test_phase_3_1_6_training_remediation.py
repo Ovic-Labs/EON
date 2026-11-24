@@ -307,6 +307,7 @@ def test_temperature_calibrator_optimizes_validation_nll() -> None:
 
 def test_onnx_model_exporter_generates_valid_graph(tmp_path: Path) -> None:
     """ONNXModelExporter must construct a valid ONNX graph that passes onnx.checker and runtime inference."""
+    pytest.importorskip("onnx", reason="ONNX export requires onnx package")
     labels = ["neutral", "happiness", "sadness", "anger", "fear", "surprise", "disgust"]
     D = 64
     H = 16
@@ -449,6 +450,7 @@ def test_evaluator_rejects_qualification_without_execution_proof(tmp_path: Path)
 
 def test_complete_15_stage_pipeline_with_real_training(tmp_path: Path) -> None:
     """The 15-stage pipeline must execute genuine preprocessing, feature extraction, training, calibration, and export."""
+    pytest.importorskip("onnx", reason="ONNX export requires onnx package")
     archive_file = tmp_path / "empirical_affect_data.zip"
     archive_file.write_bytes(b"empirical affective raw media data payload")
     archive_sha = hashlib.sha256(archive_file.read_bytes()).hexdigest().lower()
