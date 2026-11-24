@@ -10,8 +10,8 @@ from eon_ers.config import ERSConfig
 from eon_ers.contracts import EmotionObservation, ERSInput
 from eon_ers.quality.audio_quality import AudioQualityEvaluator
 from eon_ers.speech.adapters import (
-    AcousticFeatureProsodyAdapter,
     BaseSpeechModelAdapter,
+    ExperimentalAcousticProsodyAdapter,
     ONNXSpeechModelAdapter,
 )
 from eon_ers.speech.features import AcousticFeatureExtractor
@@ -45,7 +45,9 @@ class SpeechPipeline:
                 num_threads=config.num_threads,
             )
         else:
-            self.model_adapter = AcousticFeatureProsodyAdapter(model_id="ers-prosody-acoustic-v1")
+            self.model_adapter = ExperimentalAcousticProsodyAdapter(
+                model_id="ers-prosody-experimental-v1"
+            )
 
     def process(self, inp: ERSInput) -> EmotionObservation:
         """Execute speech acoustic processing pipeline on sensory input."""
@@ -132,6 +134,12 @@ class SpeechPipeline:
         acoustic_features = self.feature_extractor.extract_features(samples, sample_rate)
         acoustic_features.update(quality.metrics)
 
+        # Check adapter experimental status
+        if self.model_adapter.is_experimental:
+            limitations.append(
+                "Adapter uses experimental uncalibrated acoustic heuristics; not a validated emotion classifier."
+            )
+
         # Check model availability
         if not self.model_adapter.is_available:
             latency_ms = (time.perf_counter() - start_time) * 1000.0
@@ -212,20 +220,27 @@ class SpeechPipeline:
         # Abstention evaluation
         status = ObservationStatus.OK
         if (
-            confidence < self.config.confidence_threshold
+            self.model_adapter.is_experimental
+            or confidence < self.config.confidence_threshold
             or uncertainty > self.config.uncertainty_threshold
         ):
             status = ObservationStatus.INSUFFICIENT_EVIDENCE
-            limitations.append(
-                f"Low confidence ({confidence:.2f} < {self.config.confidence_threshold}) or high uncertainty ({uncertainty:.2f} > {self.config.uncertainty_threshold})."
-            )
+            if self.model_adapter.is_experimental:
+                limitations.append(
+                    "Abstaining from classification: unvalidated experimental feature adapter."
+                )
+            else:
+                limitations.append(
+                    f"Low confidence ({confidence:.2f} < {self.config.confidence_threshold}) "
+                    f"or high uncertainty ({uncertainty:.2f} > {self.config.uncertainty_threshold})."
+                )
 
         if quality.grade == QualityGrade.DEGRADED:
             status = ObservationStatus.DEGRADED
 
         latency_ms = (time.perf_counter() - start_time) * 1000.0
 
-        # 7. Ephemeral media scrubbing
+        # Ephemeral media scrubbing
         inp.scrub_media_payload()
 
         return EmotionObservation(

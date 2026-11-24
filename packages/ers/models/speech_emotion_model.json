@@ -6,8 +6,14 @@
   "framework": "onnx",
   "artifact_path": "packages/ers/models/speech_emotion_model.onnx",
   "sha256_checksum": "c5c8538e69d6f66e4724a7ca118b61c3c3e39686ba6adb53443bcb099fc0b0a2",
-  "license": "Apache-2.0",
-  "commercial_use_allowed": true,
+  "license": "UNVERIFIED (Synthetic graph topology; weights unverified)",
+  "commercial_use_allowed": false,
+  "commercial_use_status": "RESTRICTED",
+  "provenance_status": "UNVERIFIED",
+  "training_dataset_provenance": "UNVERIFIED (Synthetic parameter initialization; no empirical training dataset)",
+  "training_procedure": "UNVERIFIED (Handcrafted ONNX graph structure for runtime integration testing)",
+  "validation_status": "UNVERIFIED (Execution-tested only; zero empirical accuracy claims)",
+  "license_evidence": "UNVERIFIED (Synthetic architecture created for integration; no commercial weight license)",
   "source": "OVIC Labs Edge Acoustic ML Research Baseline",
   "input_specification": {
     "name": "acoustic_features",
@@ -22,7 +28,9 @@
   "cpu_supported": true,
   "accelerator_support": ["CPUExecutionProvider"],
   "known_limitations": [
+    "Synthetic baseline weights used for pipeline integration testing only.",
+    "Not trained on empirical affective datasets; predictions are uncalibrated.",
     "Requires minimum acoustic SNR >= 3.0 dB.",
-    "Acoustic prosody indicates expressive arousal/valence, not subjective truth."
+    "Acoustic prosody indicates expressive acoustic properties, not subjective truth."
   ]
 }

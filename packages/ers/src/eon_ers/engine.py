@@ -69,6 +69,14 @@ class ERSEngine:
         """Whether the engine is active and ready to accept observations."""
         return self.lifecycle.is_running
 
+    def register_consent(self, session_id: str, consent_reference: str) -> None:
+        """Register active user consent for an interaction session."""
+        self.consent_mgr.register_consent(session_id, consent_reference)
+
+    def revoke_consent(self, session_id: str) -> None:
+        """Revoke user consent for an interaction session immediately."""
+        self.consent_mgr.revoke_consent(session_id)
+
     async def initialize(self) -> None:
         """Initialize engine components, pipelines, and model adapters."""
         await self.lifecycle.transition_to(

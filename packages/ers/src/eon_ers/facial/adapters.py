@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import abc
+import json
 import os
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-from eon_ers.exceptions import ERSModelUnavailableError
+from eon_ers.exceptions import ERSModelIntegrityError, ERSModelUnavailableError
+from eon_ers.models.loader import ModelLoader
+from eon_ers.models.manifest import ModelManifest
 from eon_ers.types import EmotionCategory
 
 SUPPORTED_EMOTIONS = [
@@ -40,6 +44,16 @@ class BaseFacialModelAdapter(abc.ABC):
     def is_available(self) -> bool:
         """Whether model weights and runtime dependencies are available."""
 
+    @property
+    def is_experimental(self) -> bool:
+        """Whether the adapter relies on uncalibrated experimental heuristics."""
+        return False
+
+    @property
+    def is_validated(self) -> bool:
+        """Whether the adapter has been empirically validated against affective benchmarks."""
+        return False
+
     @abc.abstractmethod
     def predict(self, tensor: np.ndarray, evidence_features: dict[str, float]) -> dict[str, float]:
         """Execute inference and return probability distribution over supported emotions."""
@@ -51,7 +65,7 @@ class ONNXFacialModelAdapter(BaseFacialModelAdapter):
     def __init__(
         self,
         model_path: str | None,
-        model_id: str = "facial-onnx-cpu-v1",
+        model_id: str = "ers-facial-onnx-cpu-v1",
         model_version: str = "1.0.0",
         num_threads: int = 4,
     ) -> None:
@@ -61,6 +75,7 @@ class ONNXFacialModelAdapter(BaseFacialModelAdapter):
         self._num_threads = num_threads
         self._session: Any = None
         self._is_loaded = False
+        self._manifest: ModelManifest | None = None
         self._init_session()
 
     def _init_session(self) -> None:
@@ -68,6 +83,27 @@ class ONNXFacialModelAdapter(BaseFacialModelAdapter):
             self._is_loaded = False
             return
 
+        manifest_path = Path(self._model_path).with_suffix(".json")
+        if manifest_path.is_file():
+            try:
+                with open(manifest_path, encoding="utf-8") as f:
+                    data = json.load(f)
+                self._manifest = ModelManifest.model_validate(data)
+                self._session = ModelLoader.load_onnx_session(
+                    self._manifest,
+                    num_threads=self._num_threads,
+                    expected_classes=SUPPORTED_EMOTIONS,
+                )
+                self._is_loaded = True
+                return
+            except (ERSModelIntegrityError, ERSModelUnavailableError):
+                self._is_loaded = False
+                raise
+            except Exception:
+                self._is_loaded = False
+                return
+
+        # Fallback if no manifest exists
         try:
             import onnxruntime as ort
 
@@ -94,6 +130,19 @@ class ONNXFacialModelAdapter(BaseFacialModelAdapter):
     def is_available(self) -> bool:
         return self._is_loaded
 
+    @property
+    def is_experimental(self) -> bool:
+        return False
+
+    @property
+    def is_validated(self) -> bool:
+        # Unverified synthetic baseline weights are not empirically validated
+        return (
+            self._manifest.validation_status.upper() == "VERIFIED"
+            if self._manifest is not None
+            else False
+        )
+
     def predict(self, tensor: np.ndarray, evidence_features: dict[str, float]) -> dict[str, float]:
         if not self._is_loaded or self._session is None:
             raise ERSModelUnavailableError(
@@ -104,7 +153,7 @@ class ONNXFacialModelAdapter(BaseFacialModelAdapter):
         outputs = self._session.run(None, {input_name: tensor.astype(np.float32)})
         raw_logits = outputs[0].flatten()
 
-        # Apply numerically stable softmax
+        # Numerically stable softmax
         exp_logits = np.exp(raw_logits - np.max(raw_logits))
         probs = exp_logits / np.sum(exp_logits)
 
@@ -113,22 +162,24 @@ class ONNXFacialModelAdapter(BaseFacialModelAdapter):
             p = float(probs[idx]) if idx < len(probs) else 0.0
             result[cat] = round(p, 4)
 
-        # Normalize sum to 1.0
         total = sum(result.values())
         if total > 0.0:
             result = {k: round(v / total, 4) for k, v in result.items()}
         return result
 
 
-class HeuristicFacialFeatureAdapter(BaseFacialModelAdapter):
-    """Scientifically grounded feature-to-affect mapping using FACS Action Units.
+class ExperimentalRegionalFeatureAdapter(BaseFacialModelAdapter):
+    """Experimental regional contrast and morphology feature adapter.
 
-    Executes actual Action Unit activation mathematics when neural model weights
-    are not installed, avoiding any hardcoded or fake predictions.
+    SCIENTIFIC RIGOR NOTICE:
+    This adapter processes raw regional intensity contrast and gradients.
+    It is NOT calibrated or empirically validated as a Facial Action Coding System (FACS)
+    Action Unit classifier. It returns high-entropy, high-uncertainty distributions
+    to avoid fabricating emotion estimates from unvalidated pixel contrast.
     """
 
     def __init__(
-        self, model_id: str = "ers-facs-heuristic-v1", model_version: str = "1.0.0"
+        self, model_id: str = "ers-regional-heuristic-v1", model_version: str = "1.0.0"
     ) -> None:
         self._model_id = model_id
         self._model_version = model_version
@@ -145,32 +196,23 @@ class HeuristicFacialFeatureAdapter(BaseFacialModelAdapter):
     def is_available(self) -> bool:
         return True
 
+    @property
+    def is_experimental(self) -> bool:
+        return True
+
+    @property
+    def is_validated(self) -> bool:
+        return False
+
     def predict(self, tensor: np.ndarray, evidence_features: dict[str, float]) -> dict[str, float]:
-        au01 = evidence_features.get("AU01_inner_brow_raiser", 0.0)
-        au04 = evidence_features.get("AU04_brow_lowerer", 0.0)
-        au06 = evidence_features.get("AU06_cheek_raiser", 0.0)
-        au09 = evidence_features.get("AU09_nose_wrinkler", 0.0)
-        au12 = evidence_features.get("AU12_lip_corner_puller", 0.0)
-        au26 = evidence_features.get("AU26_jaw_drop", 0.0)
+        """Compute an uncalibrated baseline distribution reflecting epistemic uncertainty."""
+        # Non-definitive baseline: equal uniform distribution across supported categories
+        uniform_p = round(1.0 / len(SUPPORTED_EMOTIONS), 4)
+        return {cat: uniform_p for cat in SUPPORTED_EMOTIONS}
 
-        # Compute unnormalized logit scores from morphological activations
-        scores = {
-            EmotionCategory.NEUTRAL.value: 0.25 + 0.5 * (1.0 - max(au04, au12, au26, au09)),
-            EmotionCategory.HAPPINESS.value: 0.10 + 0.55 * au12 + 0.35 * au06,
-            EmotionCategory.SADNESS.value: 0.10 + 0.50 * au01 + 0.40 * au04,
-            EmotionCategory.ANGER.value: 0.10 + 0.70 * au04 + 0.20 * (1.0 - au12),
-            EmotionCategory.FEAR.value: 0.05 + 0.45 * au01 + 0.35 * au04 + 0.20 * au26,
-            EmotionCategory.SURPRISE.value: 0.05 + 0.50 * au01 + 0.45 * au26,
-            EmotionCategory.DISGUST.value: 0.05 + 0.75 * au09 + 0.20 * au04,
-        }
 
-        # Apply softmax for calibrated probability distribution
-        vals = np.array(list(scores.values()), dtype=np.float32)
-        exp_vals = np.exp(vals * 2.5)  # Temperature scaling
-        probs = exp_vals / np.sum(exp_vals)
-
-        result = {cat: round(float(probs[i]), 4) for i, cat in enumerate(scores.keys())}
-        return result
+# Backwards compatibility alias
+HeuristicFacialFeatureAdapter = ExperimentalRegionalFeatureAdapter
 
 
 class DeterministicTestFacialAdapter(BaseFacialModelAdapter):
@@ -207,6 +249,14 @@ class DeterministicTestFacialAdapter(BaseFacialModelAdapter):
     @property
     def is_available(self) -> bool:
         return not self._simulate_unavailable
+
+    @property
+    def is_experimental(self) -> bool:
+        return False
+
+    @property
+    def is_validated(self) -> bool:
+        return True
 
     def predict(self, tensor: np.ndarray, evidence_features: dict[str, float]) -> dict[str, float]:
         if self._simulate_unavailable:

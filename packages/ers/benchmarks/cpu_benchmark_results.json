@@ -1,40 +1,112 @@
 {
-  "hardware_target": "Intel Core Ultra 5 225U",
-  "device": "cpu",
-  "num_threads": 4,
-  "iterations": 30,
-  "initialization_ms": 73.49,
-  "peak_rss_mb": 0.0,
+  "benchmark_metadata": {
+    "benchmark_version": "2.0.0",
+    "timestamp_iso": "2026-11-24T10:22:46Z",
+    "synthetic_fixtures_notice": "Synthetic image and audio fixtures used strictly for latency and memory benchmarking. These fixtures DO NOT evaluate affective recognition accuracy or classification quality."
+  },
+  "environment": {
+    "operating_system": "Windows-10-10.0.26300-SP0",
+    "processor_raw": "Intel64 Family 6 Model 181 Stepping 0, GenuineIntel",
+    "machine_architecture": "AMD64",
+    "python_version": "3.11.9",
+    "dependencies": {
+      "onnxruntime": "1.32.0",
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "pydantic": "2.14.4",
+      "psutil": "7.2.2"
+    },
+    "cpu_count_logical": 14,
+    "cpu_count_physical": 12,
+    "total_ram_gb": 15.52
+  },
+  "execution_parameters": {
+    "device": "cpu",
+    "num_threads": 4,
+    "warmup_count": 5,
+    "iterations": 30
+  },
+  "memory_metrics": {
+    "peak_rss_mb": 138.63,
+    "rss_measurement_source": "psutil.Process().memory_info().rss",
+    "cpu_utilization_percent": 25.7
+  },
+  "initialization_ms": 9.88,
   "cold_latencies_ms": {
-    "facial": 3.98,
-    "speech": 7.37,
-    "multimodal": 8.68
+    "facial": 17.7,
+    "speech": 12.99,
+    "multimodal": 9.03
   },
-  "warm_facial_latency_ms": {
-    "mean": 2.12,
-    "p50": 2.08,
-    "p90": 3.25,
-    "p95": 3.48,
-    "p99": 3.95,
-    "min": 1.22,
-    "max": 4.07
-  },
-  "warm_speech_latency_ms": {
-    "mean": 5.39,
-    "p50": 4.73,
-    "p90": 7.46,
-    "p95": 7.81,
-    "p99": 8.05,
-    "min": 4.17,
-    "max": 8.08
-  },
-  "warm_multimodal_latency_ms": {
-    "mean": 10.67,
-    "p50": 10.75,
-    "p90": 12.37,
-    "p95": 13.46,
-    "p99": 14.08,
-    "min": 7.08,
-    "max": 14.15
+  "warm_latencies_ms": {
+    "facial_total": {
+      "mean": 2.53,
+      "std": 1.16,
+      "p50": 2.62,
+      "p90": 4.12,
+      "p95": 4.47,
+      "p99": 5.6,
+      "min": 1.32,
+      "max": 6.03
+    },
+    "facial_preprocessing_est": {
+      "mean": 0.89,
+      "std": 0.41,
+      "p50": 0.92,
+      "p90": 1.44,
+      "p95": 1.56,
+      "p99": 1.96,
+      "min": 0.46,
+      "max": 2.11
+    },
+    "facial_inference_est": {
+      "mean": 1.65,
+      "std": 0.75,
+      "p50": 1.71,
+      "p90": 2.68,
+      "p95": 2.9,
+      "p99": 3.64,
+      "min": 0.86,
+      "max": 3.92
+    },
+    "speech_total": {
+      "mean": 5.07,
+      "std": 1.95,
+      "p50": 4.39,
+      "p90": 5.99,
+      "p95": 7.01,
+      "p99": 12.51,
+      "min": 4.09,
+      "max": 14.71
+    },
+    "speech_preprocessing_est": {
+      "mean": 2.03,
+      "std": 0.78,
+      "p50": 1.76,
+      "p90": 2.4,
+      "p95": 2.8,
+      "p99": 5.0,
+      "min": 1.64,
+      "max": 5.88
+    },
+    "speech_inference_est": {
+      "mean": 3.04,
+      "std": 1.17,
+      "p50": 2.63,
+      "p90": 3.59,
+      "p95": 4.2,
+      "p99": 7.5,
+      "min": 2.45,
+      "max": 8.83
+    },
+    "multimodal_fusion_total": {
+      "mean": 12.14,
+      "std": 3.18,
+      "p50": 11.38,
+      "p90": 14.9,
+      "p95": 18.74,
+      "p99": 22.38,
+      "min": 7.38,
+      "max": 23.56
+    }
   }
 }

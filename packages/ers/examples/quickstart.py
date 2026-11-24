@@ -11,8 +11,13 @@ from PIL import Image
 
 def create_sample_face() -> bytes:
     img = Image.new("RGB", (128, 128), color=(210, 180, 160))
+    arr = np.array(img)
+    arr[30:50, 30:50] = 50  # Left eye contrast
+    arr[30:50, 78:98] = 50  # Right eye contrast
+    arr[75:95, 40:88] = 80  # Mouth contrast
+    synth = Image.fromarray(arr)
     buf = io.BytesIO()
-    img.save(buf, format="JPEG")
+    synth.save(buf, format="JPEG")
     return buf.getvalue()
 
 
@@ -41,6 +46,7 @@ async def main() -> None:
 
     async with ERSEngine(config) as engine:
         print("ERS Engine running. State:", engine.state.value)
+        engine.register_consent("user-session-001", "consent-token-abc-123")
 
         # 1. Process Facial Observation
         face_input = ERSInput(
