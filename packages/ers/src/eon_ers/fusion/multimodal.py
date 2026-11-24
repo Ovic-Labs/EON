@@ -28,6 +28,55 @@ from eon_ers.types import (
     ObservationStatus,
 )
 
+SUPPORTED_EMOTION_CLASSES: frozenset[str] = frozenset(
+    {
+        EmotionCategory.NEUTRAL.value,
+        EmotionCategory.HAPPINESS.value,
+        EmotionCategory.SADNESS.value,
+        EmotionCategory.ANGER.value,
+        EmotionCategory.FEAR.value,
+        EmotionCategory.SURPRISE.value,
+        EmotionCategory.DISGUST.value,
+    }
+)
+PROBABILITY_SUM_TOLERANCE: float = 0.02
+
+
+def validate_emotion_probabilities(
+    probs: dict[str, float] | None,
+    tolerance: float = PROBABILITY_SUM_TOLERANCE,
+) -> tuple[bool, str]:
+    """Validate that probability distribution covers all supported emotion classes and sums to 1 within tolerance."""
+    if not probs:
+        return False, "Empty or absent probability distribution."
+
+    prob_keys = set(probs.keys())
+    if prob_keys != SUPPORTED_EMOTION_CLASSES:
+        missing = SUPPORTED_EMOTION_CLASSES - prob_keys
+        extra = prob_keys - SUPPORTED_EMOTION_CLASSES
+        reasons: list[str] = []
+        if missing:
+            reasons.append(f"missing classes: {sorted(missing)}")
+        if extra:
+            reasons.append(f"unsupported classes: {sorted(extra)}")
+        return False, f"Invalid emotion probability keys ({'; '.join(reasons)})."
+
+    vals = list(probs.values())
+    if not np.isfinite(vals).all():
+        return False, "Probability distribution contains non-finite values (NaN or Inf)."
+
+    if any(p < 0.0 for p in vals):
+        return False, "Probability distribution contains negative probability values."
+
+    total = float(sum(vals))
+    if abs(total - 1.0) > tolerance:
+        return (
+            False,
+            f"Probability distribution does not sum to 1.0 within tolerance {tolerance} (sum={total:.4f}).",
+        )
+
+    return True, "Valid emotion probability distribution."
+
 
 def evaluate_modality_eligibility(
     obs: EmotionObservation | None,
@@ -80,21 +129,14 @@ def evaluate_modality_eligibility(
             f"Model '{obs.model_id}' is unvalidated (state: {obs.model_state.value}).",
         )
 
-    # Probability schema validation: non-empty, finite, non-negative
+    # Probability schema and distribution validation: supported classes, finite, non-negative, unit sum
     probs = obs.emotion_probabilities
-    if not probs:
+    is_valid, prob_reason = validate_emotion_probabilities(probs)
+    if not is_valid:
         return (
             False,
             ModalityEligibilityStatus.DIAGNOSTIC_ONLY,
-            "Empty probability distribution.",
-        )
-
-    prob_vals = list(probs.values())
-    if not np.isfinite(prob_vals).all() or any(p < 0.0 for p in prob_vals):
-        return (
-            False,
-            ModalityEligibilityStatus.DIAGNOSTIC_ONLY,
-            "Probability distribution contains non-finite or negative values.",
+            f"Invalid probability distribution: {prob_reason}",
         )
 
     return (

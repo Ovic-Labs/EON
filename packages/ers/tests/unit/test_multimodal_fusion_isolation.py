@@ -37,9 +37,26 @@ def _make_observation(
     input_quality: InputQualityStatus = InputQualityStatus.ACCEPTABLE,
     timestamp: float | None = None,
     raw_confidence: float = 0.85,
+    exact_probs: dict[str, float] | None = None,
 ) -> EmotionObservation:
     dominant = max(probs, key=probs.get) if probs else EmotionCategory.NEUTRAL
-    str_probs = {c.value: float(p) for c, p in probs.items()}
+    if exact_probs is not None:
+        str_probs = exact_probs
+    elif probs:
+        str_probs = {
+            EmotionCategory.NEUTRAL.value: 0.0,
+            EmotionCategory.HAPPINESS.value: 0.0,
+            EmotionCategory.SADNESS.value: 0.0,
+            EmotionCategory.ANGER.value: 0.0,
+            EmotionCategory.FEAR.value: 0.0,
+            EmotionCategory.SURPRISE.value: 0.0,
+            EmotionCategory.DISGUST.value: 0.0,
+        }
+        for c, p in probs.items():
+            str_probs[c.value] = float(p)
+    else:
+        str_probs = {}
+
     is_val = model_state == ModelState.MODEL_LOADED_VALIDATED
     return EmotionObservation(
         observation_id="obs-" + str(uuid.uuid4())[:8],

@@ -7,6 +7,7 @@ import os
 import time
 from typing import Any
 
+from eon_ers.evaluation.dataset import KNOWN_PLACEHOLDER_CHECKSUMS
 from eon_ers.evaluation.metrics import (
     compute_calibration_metrics,
     compute_classification_metrics,
@@ -103,32 +104,71 @@ class ModelEvaluator:
                     hasher.update(chunk)
             artifact_sha256 = hasher.hexdigest().lower()
 
-        # Scientific qualification threshold criteria:
+        # Scientific qualification threshold criteria (Phase 3.1.5 non-negotiables):
         # A model is ONLY qualified as is_validated = True if:
-        # 1. Macro-F1 exceeds random guessing (1/K = ~0.14) with significant margin (>= 0.40)
-        # 2. Balanced accuracy >= 0.40
-        # 3. Training dataset provenance is verified
-        # 4. Evaluation was conducted on empirical, non-synthetic datasets
-        is_empirical_dataset = "synthetic" not in dataset_name.lower()
-        has_provenance = model_manifest.provenance_status.upper() == "VERIFIED"
-        accuracy_acceptable = (
-            macro_summary["macro_f1"] >= 0.40 and macro_summary["balanced_accuracy"] >= 0.40
+        # 1. Macro-F1 >= 0.40, Balanced accuracy >= 0.40, and Accuracy >= 0.40
+        # 2. Evaluation was conducted on empirical, non-synthetic datasets with sufficient samples (>= 10)
+        # 3. Model weights and dataset provenance are strictly verified
+        # 4. Actual inference was conducted (mock/uniform predictions rejected)
+        # 5. Model artifact exists and SHA-256 integrity check passes with non-placeholder hash
+        is_empirical_dataset = "synthetic" not in dataset_name.lower() and total_samples >= 10
+
+        # Detect uniform/mock predictions
+        k_classes = len(self.labels)
+        uniform_target = round(1.0 / k_classes, 4)
+        is_mock_evaluation = total_samples > 0 and all(
+            bool(p_dict) and all(abs(val - uniform_target) < 0.01 for val in p_dict.values())
+            for p_dict in predicted_probs
+        )
+        actual_inference_conducted = not is_mock_evaluation and abstention_rate < 1.0
+
+        has_provenance = (
+            model_manifest.provenance_status.upper() == "VERIFIED"
+            and dataset_license.strip().upper() not in ("", "UNVERIFIED")
+            and model_manifest.training_dataset_provenance.upper() != "UNVERIFIED"
         )
 
-        is_validated = is_empirical_dataset and has_provenance and accuracy_acceptable
+        has_valid_manifest_checksum = (
+            model_manifest.sha256_checksum.lower() not in KNOWN_PLACEHOLDER_CHECKSUMS
+        )
+        artifact_integrity_passed = (
+            has_valid_manifest_checksum and model_manifest.verify_integrity()
+        )
 
-        notes = evaluation_notes or []
+        accuracy_acceptable = (
+            macro_summary.get("macro_f1", 0.0) >= 0.40
+            and macro_summary.get("balanced_accuracy", 0.0) >= 0.40
+            and macro_summary.get("accuracy", 0.0) >= 0.40
+        )
+
+        is_validated = bool(
+            is_empirical_dataset
+            and actual_inference_conducted
+            and has_provenance
+            and artifact_integrity_passed
+            and accuracy_acceptable
+        )
+
+        notes = list(evaluation_notes) if evaluation_notes else []
         if not is_empirical_dataset:
             notes.append(
-                "Evaluation used synthetic validation fixtures; not empirical accuracy qualification."
+                "Evaluation used synthetic validation fixtures or insufficient sample size; not empirical accuracy qualification."
+            )
+        if not actual_inference_conducted:
+            notes.append(
+                "Mock or uniform predictions detected; actual empirical model inference required."
             )
         if not has_provenance:
             notes.append(
-                "Model weights have unverified provenance; prohibited from production validation."
+                "Model weights, training dataset, or evaluation dataset have unverified provenance; prohibited from production validation."
+            )
+        if not artifact_integrity_passed:
+            notes.append(
+                f"Model artifact integrity verification failed: weights file missing, placeholder hash, or SHA-256 does not match manifest digest '{model_manifest.sha256_checksum}'."
             )
         if not accuracy_acceptable:
             notes.append(
-                f"Model failed accuracy thresholds (Macro-F1 {macro_summary['macro_f1']} < 0.40). "
+                f"Model failed accuracy thresholds (Macro-F1 {macro_summary.get('macro_f1', 0.0)} < 0.40). "
                 "Classifications must be suppressed as INSUFFICIENT_EVIDENCE."
             )
 
