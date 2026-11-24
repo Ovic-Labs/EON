@@ -1,0 +1,76 @@
+flowchart TD
+    subgraph HumanEnvironment["Human & Physical Environment"]
+        Human["Human User / Interaction Partner"]
+        PhysicalWorld["Physical Environment & Acoustic Space"]
+    end
+
+    subgraph RobotHardwareLayer["Robot Hardware & Safety Layer"]
+        Sensors["Robot Sensors<br/>(RGB Camera, Mic Array, IMU, Depth)"]
+        SafetyArbiter["Robot Safety Arbiter & E-Stop<br/>(Certified Safety Controller)"]
+        Actuators["Physical Actuators<br/>(Neck Pan-Tilt, Base Motors, Arms)"]
+    end
+
+    subgraph EONEdgeSystem["OVIC EON Edge Infrastructure (Autonomous)"]
+        RAL["Robot Abstraction Layer (RAL)"]
+        
+        subgraph CoreRuntime["EON Core Runtime Service"]
+            EventBus["Priority Core Event Bus<br/>(Lock-free SPSC / Ring Buffer)"]
+            LifecycleFSM["11-State Engine Lifecycle FSM"]
+            ContextMgr["Shared Context Engine<br/>(AES-256-GCM Envelope Encryption)"]
+            ModelAdapters["Model Adapter Subsystem<br/>(ONNX Runtime / CPU Fallback)"]
+        end
+
+        subgraph SevenEngines["Seven Intelligence Engines"]
+            ERS["1. ERS: Emotion Recognition System"]
+            EMS["2. EMS: Emotion Modelling System"]
+            ERE["3. ERE: Empathy Reasoning Engine"]
+            PSE["4. PSE: Personality & Social Engine"]
+            SIE["5. SIE: Social Interaction Engine"]
+            ERG["6. ERG: Emotion Response Generation"]
+            HBU["7. HBU: Human Behaviour Understanding"]
+        end
+
+        subgraph ClientInterfaces["SDK & Middleware Layer"]
+            CppSDK["Native C++ SDK (libeonsdk)"]
+            PySDK["Python SDK (eon-sdk)"]
+            ROS2Bridge["ROS 2 Bridge Nodes (eon_ros2_bridge)"]
+        end
+    end
+
+    subgraph CloudLayer["Optional Cloud Layer (Non-Mandatory)"]
+        CloudGW["Cloud API Gateway (mTLS)"]
+        FleetMgmt["Fleet Health & OTA Updates"]
+        TenantDB["Encrypted Tenant Context Store"]
+    end
+
+    %% Perception Data Flow
+    Human --> PhysicalWorld
+    PhysicalWorld --> Sensors
+    Sensors -->|Raw Frames in /dev/shm| RAL
+    RAL -->|Zero-Copy / Descriptors| ERS
+    RAL -->|Zero-Copy / Descriptors| HBU
+
+    %% Engine Interactions via Core Event Bus
+    ERS -->|EmotionObservation| EventBus
+    HBU -->|BehaviourObservation| EventBus
+    EventBus --> EMS
+    EMS --> ERE
+    ERE --> SIE
+    PSE --> SIE
+    SIE --> ERG
+
+    %% Non-authoritative response path
+    ERG -->|MotionProposal is_authoritative=false| RAL
+    RAL -->|Non-Authoritative Proposal| SafetyArbiter
+    SafetyArbiter -->|Vetted & Clamped Motor Commands| Actuators
+    SafetyArbiter -.->|E-Stop Override / Interlock| Actuators
+
+    %% SDK and Bridge Connections
+    CoreRuntime <--> CppSDK
+    CoreRuntime <--> PySDK
+    CppSDK <--> ROS2Bridge
+
+    %% Optional Cloud Sync
+    CoreRuntime -.->|Store-and-Forward Telemetry (No Raw Media)| CloudGW
+    CloudGW <--> FleetMgmt
+    CloudGW <--> TenantDB

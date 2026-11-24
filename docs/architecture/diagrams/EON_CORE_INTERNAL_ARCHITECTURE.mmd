@@ -1,0 +1,49 @@
+flowchart TD
+    subgraph EonCoreService["EON Core Daemon (eond)"]
+        subgraph IPC_Transport["IPC Transport Layer"]
+            UDS["Unix Domain Socket Server (/var/run/eon/eon.sock)"]
+            WinPipes["Windows Named Pipe Server"]
+            SHM_Mgr["POSIX SHM Manager (/dev/shm)"]
+        end
+
+        subgraph EventSubsystem["Core Event Bus Subsystem"]
+            PriorityRouter["Topic & Priority Router"]
+            RingBuffer["Lock-Free SPSC Ring Buffers"]
+            Backpressure["Backpressure & Drop Policy Handler"]
+        end
+
+        subgraph ContextSubsystem["Shared Context Subsystem"]
+            ContextArbiter["Subject Context Access Arbiter"]
+            CryptoEngine["Envelope Crypto Engine (AES-256-GCM)"]
+            SQLiteStore["Encrypted SQLite Database (context.db)"]
+            WALManager["WAL Truncation & Shredder"]
+        end
+
+        subgraph LifecycleSubsystem["Lifecycle Management Subsystem"]
+            FSM_Master["11-State Engine Lifecycle FSM"]
+            HealthMonitor["Health Telemetry & Heartbeat Generator"]
+            WatchdogGuard["Systemd Watchdog Client"]
+        end
+
+        subgraph AdapterSubsystem["Model Adapter Runtime Subsystem"]
+            ModelRegistry["Model Registry & Loader"]
+            ONNXEngine["ONNX Runtime Engine"]
+            FallbackCPU["CPU Fallback Provider"]
+        end
+    end
+
+    UDS --> PriorityRouter
+    WinPipes --> PriorityRouter
+    SHM_Mgr <--> RingBuffer
+
+    PriorityRouter --> RingBuffer
+    RingBuffer --> ContextArbiter
+    ContextArbiter <--> CryptoEngine
+    CryptoEngine <--> SQLiteStore
+    CryptoEngine <--> WALManager
+
+    FSM_Master <--> HealthMonitor
+    HealthMonitor --> WatchdogGuard
+
+    ModelRegistry --> ONNXEngine
+    ONNXEngine -.-> FallbackCPU

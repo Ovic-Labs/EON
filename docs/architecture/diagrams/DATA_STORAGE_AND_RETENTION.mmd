@@ -1,0 +1,32 @@
+flowchart TD
+    subgraph StorageLocations["Storage Physical Locations"]
+        RAM["Volatile RAM (/dev/shm tmpfs)<br/>- Raw 1080p camera frames<br/>- Raw 16kHz PCM audio<br/>- Ephemeral session memory"]
+        DiskLUKS["Encrypted Block Device (dm-crypt LUKS)<br/>- SQLite context.db<br/>- Model ONNX weights<br/>- Systemd journal logs"]
+    end
+
+    subgraph CryptographicEnvelope["Cryptographic Envelope Architecture"]
+        TPM["TPM 2.0 / Linux Kernel Keyring"]
+        KEK["Key Encryption Key (KEK - AES-256)"]
+        DEKTable["Key Table: Per-Subject Wrapped DEKs"]
+        CiphertextRecords["Ciphertext Context Records (AES-256-GCM)"]
+    end
+
+    subgraph DeletionLifecycle["Data Shredding & Retention Lifecycle"]
+        RetentionPolicy["Retention Policy (Consented subjects only)"]
+        PurgeRequest["User Purge Request (Right to be Forgotten)"]
+        DEKOverwritten["DEK Overwritten with Cryptographic Random Noise"]
+        WALCheckpoint["PRAGMA wal_checkpoint(TRUNCATE)"]
+        ResidualCiphertext["Ciphertext on Flash Blocks is Permanently Undecipherable"]
+    end
+
+    RAM -->|Features Extracted| CryptographicEnvelope
+    DiskLUKS <--> CryptographicEnvelope
+
+    TPM --> KEK
+    KEK --> DEKTable
+    DEKTable --> CiphertextRecords
+
+    RetentionPolicy --> PurgeRequest
+    PurgeRequest --> DEKOverwritten
+    DEKOverwritten --> WALCheckpoint
+    WALCheckpoint --> ResidualCiphertext

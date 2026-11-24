@@ -1,0 +1,41 @@
+flowchart TD
+    subgraph PhysicalRobotEnclosure["Physical Robot Enclosure"]
+        subgraph ComputeEdge["Onboard Robot Compute (e.g., Jetson Orin / Intel Core Ultra)"]
+            OS["Linux OS (Ubuntu 22.04/24.04 LTS)"]
+            Daemon["eond (EON Core Daemon Service)"]
+            CppClient["libeonsdk (C++ Client)"]
+            ROS2BridgeNode["eon_ros2_bridge Node"]
+            LocalContextDB["Encrypted context.db (SQLite)"]
+        end
+
+        subgraph RobotSafetyHardware["Robot Safety Controller Hardware"]
+            SafetyMCU["Safety Microcontroller (Certified ISO 13482)"]
+            EStopRelay["Emergency Stop Circuit"]
+            ActuatorDrivers["CANopen / EtherCAT Motor Drives"]
+        end
+
+        subgraph RobotPerceptionSensors["Physical Sensors"]
+            RGBD_Camera["Wide-Angle RGB-D Camera"]
+            MicArray["4-Channel Microphone Array"]
+            IMUSensor["IMU / Odometry Encoders"]
+        end
+    end
+
+    subgraph EnterpriseFleetCloud["Optional Enterprise Cloud"]
+        CloudGateway["API Gateway (mTLS)"]
+        FleetDashboard["Web Management Console"]
+        MultiTenantContext["Multi-Tenant DB"]
+    end
+
+    RobotPerceptionSensors -->|Raw Video & Audio| Daemon
+    Daemon <--> LocalContextDB
+    Daemon <--> CppClient
+    CppClient <--> ROS2BridgeNode
+
+    ROS2BridgeNode -->|eon_msgs/MotionProposal is_authoritative=false| SafetyMCU
+    SafetyMCU --> ActuatorDrivers
+    EStopRelay -.->|Direct Hardware Kill| ActuatorDrivers
+
+    Daemon -.->|Optional Telemetry Sync (TLS 1.3 / mTLS)| CloudGateway
+    CloudGateway <--> FleetDashboard
+    CloudGateway <--> MultiTenantContext

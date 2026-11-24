@@ -1,0 +1,30 @@
+stateDiagram-v2
+    [*] --> DISCOVERED : Engine registered in manifest
+
+    DISCOVERED --> REGISTERED : RegisterEngine()
+    REGISTERED --> VALIDATING : Validate()
+    VALIDATING --> INITIALIZING : Validation passed
+    VALIDATING --> FAILED : Validation failed
+
+    INITIALIZING --> INITIALIZED : Allocate memory & load models
+    INITIALIZING --> FAILED : Initialization error
+
+    INITIALIZED --> STARTING : Start() command
+    STARTING --> RUNNING : Event loops active & connected
+    STARTING --> FAILED : Startup error
+
+    RUNNING --> DEGRADED : Sensor dropout / Fallback CPU triggered
+    DEGRADED --> RUNNING : Resource recovery / Sensor restored
+
+    RUNNING --> PAUSED : Pause() command
+    PAUSED --> RUNNING : Resume() command
+
+    RUNNING --> STOPPING : Stop() command
+    DEGRADED --> STOPPING : Stop() command
+    PAUSED --> STOPPING : Stop() command
+
+    STOPPING --> STOPPED : Shutdown complete & resources freed
+    STOPPED --> INITIALIZING : Restart() cycle
+
+    FAILED --> STOPPING : Fatal error containment
+    STOPPED --> [*] : Unregister

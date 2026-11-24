@@ -3,7 +3,7 @@
 **Emotional Intelligence Infrastructure for Robotics**  
 **Organization:** OVIC Labs  
 **Repository:** [https://github.com/Ovic-Labs/EON.git](https://github.com/Ovic-Labs/EON.git)  
-**Current Phase:** Phase 2 — System Architecture and Engineering Design (Sub-phases 2.1–2.10 Qualified)  
+**Current Phase:** Phase 2 — System Architecture and Engineering Design (Completed & Qualified: Sub-phases 2.1–2.20)  
 **Core Runtime Status:** Phase 1 Foundation Implemented & Verified (Sub-phases 1.1–1.3: 203 passing tests)  
 **Research Status:** Phase 1 Technical Feasibility Qualified With Conditions (Sub-phases 1.1–1.18)  
 **Product Baseline:** Phase 0 Product Foundation Production-Qualified (290 source requirements, 100% spec traceability)  
@@ -164,7 +164,108 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | [Python SDK Error Handling](architecture/PYTHON_SDK_ERROR_HANDLING.md) | EON-SPEC-SDK-003 | Deterministic `EonError` hierarchy, status mapping, and full-jitter retry |
 | [Python SDK Compatibility](architecture/PYTHON_SDK_COMPATIBILITY.md) | EON-SPEC-SDK-004 | Python 3.10–3.12 compatibility matrix and API version handshake |
 
-#### 1.5.10 Architecture Decision Records (`docs/architecture/decisions/`)
+#### 1.5.10 C++ SDK Architecture (Sub-phase 2.11)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [C++ SDK Architecture](architecture/CPP_SDK_ARCHITECTURE.md) | EON-ARCH-CPP-001 | Native C++17 SDK architecture, Pimpl idiom, zero-copy SHM, and non-authoritative motion |
+| [C++ SDK Package Structure](architecture/CPP_SDK_PACKAGE_STRUCTURE.md) | EON-ARCH-CPP-002 | CMake build layout, public/private header separation, and packaging deliverables |
+| [C++ SDK API Contracts](architecture/CPP_SDK_API_CONTRACTS.md) | EON-SPEC-CPP-001 | Strongly typed interfaces, Result monad, and 7-state EngineState enum mapping |
+| [C++ SDK Memory Management](architecture/CPP_SDK_MEMORY_MANAGEMENT.md) | EON-SPEC-CPP-002 | RAII memory management, bounded ring buffers, and std::pmr allocator support |
+| [C++ SDK Threading and Concurrency](architecture/CPP_SDK_THREADING_AND_CONCURRENCY.md) | EON-SPEC-CPP-003 | Thread isolation, lock-free queues, thread pool, and cooperative cancellation |
+| [C++ SDK Error Handling](architecture/CPP_SDK_ERROR_HANDLING.md) | EON-SPEC-CPP-004 | Exception boundaries, Result monadic error propagation, and recovery actions |
+| [C++ SDK ABI Compatibility](architecture/CPP_SDK_ABI_COMPATIBILITY.md) | EON-SPEC-CPP-005 | Pimpl idiom, flat C-ABI bridge header (eon_c.h), and symbol visibility controls |
+| [C++ SDK Build and Toolchain](architecture/CPP_SDK_BUILD_AND_TOOLCHAIN.md) | EON-SPEC-CPP-006 | ISO C++17 standard, GCC 11+/Clang 14+/MSVC 2022 support, and ament_cmake integration |
+| [C++ SDK Security](architecture/CPP_SDK_SECURITY.md) | EON-SPEC-CPP-007 | IPC socket permissions, SO_PEERCRED credential checks, and memory zeroing |
+| [C++ SDK Compatibility Matrix](architecture/CPP_SDK_COMPATIBILITY_MATRIX.md) | EON-SPEC-CPP-008 | OS/compiler matrix and future hardware benchmark protocol (p50, p95, p99) |
+
+#### 1.5.11 ROS 2 Architecture (Sub-phase 2.12)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [ROS 2 Architecture](architecture/ROS2_ARCHITECTURE.md) | EON-ARCH-ROS-001 | Complete ROS 2 integration architecture, decoupling principles, and middleware topology |
+| [ROS 2 Node Specifications](architecture/ROS2_NODE_SPECIFICATIONS.md) | EON-ARCH-ROS-002 | Managed lifecycle node architecture (rclcpp_lifecycle) and bridge node specifications |
+| [ROS 2 Topic and Message Contracts](architecture/ROS2_TOPIC_AND_MESSAGE_CONTRACTS.md) | EON-SPEC-ROS-001 | Custom message definitions (eon_msgs) and topic catalog for observations and proposals |
+| [ROS 2 Service and Action Contracts](architecture/ROS2_SERVICE_AND_ACTION_CONTRACTS.md) | EON-SPEC-ROS-002 | Custom service and action definitions for state queries and social interactions |
+| [ROS 2 QoS Policies](architecture/ROS2_QOS_POLICIES.md) | EON-SPEC-ROS-003 | Quality of Service profiles (SensorData, Reliable Events, TransientLocal Diagnostics) |
+| [ROS 2 Lifecycle Integration](architecture/ROS2_LIFECYCLE_INTEGRATION.md) | EON-SPEC-ROS-004 | Bidirectional coordination between rclcpp_lifecycle and EON 7-state operational health |
+| [ROS 2 Security and Namespaces](architecture/ROS2_SECURITY_AND_NAMESPACES.md) | EON-SPEC-ROS-005 | SROS 2 / DDS Security, X.509 cert validation, and multi-robot fleet namespacing |
+| [ROS 2 Failure Handling](architecture/ROS2_FAILURE_HANDLING.md) | EON-SPEC-ROS-006 | Fail-silent social motion principle, deadline monitoring, and neutral posture fallback |
+| [ROS 2 Distribution Compatibility](architecture/ROS2_DISTRIBUTION_COMPATIBILITY.md) | EON-SPEC-ROS-007 | Support policy for ROS 2 Humble (LTS), Iron, and Jazzy (LTS), and standalone independence |
+
+#### 1.5.12 Robot Abstraction Architecture (Sub-phase 2.13)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Robot Abstraction Architecture](architecture/ROBOT_ABSTRACTION_ARCHITECTURE.md) | EON-ARCH-ROB-001 | Vendor-neutral Robot Abstraction Layer (RAL) topology and decoupled intelligence |
+| [Robot Capability Model](architecture/ROBOT_CAPABILITY_MODEL.md) | EON-SPEC-ROB-001 | Dynamic capability negotiation schema and expressive fallback matrix |
+| [Robot Interface Contracts](architecture/ROBOT_INTERFACE_CONTRACTS.md) | EON-SPEC-ROB-002 | C++ abstract interfaces, normalized sensor packets, and proposal structures |
+| [Robot Hardware Adapters](architecture/ROBOT_HARDWARE_ADAPTERS.md) | EON-SPEC-ROB-003 | Plugin architecture for ROS 2, gRPC, and shared memory hardware adapters |
+| [Robot Sensor Abstraction](architecture/ROBOT_SENSOR_ABSTRACTION.md) | EON-SPEC-ROB-004 | Normalization for cameras, 16kHz microphone arrays, and robot odometry |
+| [Robot Actuator Abstraction](architecture/ROBOT_ACTUATOR_ABSTRACTION.md) | EON-SPEC-ROB-005 | Expressive channels (gaze, display, audio, locomotion) and kinematic clamping |
+| [Robot Safety Boundaries](architecture/ROBOT_SAFETY_BOUNDARIES.md) | EON-SPEC-ROB-006 | Strict physical safety barrier, non-authoritative invariant, and safety controller primacy |
+| [Robot Simulation Architecture](architecture/ROBOT_SIMULATION_ARCHITECTURE.md) | EON-SPEC-ROB-007 | Synthetic evaluation pipeline for NVIDIA Isaac Sim, Gazebo, and Webots |
+| [Robot Platform Compatibility](architecture/ROBOT_PLATFORM_COMPATIBILITY.md) | EON-SPEC-ROB-008 | Compatibility tiers for humanoid, wheeled, social desktop, and industrial robots |
+
+#### 1.5.13 Edge Deployment Architecture (Sub-phase 2.14)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Edge Deployment Architecture](architecture/EDGE_DEPLOYMENT_ARCHITECTURE.md) | EON-ARCH-EDGE-001 | CPU-first edge packaging, deployment profiles, and runtime stacking |
+| [Edge Resource Management](architecture/EDGE_RESOURCE_MANAGEMENT.md) | EON-SPEC-EDGE-001 | Resource budgets by profile (Low-Resource, Standard, Accelerated) and cgroups v2 caps |
+| [Edge Installation and Packaging](architecture/EDGE_INSTALLATION_AND_PACKAGING.md) | EON-SPEC-EDGE-002 | Debian/RPM packages, OCI containers, tarballs, and standard filesystem layout |
+| [Edge Process Supervision](architecture/EDGE_PROCESS_SUPERVISION.md) | EON-SPEC-EDGE-003 | systemd service specification, sandboxing, and 2.0-second watchdog keepalive |
+| [Edge Model Deployment](architecture/EDGE_MODEL_DEPLOYMENT.md) | EON-SPEC-EDGE-004 | ONNX Runtime execution providers (CPU, OpenVINO, TensorRT, QNN) and INT8 quantization |
+| [Edge Offline Operation](architecture/EDGE_OFFLINE_OPERATION.md) | EON-SPEC-EDGE-005 | 100% autonomous offline guarantee, local clocking, and zero cloud dependency |
+| [Edge Update and Rollback](architecture/EDGE_UPDATE_AND_ROLLBACK.md) | EON-SPEC-EDGE-006 | A/B dual-slot atomic updates, 3-strike bootloader recovery, and SQLite backup |
+| [Edge Monitoring and Diagnostics](architecture/EDGE_MONITORING_AND_DIAGNOSTICS.md) | EON-SPEC-EDGE-007 | CLI diagnostics (eon-cli), REST health endpoints, and journald structured logging |
+| [Edge Hardware Compatibility](architecture/EDGE_HARDWARE_COMPATIBILITY.md) | EON-SPEC-EDGE-008 | Hardware profiles for Jetson, Intel Core Ultra, AMD Ryzen, Raspberry Pi, Qualcomm |
+
+#### 1.5.14 Optional Cloud Architecture (Sub-phase 2.15)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Optional Cloud Architecture](architecture/CLOUD_ARCHITECTURE.md) | EON-ARCH-CLD-001 | Optional cloud control plane topology, fleet telemetry, and local vs. cloud separation |
+| [Cloud-Edge Synchronization](architecture/CLOUD_EDGE_SYNCHRONIZATION.md) | EON-SPEC-CLD-001 | Resilient store-and-forward sync queue, vector clocks, and CRDT conflict resolution |
+| [Cloud API Gateway](architecture/CLOUD_API_GATEWAY.md) | EON-SPEC-CLD-002 | Envoy API gateway, mTLS robot termination, rate limiting, and tenant routing |
+| [Cloud Tenant Isolation](architecture/CLOUD_TENANT_ISOLATION.md) | EON-SPEC-CLD-003 | Logical schema isolation, dedicated tenant DBs, and per-tenant KMS encryption |
+| [Cloud Data Storage](architecture/CLOUD_DATA_STORAGE.md) | EON-SPEC-CLD-004 | PostgreSQL context store, TimescaleDB telemetry, and S3 artifact repository |
+| [Cloud Identity and Access](architecture/CLOUD_IDENTITY_AND_ACCESS.md) | EON-SPEC-CLD-005 | Device X.509 identities, OAuth2/OIDC operator login, and multi-tenant RBAC |
+| [Cloud Failure and Recovery](architecture/CLOUD_FAILURE_AND_RECOVERY.md) | EON-SPEC-CLD-006 | Zero edge degradation on cloud outage and exponential jittered reconnect |
+| [Cloud Deployment Options](architecture/CLOUD_DEPLOYMENT_OPTIONS.md) | EON-SPEC-CLD-007 | Public SaaS, private cloud VPC, and on-premises air-gapped hybrid appliances |
+| [Cloud Cost and Scalability](architecture/CLOUD_COST_AND_SCALABILITY_MODEL.md) | EON-SPEC-CLD-008 | FinOps cost model (~$1.50/robot/month) and horizontal gateway scaling |
+
+#### 1.5.15 Security Architecture (Sub-phase 2.16)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Security Architecture](architecture/SECURITY_ARCHITECTURE.md) | EON-ARCH-SEC-001 | Zero-Trust architecture, five security domains, and three trust boundaries |
+| [Security Threat Model](architecture/SECURITY_THREAT_MODEL.md) | EON-SPEC-SEC-001 | STRIDE threat analysis matrix with mitigations and automated verification methods |
+| [Security Identity and Authentication](architecture/SECURITY_IDENTITY_AND_AUTHENTICATION.md) | EON-SPEC-SEC-002 | TPM 2.0 device identities, SO_PEERCRED IPC auth, and pseudonymous UUIDs |
+| [Security Authorization and RBAC](architecture/SECURITY_AUTHORIZATION_AND_RBAC.md) | EON-SPEC-SEC-003 | Capability-based authorization model and default component role assignments |
+| [Security Key Management](architecture/SECURITY_KEY_MANAGEMENT.md) | EON-SPEC-SEC-004 | Two-tier envelope encryption (TPM KEK + per-subject DEKs) and shredding |
+| [Security Secure Communication](architecture/SECURITY_SECURE_COMMUNICATION.md) | EON-SPEC-SEC-005 | Transport encryption standards (IPC memory isolation, SROS 2, TLS 1.3) |
+| [Security Secrets Management](architecture/SECURITY_SECRETS_MANAGEMENT.md) | EON-SPEC-SEC-006 | Zero hardcoded secrets, TPM sealing, and mlock/explicit_bzero memory hygiene |
+| [Security Audit and Logging](architecture/SECURITY_AUDIT_AND_LOGGING.md) | EON-SPEC-SEC-007 | Tamper-evident append-only SHA-256 hash-chained audit trail and log redaction |
+| [Security Supply Chain](architecture/SECURITY_SUPPLY_CHAIN.md) | EON-SPEC-SEC-008 | CycloneDX/SPDX SBOM generation, Cosign artifact signing, and CVE scanning |
+| [Security Incident Response](architecture/SECURITY_INCIDENT_RESPONSE.md) | EON-SPEC-SEC-009 | Robotic fleet compromise containment, key revocation, and forensic readiness |
+
+#### 1.5.16 Privacy Architecture (Sub-phase 2.17)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Privacy Architecture](architecture/PRIVACY_ARCHITECTURE.md) | EON-ARCH-PRIV-001 | Privacy-by-design framework, epistemic modesty, and four non-negotiable pillars |
+| [Privacy Consent Model](architecture/PRIVACY_CONSENT_MODEL.md) | EON-SPEC-PRIV-001 | 3-tier consent model (Anonymous, Ephemeral Session, Consented Personalization) |
+| [Privacy Data Classification](architecture/PRIVACY_DATA_CLASSIFICATION.md) | EON-SPEC-PRIV-002 | Five-tier data sensitivity taxonomy and volatile vs. encrypted storage rules |
+| [Privacy Data Minimization](architecture/PRIVACY_DATA_MINIMIZATION.md) | EON-SPEC-PRIV-003 | Dimension reduction, landmark extraction, and strict purpose limitation |
+| [Privacy Retention and Deletion](architecture/PRIVACY_RETENTION_AND_DELETION.md) | EON-SPEC-PRIV-004 | Truth-in-specification regarding SSD wear-leveling and mathematical shredding |
+| [Privacy Context Isolation](architecture/PRIVACY_CONTEXT_ISOLATION.md) | EON-SPEC-PRIV-005 | Subject context memory boundaries and automated session expiration |
+| [Privacy Media Processing](architecture/PRIVACY_MEDIA_PROCESSING.md) | EON-SPEC-PRIV-006 | Ephemeral volatile ring buffers (/dev/shm) and recording indicator LED policy |
+| [Privacy Audit and Transparency](architecture/PRIVACY_AUDIT_AND_TRANSPARENCY.md) | EON-SPEC-PRIV-007 | Right of access data exports and immutable privacy audit logging |
+| [Privacy Cloud Synchronization](architecture/PRIVACY_CLOUD_SYNCHRONIZATION.md) | EON-SPEC-PRIV-008 | Unbypassable edge privacy filter dropping raw media and geographic pinning |
+| [Privacy Verification Requirements](architecture/PRIVACY_VERIFICATION_REQUIREMENTS.md) | EON-SPEC-PRIV-009 | Automated test procedures for zero disk media and cryptographic shredding |
+
+#### 1.5.17 Architecture Decision Records (`docs/architecture/decisions/`)
 
 | ADR | Title | Status | Scope |
 |---|---|---|---|
@@ -187,8 +288,53 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | [ADR-017](architecture/decisions/ADR-017-edge-storage-and-data-governance.md) | Edge Data Architecture, Storage & Retention | Approved | Multi-engine edge storage, AES-256-GCM, and shredding |
 | [ADR-018](architecture/decisions/ADR-018-api-architecture-and-security.md) | API Gateway Architecture, Protocol & Security | Approved | Northbound API Gateway, OpenAPI 3.1, and token bucket |
 | [ADR-019](architecture/decisions/ADR-019-python-sdk-architecture.md) | Dual-Mode Synchronous/Asynchronous Python SDK | Approved | Local in-process and remote client modes, strong typing |
+| [ADR-020](architecture/decisions/ADR-020-cpp-sdk-architecture.md) | Native C++ SDK Architecture (libeonsdk) | Approved | ISO C++17, Pimpl ABI stability, and zero-copy SHM |
+| [ADR-021](architecture/decisions/ADR-021-ros2-integration-strategy.md) | ROS 2 Decoupled Integration Strategy | Approved | Decoupled eon_ros2_bridge, lifecycle nodes, and SROS 2 |
+| [ADR-022](architecture/decisions/ADR-022-hardware-independent-robot-abstraction.md) | Robot Abstraction Layer (RAL) | Approved | Vendor-neutral abstraction, capability negotiation, and safety gate |
+| [ADR-023](architecture/decisions/ADR-023-edge-deployment-and-process-supervision.md) | Edge Deployment & Process Supervision | Approved | CPU-first edge profiles, systemd watchdog, cgroups v2, and A/B updates |
+| [ADR-024](architecture/decisions/ADR-024-optional-cloud-architecture-and-sync.md) | Optional Cloud Architecture & Sync | Approved | 100% offline edge autonomy, CRDT sync, and multi-tenancy |
+| [ADR-025](architecture/decisions/ADR-025-zero-trust-security-and-stride-threat-model.md) | Zero-Trust Security & STRIDE Model | Approved | 5 security domains, STRIDE mitigations, and TPM/DEK envelope crypto |
+| [ADR-026](architecture/decisions/ADR-026-privacy-by-design-and-cryptographic-boundaries.md) | Privacy-by-Design & Cryptographic Boundaries | Approved | Zero raw media persistence, epistemic modesty, and mathematical shredding |
+| [ADR-027](architecture/decisions/ADR-027-dual-runtime-interoperability-python-cpp.md) | Dual-Runtime Interoperability (Python & C++) | Approved | Unified event schemas, 7-state health model, and benchmark protocols |
+| [ADR-028](architecture/decisions/ADR-028-failure-containment-and-resilience-model.md) | Failure Containment & Resilience Model | Approved | Fail-silent social motion, priority queue drops, and worker restarts |
 
-#### 1.5.11 Phase 2 Architectural Qualification Reports
+#### 1.5.18 System Architecture Visual Suite (`docs/architecture/diagrams/`)
+
+| Diagram File | Description |
+|---|---|
+| [COMPLETE_SYSTEM_ARCHITECTURE.mmd](architecture/diagrams/COMPLETE_SYSTEM_ARCHITECTURE.mmd) | End-to-end system context from human environment to robot actuators |
+| [COMPLETE_COMPONENT_ARCHITECTURE.mmd](architecture/diagrams/COMPLETE_COMPONENT_ARCHITECTURE.mmd) | 5-layer component architecture from OS to application layer |
+| [SEVEN_ENGINE_INTERACTION.mmd](architecture/diagrams/SEVEN_ENGINE_INTERACTION.mmd) | Information flow across ERS, EMS, ERE, PSE, SIE, ERG, HBU |
+| [EON_CORE_INTERNAL_ARCHITECTURE.mmd](architecture/diagrams/EON_CORE_INTERNAL_ARCHITECTURE.mmd) | Internal subsystems of eond (IPC, Bus, Context, Lifecycle, Adapters) |
+| [CPP_SDK_ARCHITECTURE.mmd](architecture/diagrams/CPP_SDK_ARCHITECTURE.mmd) | Public API, Pimpl barrier, C-ABI bridge, and private threading core |
+| [PYTHON_CPP_INTEROPERABILITY.mmd](architecture/diagrams/PYTHON_CPP_INTEROPERABILITY.mmd) | Cross-language contracts, shared schemas, and FFI bridging |
+| [ROS2_INTEGRATION_ARCHITECTURE.mmd](architecture/diagrams/ROS2_INTEGRATION_ARCHITECTURE.mmd) | ROS 2 middleware graph, managed lifecycle nodes, and topics |
+| [ROBOT_ABSTRACTION_ARCHITECTURE.mmd](architecture/diagrams/ROBOT_ABSTRACTION_ARCHITECTURE.mmd) | RAL sensors, capability manifests, expressive fallback, and safety |
+| [EDGE_DEPLOYMENT_ARCHITECTURE.mmd](architecture/diagrams/EDGE_DEPLOYMENT_ARCHITECTURE.mmd) | Host hardware, Linux OS, cgroups v2, and runtime sandboxes |
+| [CLOUD_EDGE_ARCHITECTURE.mmd](architecture/diagrams/CLOUD_EDGE_ARCHITECTURE.mmd) | Edge autonomous domain and optional cloud control plane |
+| [SECURITY_TRUST_BOUNDARIES.mmd](architecture/diagrams/SECURITY_TRUST_BOUNDARIES.mmd) | Trust Boundaries A, B, C across five security domains |
+| [PRIVACY_DATA_FLOW.mmd](architecture/diagrams/PRIVACY_DATA_FLOW.mmd) | Ephemeral volatile media processing, 3-tier consent, and shredding |
+| [EVENT_COMMUNICATION_ARCHITECTURE.mmd](architecture/diagrams/EVENT_COMMUNICATION_ARCHITECTURE.mmd) | Priority lanes (CRITICAL to LOW), queues, and DROP_OLDEST policy |
+| [ENGINE_LIFECYCLE_STATE_MACHINE.mmd](architecture/diagrams/ENGINE_LIFECYCLE_STATE_MACHINE.mmd) | Full 11-State internal FSM transitions and failure containment |
+| [FAILURE_ISOLATION_ARCHITECTURE.mmd](architecture/diagrams/FAILURE_ISOLATION_ARCHITECTURE.mmd) | Fault triggers, containment boundaries, and fail-silent robotics contract |
+| [DATA_STORAGE_AND_RETENTION.mmd](architecture/diagrams/DATA_STORAGE_AND_RETENTION.mmd) | Volatile RAM vs. LUKS disk, envelope encryption, and WAL truncation |
+| [COMPLETE_DEPLOYMENT_TOPOLOGY.mmd](architecture/diagrams/COMPLETE_DEPLOYMENT_TOPOLOGY.mmd) | Physical robot enclosure, compute edge, safety MCU, and sensors |
+| [SYSTEM_STARTUP_AND_SHUTDOWN.mmd](architecture/diagrams/SYSTEM_STARTUP_AND_SHUTDOWN.mmd) | Deterministic sequence diagram for service startup and clean exit |
+
+#### 1.5.19 Scalability, Failure Isolation, and Resilience Review (Sub-phase 2.20)
+
+| Document | Document ID | Description |
+|---|---|---|
+| [Architecture Scalability Review](architecture/ARCHITECTURE_SCALABILITY_REVIEW.md) | EON-REV-SCAL-001 | Single-robot, multi-user, and fleet scalability modeling |
+| [Architecture Failure Isolation Review](architecture/ARCHITECTURE_FAILURE_ISOLATION_REVIEW.md) | EON-REV-FAIL-001 | 18 deterministic failure scenarios, triggers, containment, and recovery |
+| [Architecture Resource Budgets](architecture/ARCHITECTURE_RESOURCE_BUDGETS.md) | EON-SPEC-BUD-001 | Resource budgets across Low-Resource, Standard, and Accelerated tiers |
+| [Architecture Bottleneck Analysis](architecture/ARCHITECTURE_BOTTLENECK_ANALYSIS.md) | EON-REV-BOT-001 | Analysis of perception serialization, GIL, WAL, and thermal limits |
+| [Architecture Resilience Model](architecture/ARCHITECTURE_RESILIENCE_MODEL.md) | EON-REV-RES-001 | Four-layer resilience model (Prevention, Detection, Degradation, Recovery) |
+| [Architecture Risk Register](architecture/ARCHITECTURE_RISK_REGISTER.md) | EON-REG-RISK-001 | Systemic risk register with 8 systemic risks and architectural mitigations |
+| [Architecture Implementation Readiness](architecture/ARCHITECTURE_IMPLEMENTATION_READINESS.md) | EON-REV-READY-001 | Subsystem readiness audit confirming readiness for Phase 3 engineering |
+| [Architecture Acceptance Matrix](architecture/ARCHITECTURE_ACCEPTANCE_MATRIX.md) | EON-REG-ACCP-001 | Traceability verification for all core architectural acceptance criteria |
+
+#### 1.5.20 Phase 2 Architectural Qualification Reports
 
 | Document | Document ID | Description |
 |---|---|---|
@@ -201,8 +347,19 @@ The Phase 0 documentation suite comprises 16 foundational specifications across 
 | [Phase 2.8 Qualification Report](architecture/PHASE_2_8_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.8-001 | Architecture qualification report for Sub-phase 2.8 (Data Architecture) |
 | [Phase 2.9 Qualification Report](architecture/PHASE_2_9_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.9-001 | Architecture qualification report for Sub-phase 2.9 (API Architecture) |
 | [Phase 2.10 Qualification Report](architecture/PHASE_2_10_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.10-001 | Architecture qualification report for Sub-phase 2.10 (Python SDK) |
+| [Phase 2.11 Qualification Report](architecture/PHASE_2_11_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.11-001 | Architecture qualification report for Sub-phase 2.11 (C++ SDK) |
+| [Phase 2.12 Qualification Report](architecture/PHASE_2_12_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.12-001 | Architecture qualification report for Sub-phase 2.12 (ROS 2 Architecture) |
+| [Phase 2.13 Qualification Report](architecture/PHASE_2_13_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.13-001 | Architecture qualification report for Sub-phase 2.13 (Robot Abstraction) |
+| [Phase 2.14 Qualification Report](architecture/PHASE_2_14_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.14-001 | Architecture qualification report for Sub-phase 2.14 (Edge Deployment) |
+| [Phase 2.15 Qualification Report](architecture/PHASE_2_15_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.15-001 | Architecture qualification report for Sub-phase 2.15 (Optional Cloud) |
+| [Phase 2.16 Qualification Report](architecture/PHASE_2_16_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.16-001 | Architecture qualification report for Sub-phase 2.16 (Security Architecture) |
+| [Phase 2.17 Qualification Report](architecture/PHASE_2_17_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.17-001 | Architecture qualification report for Sub-phase 2.17 (Privacy Architecture) |
+| [Phase 2.18 Qualification Report](architecture/PHASE_2_18_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.18-001 | Architecture qualification report for Sub-phase 2.18 (Architecture Decisions) |
+| [Phase 2.19 Qualification Report](architecture/PHASE_2_19_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.19-001 | Architecture qualification report for Sub-phase 2.19 (System Diagrams) |
+| [Phase 2.20 Qualification Report](architecture/PHASE_2_20_QUALIFICATION_REPORT.md) | EON-QUAL-PH2.20-001 | Architecture qualification report for Sub-phase 2.20 (Scalability & Failure Isolation) |
 | [Phase 2.3–2.10 Architecture Correction Audit](architecture/PHASE_2_3_TO_2_10_CORRECTION_AUDIT.md) | EON-AUDIT-PH2-001 | Defect audit, reconciliation, and requalification report for Sub-phases 2.3–2.10 |
 | [Phase 2.3–2.10 Master Qualification Report](architecture/PHASE_2_3_TO_2_10_FINAL_QUALIFICATION_REPORT.md) | EON-QUAL-PH2-FINAL-001 | Master consolidated qualification report for Sub-phases 2.3 through 2.10 |
+| [Phase 2.11–2.20 Final Consolidated Qualification Report](architecture/PHASE_2_11_TO_2_20_FINAL_QUALIFICATION_REPORT.md) | EON-QUAL-PH2-FINAL-002 | Master consolidated qualification report for Sub-phases 2.11 through 2.20 |
 
 ### 1.6 Engineering Implementation Reports (`docs/engineering/`)
 

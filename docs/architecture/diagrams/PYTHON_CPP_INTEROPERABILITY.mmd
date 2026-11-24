@@ -1,0 +1,35 @@
+flowchart LR
+    subgraph ApplicationLayer["Application Developer Layer"]
+        PyApp["Python Behavioral Scripts & Research<br/>(eon-sdk)"]
+        CppApp["C++ High-Performance Robotic Nodes<br/>(libeonsdk)"]
+    end
+
+    subgraph CrossLanguageContracts["Unified Contract Specification"]
+        EventSchemas["Unified Event Schemas<br/>(Protobuf / FlatBuffers / JSON)"]
+        HealthProjection["7-State Operational Health Model<br/>(UNINITIALIZED .. FAULTED)"]
+        SafetyInvariant["Non-Authoritative Motion Invariant<br/>(is_authoritative = false)"]
+        BenchmarkProtocol["Unified Benchmark Protocol<br/>(p50, p95, p99 Latency Metrics)"]
+    end
+
+    subgraph InteropBridge["Interop & FFI Mechanisms"]
+        C_ABI["Flat C-ABI Dynamic Library (libeon_c.so)"]
+        PyBind["pybind11 / ctypes Zero-Copy FFI"]
+        SharedMemory["OS Shared Memory (/dev/shm)<br/>Zero-Copy Tensor Exchange"]
+    end
+
+    subgraph EonCore["EON Core Runtime Engine"]
+        CoreBus["Local IPC Event Bus"]
+    end
+
+    PyApp --> EventSchemas
+    CppApp --> EventSchemas
+    PyApp --> HealthProjection
+    CppApp --> HealthProjection
+    PyApp --> SafetyInvariant
+    CppApp --> SafetyInvariant
+
+    CppApp --> C_ABI
+    PyApp --> PyBind
+    PyBind --> C_ABI
+    C_ABI --> SharedMemory
+    C_ABI --> CoreBus

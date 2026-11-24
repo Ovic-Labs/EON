@@ -1,0 +1,49 @@
+flowchart TD
+    subgraph IngressStream["1. High-Frequency Perception Ingress"]
+        CameraFeed["Raw Camera Frames (1080p RGB)"]
+        AudioFeed["Raw Audio Chunks (16 kHz PCM)"]
+    end
+
+    subgraph VolatileMemory["2. Volatile Memory Only (/dev/shm tmpfs)"]
+        ShmRing["Fixed-Capacity Circular Ring Buffer<br/>(Overwritten in <= 100 ms)"]
+        ZeroDiskInvariant["NO DISK WRITES PERMITTED<br/>(Raw media strictly ephemeral)"]
+    end
+
+    subgraph ExtractionPipeline["3. Feature Extraction & Probabilistic Inference"]
+        Landmarks["Facial Landmarks (2D Coords)"]
+        Prosody["Vocal Pitch / Formant Vectors"]
+        AffectInference["Probabilistic Inference (Valence, Arousal)<br/>Invariant: is_definitive_claim = false"]
+    end
+
+    subgraph ConsentDecision["4. Privacy & Consent Evaluation Gate"]
+        CheckConsent{"User Consent Status?"}
+        Anonymous["Tier 1: Anonymous Passerby<br/>(Zero storage, ephemeral gaze only)"]
+        SessionMemory["Tier 2: Ephemeral Session<br/>(RAM context, flushed upon user departure)"]
+        EncryptedStorage["Tier 3: Consented Personalization<br/>(Encrypted SQLite under Subject DEK)"]
+    end
+
+    subgraph ShreddingAction["5. Right to be Forgotten (Shredding)"]
+        UserRevoke["User Revocation Command"]
+        DEKDestroy["Destroy Subject DEK in Memory & Key Table"]
+        WALTruncate["PRAGMA wal_checkpoint(TRUNCATE)"]
+        Unrecoverable["Ciphertext Blocks on Flash Mathematically Undecipherable"]
+    end
+
+    CameraFeed --> ShmRing
+    AudioFeed --> ShmRing
+    ShmRing --> ZeroDiskInvariant
+    ShmRing --> Landmarks
+    ShmRing --> Prosody
+
+    Landmarks --> AffectInference
+    Prosody --> AffectInference
+    AffectInference --> CheckConsent
+
+    CheckConsent -->|No Consent / Public Space| Anonymous
+    CheckConsent -->|Active Conversation| SessionMemory
+    CheckConsent -->|Explicit Opt-In| EncryptedStorage
+
+    UserRevoke --> DEKDestroy
+    DEKDestroy --> WALTruncate
+    WALTruncate --> Unrecoverable
+    EncryptedStorage -.-> UserRevoke

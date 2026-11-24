@@ -1,0 +1,44 @@
+flowchart TD
+    subgraph Layer5["Layer 5: Client & Application Layer"]
+        CLI["eon-cli Tool"]
+        PythonSDK["eon-sdk (Python 3.10+)"]
+        CppSDK["libeonsdk (C++17)"]
+        ROS2Nodes["eon_ros2_bridge Nodes"]
+    end
+
+    subgraph Layer4["Layer 4: Robot Abstraction Layer (RAL)"]
+        SensorAbstraction["Sensor Normalizer (Vision, Audio, IMU)"]
+        CapabilityArbiter["Capability Manifest & Fallback Arbiter"]
+        ActuatorProposals["Non-Authoritative Proposal Formatter"]
+    end
+
+    subgraph Layer3["Layer 3: Seven Intelligence Engines"]
+        direction TB
+        E1["1. ERS: Emotion Recognition"]
+        E2["2. EMS: Emotion Modelling"]
+        E3["3. ERE: Empathy Reasoning"]
+        E4["4. PSE: Personality & Social"]
+        E5["5. SIE: Social Interaction"]
+        E6["6. ERG: Emotion Response Generation"]
+        E7["7. HBU: Human Behaviour Understanding"]
+    end
+
+    subgraph Layer2["Layer 2: EON Core Runtime"]
+        EventBus["Core Event Bus (Priority Queues)"]
+        LifecycleEngine["11-State FSM Lifecycle Coordinator"]
+        SharedContext["Shared Context Engine (Encrypted SQLite)"]
+        ModelAdapters["Model Adapter Runtime (ONNX / Fallback)"]
+    end
+
+    subgraph Layer1["Layer 1: Platform & Operating System"]
+        OS_Linux["Linux Kernel (Ubuntu / Debian / Yocto)"]
+        Cgroups["cgroups v2 & systemd Supervision"]
+        CryptoHardware["TPM 2.0 / dm-crypt LUKS Storage"]
+        POSIX_SHM["/dev/shm Ring Buffers"]
+    end
+
+    Layer5 <--> Layer2
+    Layer5 <--> Layer4
+    Layer4 <--> Layer3
+    Layer3 <--> Layer2
+    Layer2 <--> Layer1

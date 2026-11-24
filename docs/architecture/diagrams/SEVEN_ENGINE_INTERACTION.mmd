@@ -1,0 +1,36 @@
+flowchart LR
+    subgraph Ingress["Perceptual Ingress"]
+        Camera["Camera Stream"]
+        Audio["Audio Stream"]
+        Odometry["Robot Odometry"]
+    end
+
+    subgraph PerceptionEngines["Perception & Understanding Engines"]
+        ERS["Emotion Recognition System (ERS)<br/>- Face Landmarks<br/>- Vocal Prosody<br/>- Multimodal Fusion"]
+        HBU["Human Behaviour Understanding (HBU)<br/>- Posture & Gesture<br/>- Engagement Dynamics<br/>- Proxemic Distance"]
+    end
+
+    subgraph AffectiveReasoningEngines["Affective & Social Reasoning Engines"]
+        EMS["Emotion Modelling System (EMS)<br/>- Continuous Valence/Arousal<br/>- Affect Decay Dynamics<br/>- Mood Recurrence"]
+        ERE["Empathy Reasoning Engine (ERE)<br/>- Perspective Taking<br/>- Empathetic Concern<br/>- Distress Compensation"]
+        PSE["Personality & Social Engine (PSE)<br/>- Big Five Profile<br/>- Social Relationship Graph<br/>- Conversational Pacing"]
+    end
+
+    subgraph ResponseEngines["Response & Generation Engines"]
+        SIE["Social Interaction Engine (SIE)<br/>- Turn-Taking Coordinator<br/>- Dialogue Act Planner<br/>- Interaction State Graph"]
+        ERG["Emotion Response Generation (ERG)<br/>- Facial OLED Cue<br/>- Speech Prosody Modulator<br/>- Non-Authoritative Gaze Proposal"]
+    end
+
+    subgraph SafetyAndOutput["Output & Safety Gate"]
+        ProposalGate["Safety Arbiter Proposal Gate<br/>(is_authoritative = false)"]
+        RobotController["Robot Safety Controller"]
+    end
+
+    Ingress --> PerceptionEngines
+    PerceptionEngines --> EMS
+    EMS --> ERE
+    ERE --> SIE
+    PSE --> SIE
+    SIE --> ERG
+    ERG --> ProposalGate
+    ProposalGate --> RobotController
