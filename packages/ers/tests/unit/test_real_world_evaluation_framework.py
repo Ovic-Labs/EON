@@ -84,6 +84,9 @@ def test_dataset_provenance_and_licensing_registers() -> None:
         # All academic benchmarks are restricted for commercial use:
         assert meta.commercial_allowed is False
         assert meta.is_commercially_usable() is False
+        # External unacquired datasets must have empty checksum (no placeholder hashes)
+        assert meta.checksum == ""
+        assert meta.is_valid_checksum() is False
 
 
 def test_15_stage_training_pipeline_execution(tmp_path: Path) -> None:
@@ -110,7 +113,7 @@ def test_15_stage_training_pipeline_execution(tmp_path: Path) -> None:
         output_dir=str(tmp_path),
     )
 
-    # Generate synthetic samples with 5 distinct subjects
+    # Generate synthetic samples with 5 distinct subjects (without data payloads)
     samples = []
     for i in range(1, 6):
         subj = f"Subject_{i:02d}"
@@ -137,3 +140,11 @@ def test_15_stage_training_pipeline_execution(tmp_path: Path) -> None:
     # Since AffectNet has commercial_allowed = False and mock predictions are uncalibrated:
     assert record is not None
     assert record.is_validated is False
+    assert success is False
+
+    # Check that stage 11 reported BLOCKED because sample data was missing
+    stage_11 = next(
+        r for r in stage_results if r.stage == TrainingPipelineStage.STAGE_11_TEST_EVALUATION
+    )
+    assert stage_11.success is False
+    assert stage_11.details.get("status") == "BLOCKED"

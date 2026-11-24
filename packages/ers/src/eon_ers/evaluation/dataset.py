@@ -7,10 +7,23 @@ partitioning to prevent subject leakage during training and scientific evaluatio
 
 from __future__ import annotations
 
+import hashlib
 import random
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+
+EMPTY_BYTES_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+KNOWN_PLACEHOLDER_CHECKSUMS: frozenset[str] = frozenset(
+    {
+        EMPTY_BYTES_SHA256,
+        "0" * 64,
+        "f" * 64,
+        "a" * 64,
+        "1" * 64,
+    }
+)
 
 
 class DatasetMetadata(BaseModel):
@@ -41,6 +54,49 @@ class DatasetMetadata(BaseModel):
     def is_commercially_usable(self) -> bool:
         """Check if dataset can be legally used for commercial models."""
         return self.commercial_allowed
+
+    def is_valid_checksum(self) -> bool:
+        """Verify whether the registered checksum is a valid, non-placeholder 64-char SHA-256."""
+        if not self.checksum:
+            return False
+        c = self.checksum.strip().lower()
+        if len(c) != 64:
+            return False
+        if not all(ch in "0123456789abcdef" for ch in c):
+            return False
+        if c in KNOWN_PLACEHOLDER_CHECKSUMS:
+            return False
+        return True
+
+    def verify_archive(self, archive_path: str | Path) -> tuple[bool, str]:
+        """Verify the integrity of a dataset archive file against its registered SHA-256 checksum."""
+        if not self.is_valid_checksum():
+            return (
+                False,
+                f"Dataset '{self.name}' has no registered valid SHA-256 checksum (value: '{self.checksum}').",
+            )
+
+        path = Path(archive_path)
+        if not path.is_file():
+            return False, f"Dataset archive file not found: {path}"
+
+        if path.stat().st_size == 0:
+            return False, f"Dataset archive file is empty (0 bytes): {path}"
+
+        hasher = hashlib.sha256()
+        with open(path, "rb") as f:
+            while chunk := f.read(65536):
+                hasher.update(chunk)
+        computed = hasher.hexdigest().lower()
+
+        expected = self.checksum.strip().lower()
+        if computed != expected:
+            return (
+                False,
+                f"Checksum mismatch for '{self.name}': expected {expected}, got {computed}.",
+            )
+
+        return True, f"Dataset archive integrity verified ({computed[:16]}...)."
 
 
 class EvaluationSample(BaseModel):
@@ -157,7 +213,7 @@ AFFECTNET_METADATA = DatasetMetadata(
     commercial_allowed=False,
     redistribution_allowed=False,
     partition_strategy="subject_independent",
-    checksum="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    checksum="",
     download_url="http://mohammadmahoor.com/affectnet/",
     subject_ids=[],
 )
@@ -170,7 +226,7 @@ RAF_DB_METADATA = DatasetMetadata(
     commercial_allowed=False,
     redistribution_allowed=False,
     partition_strategy="predefined_subject_splits",
-    checksum="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    checksum="",
     download_url="http://www.whdeng.cn/RAF/model1.html",
     subject_ids=[],
 )
@@ -183,7 +239,7 @@ RAVDESS_METADATA = DatasetMetadata(
     commercial_allowed=False,
     redistribution_allowed=True,
     partition_strategy="actor_independent_holdout",
-    checksum="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    checksum="",
     download_url="https://zenodo.org/record/1188976",
     subject_ids=[f"Actor_{i:02d}" for i in range(1, 25)],
 )
@@ -196,7 +252,7 @@ CREMA_D_METADATA = DatasetMetadata(
     commercial_allowed=False,
     redistribution_allowed=True,
     partition_strategy="actor_independent_holdout",
-    checksum="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    checksum="",
     download_url="https://github.com/CheyneyComputerScience/CREMA-D",
     subject_ids=[f"Actor_{1000 + i}" for i in range(1, 92)],
 )
