@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from eon_ers.types import Modality, ModelState, ObservationStatus, QualityGrade
+from eon_ers.types import InputQualityStatus, Modality, ModelState, ObservationStatus, QualityGrade
 
 
 class QualityAssessment(BaseModel):
@@ -167,7 +167,19 @@ class EmotionObservation(BaseModel):
     )
     status: ObservationStatus = Field(
         default=ObservationStatus.OK,
-        description="Status indicator ('ok', 'degraded', 'insufficient_evidence', 'model_unavailable').",
+        description="Status indicator ('ok', 'degraded', 'insufficient_evidence', 'model_unavailable', 'model_unvalidated', 'failed').",
+    )
+    input_quality: InputQualityStatus = Field(
+        default=InputQualityStatus.ACCEPTABLE,
+        description="Independent sensory input quality status separated from model qualification.",
+    )
+    is_calibrated: bool = Field(
+        default=False,
+        description="Whether the confidence score has been verified against empirical calibration evidence.",
+    )
+    raw_confidence: float | None = Field(
+        default=None,
+        description="Raw uncalibrated confidence score prior to calibration mapping.",
     )
     model_state: ModelState = Field(
         default=ModelState.MODEL_LOADED_UNVERIFIED,
@@ -261,6 +273,26 @@ class FusionResult(BaseModel):
     contributing_model_states: dict[str, str] = Field(
         default_factory=dict,
         description="Scientific model validation state of each contributing modality.",
+    )
+    classification_eligible_modalities: list[str] = Field(
+        default_factory=list,
+        description="Modalities strictly validated and eligible for affective classification.",
+    )
+    diagnostic_modalities: list[str] = Field(
+        default_factory=list,
+        description="Modalities presented for diagnostic/observability only, isolated from classification probabilities.",
+    )
+    fusion_status: str = Field(
+        default="ok",
+        description="Overall multimodal fusion and eligibility status ('ok', 'unvalidated_only', 'conflict_attenuated', 'insufficient_evidence').",
+    )
+    contributing_artifact_hashes: dict[str, str] = Field(
+        default_factory=dict,
+        description="Cryptographic SHA-256 digest of each contributing model artifact.",
+    )
+    contributing_validation_records: dict[str, str] = Field(
+        default_factory=dict,
+        description="Validation record ID of each contributing model.",
     )
     is_validated: bool = Field(
         default=False,

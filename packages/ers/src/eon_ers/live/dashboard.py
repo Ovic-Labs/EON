@@ -511,27 +511,37 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         .status-dot.active { background: var(--status-success); box-shadow: 0 0 6px var(--status-success); }
         .status-dot.warning { background: var(--status-warning); }
         .status-dot.error { background: var(--status-error); }
+
+        /* Accessibility: Prefers Reduced Motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <header>
+    <header role="banner">
         <div class="brand-container">
             <span class="brand-badge">OVIC EON</span>
             <h1>ERS Telemetry & Model Qualification</h1>
         </div>
         <div class="header-actions">
             <div>
-                <span class="status-dot" id="ws-status-dot"></span>
-                <span style="font-family: var(--font-mono); font-size: 0.75rem;" id="ws-status-text">DISCONNECTED</span>
+                <span class="status-dot" id="ws-status-dot" aria-hidden="true"></span>
+                <span style="font-family: var(--font-mono); font-size: 0.75rem;" id="ws-status-text" aria-live="polite">DISCONNECTED</span>
             </div>
-            <button class="theme-toggle-btn" id="theme-toggle-btn">THEME: DARK</button>
+            <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle dark and light color theme">THEME: DARK</button>
         </div>
     </header>
 
-    <div class="system-banner banner-warning" id="model-integrity-banner">
-        <div class="banner-text">
-            <strong>Qualification Alert:</strong> Loaded models are unverified baseline graphs with unvalidated provenance. Discrete emotion categorization is suppressed to prevent false claims.
+    <div class="system-banner banner-warning" id="model-integrity-banner" role="alert" aria-live="polite">
+        <div class="banner-text" id="model-integrity-text">
+            <strong>Notice:</strong> Live sensor input is active. Emotion classification is unavailable because the selected model has not passed scientific validation.
         </div>
         <span class="metric-badge badge-unvalidated" id="overall-model-state-badge">MODEL_LOADED_UNVERIFIED</span>
     </div>
@@ -902,6 +912,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                         elements.modelIntegrityBanner.innerHTML = "<strong>Validated Baseline:</strong> All models verified against validation records.";
                         elements.overallModelStateBadge.textContent = "VALIDATED";
                         elements.overallModelStateBadge.className = "metric-badge badge-verified";
+                    } else {
+                        elements.modelIntegrityBanner.className = "system-banner banner-warning";
+                        elements.modelIntegrityBanner.innerHTML = "<strong>Notice:</strong> Live sensor input is active. Emotion classification is unavailable because the selected model has not passed scientific validation.";
+                        elements.overallModelStateBadge.textContent = "MODEL_LOADED_UNVERIFIED";
+                        elements.overallModelStateBadge.className = "metric-badge badge-unvalidated";
                     }
                 } catch (e) {
                     logEvent("Failed to fetch model status: " + e.message, "warn");

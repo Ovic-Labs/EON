@@ -22,7 +22,14 @@ from eon_ers.facial.features import ExperimentalRegionalFeatureExtractor
 from eon_ers.facial.landmarks import BaseLandmarkDetector, HeuristicLandmarkDetector
 from eon_ers.facial.preprocessing import FacialPreprocessor
 from eon_ers.quality.face_quality import FaceQualityEvaluator
-from eon_ers.types import EmotionCategory, Modality, ObservationStatus, QualityGrade
+from eon_ers.types import (
+    EmotionCategory,
+    InputQualityStatus,
+    Modality,
+    ModelState,
+    ObservationStatus,
+    QualityGrade,
+)
 
 
 class FacialPipeline:
@@ -87,11 +94,21 @@ class FacialPipeline:
                 processing_latency_ms=latency_ms,
                 limitations=["No image payload supplied in input envelope."],
                 status=ObservationStatus.INSUFFICIENT_EVIDENCE,
+                input_quality=InputQualityStatus.UNUSABLE,
+                model_state=self.model_adapter.model_state,
+                is_validated=False,
                 is_definitive_claim=False,
             )
 
         # 2. Quality evaluation & decoding
         quality, pil_img = self.quality_evaluator.evaluate(inp.image_payload)
+
+        if quality.grade in (QualityGrade.EXCELLENT, QualityGrade.ACCEPTABLE):
+            input_quality = InputQualityStatus.ACCEPTABLE
+        elif quality.grade == QualityGrade.DEGRADED:
+            input_quality = InputQualityStatus.DEGRADED
+        else:
+            input_quality = InputQualityStatus.UNUSABLE
 
         # If image cannot be decoded or is unusable
         if pil_img is None or quality.grade == QualityGrade.UNUSABLE:
@@ -112,6 +129,9 @@ class FacialPipeline:
                 processing_latency_ms=latency_ms,
                 limitations=limitations + quality.reasons,
                 status=ObservationStatus.INSUFFICIENT_EVIDENCE,
+                input_quality=InputQualityStatus.UNUSABLE,
+                model_state=self.model_adapter.model_state,
+                is_validated=False,
                 is_definitive_claim=False,
             )
 
@@ -138,6 +158,9 @@ class FacialPipeline:
                 processing_latency_ms=latency_ms,
                 limitations=limitations + ["No face detected in sensory frame."],
                 status=ObservationStatus.INSUFFICIENT_EVIDENCE,
+                input_quality=InputQualityStatus.UNUSABLE,
+                model_state=self.model_adapter.model_state,
+                is_validated=False,
                 is_definitive_claim=False,
             )
 
@@ -185,6 +208,9 @@ class FacialPipeline:
                 processing_latency_ms=latency_ms,
                 limitations=limitations + ["Configured model adapter weights are unavailable."],
                 status=ObservationStatus.MODEL_UNAVAILABLE,
+                input_quality=input_quality,
+                model_state=self.model_adapter.model_state,
+                is_validated=False,
                 is_definitive_claim=False,
             )
 
@@ -210,6 +236,9 @@ class FacialPipeline:
                 processing_latency_ms=latency_ms,
                 limitations=limitations + [f"Model inference failed: {exc}"],
                 status=ObservationStatus.FAILED,
+                input_quality=input_quality,
+                model_state=ModelState.MODEL_INFERENCE_FAILED,
+                is_validated=False,
                 is_definitive_claim=False,
             )
 
@@ -252,13 +281,10 @@ class FacialPipeline:
             )
         )
 
-        # Epistemic honesty & abstention evaluation:
-        # If model is unvalidated, experimental, uniform, or below threshold,
-        # we strictly suppress discrete classification to prevent fabricated emotion claims.
-        status = ObservationStatus.OK
-        dominant_cat = raw_dominant
-
-        if is_unvalidated:
+        # Deterministic Status Precedence Policy:
+        # Precedence: FAILED > MODEL_UNAVAILABLE > MODEL_UNVALIDATED > INSUFFICIENT_EVIDENCE > DEGRADED > OK
+        # Crucial: Unvalidated model state is NEVER overwritten by degraded input quality!
+        if is_unvalidated or is_experimental:
             status = ObservationStatus.MODEL_UNVALIDATED
             dominant_cat = EmotionCategory.UNKNOWN.value
             confidence = 0.0
@@ -266,13 +292,13 @@ class FacialPipeline:
             limitations.append(
                 "Model is unvalidated; discrete emotion categorization suppressed to prevent fabricated predictions."
             )
-        elif is_experimental:
+        elif input_quality == InputQualityStatus.UNUSABLE:
             status = ObservationStatus.INSUFFICIENT_EVIDENCE
             dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
             confidence = 0.0
             uncertainty = 1.0
             limitations.append(
-                "Abstaining from classification: unvalidated experimental feature adapter."
+                "Unusable sensory input quality; insufficient evidence for emotion classification."
             )
         elif is_uniform:
             status = ObservationStatus.INSUFFICIENT_EVIDENCE
@@ -294,9 +320,12 @@ class FacialPipeline:
                 f"Low confidence ({confidence:.2f} < {self.config.confidence_threshold}) "
                 f"or high uncertainty ({uncertainty:.2f} > {self.config.uncertainty_threshold})."
             )
-
-        if quality.grade == QualityGrade.DEGRADED:
+        elif input_quality == InputQualityStatus.DEGRADED:
             status = ObservationStatus.DEGRADED
+            dominant_cat = raw_dominant
+        else:
+            status = ObservationStatus.OK
+            dominant_cat = raw_dominant
 
         latency_ms = (time.perf_counter() - start_time) * 1000.0
 
@@ -318,7 +347,10 @@ class FacialPipeline:
             processing_latency_ms=round(latency_ms, 2),
             limitations=limitations,
             status=status,
+            input_quality=input_quality,
             model_state=self.model_adapter.model_state,
             is_validated=self.model_adapter.is_validated,
+            is_calibrated=False,
+            raw_confidence=round(raw_confidence, 4),
             is_definitive_claim=False,
         )

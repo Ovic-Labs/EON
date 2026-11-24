@@ -96,42 +96,82 @@ class ModelManifest(BaseModel):
             outputs = session.get_outputs()
 
             # Validate input tensor specification
-            expected_in_name = self.input_specification.get("name")
-            expected_in_shape = self.input_specification.get("shape")
             if not inputs:
                 return False, "ONNX model has no input tensors."
 
             actual_in = inputs[0]
+            expected_in_name = self.input_specification.get("name")
+            expected_in_shape = self.input_specification.get("shape")
+            expected_in_dtype = self.input_specification.get("dtype")
+
             if expected_in_name and actual_in.name != expected_in_name:
                 return (
                     False,
                     f"Input tensor name mismatch: expected '{expected_in_name}', got '{actual_in.name}'.",
                 )
 
-            if expected_in_shape and actual_in.shape != expected_in_shape:
-                return (
-                    False,
-                    f"Input tensor shape mismatch: expected {expected_in_shape}, got {actual_in.shape}.",
-                )
+            if expected_in_shape is not None:
+                if len(actual_in.shape) != len(expected_in_shape):
+                    return (
+                        False,
+                        f"Input tensor rank mismatch: expected {len(expected_in_shape)}D, got {len(actual_in.shape)}D.",
+                    )
+                if list(actual_in.shape) != list(expected_in_shape):
+                    return (
+                        False,
+                        f"Input tensor shape mismatch: expected {expected_in_shape}, got {actual_in.shape}.",
+                    )
+
+            if expected_in_dtype or hasattr(actual_in, "type"):
+                valid_float_types = ("tensor(float)", "tensor(float32)")
+                if actual_in.type not in valid_float_types:
+                    return (
+                        False,
+                        f"Input tensor dtype invalid: expected floating point tensor, got '{actual_in.type}'.",
+                    )
 
             # Validate output tensor specification
-            expected_out_name = self.output_specification.get("name")
-            expected_out_shape = self.output_specification.get("shape")
             if not outputs:
                 return False, "ONNX model has no output tensors."
 
             actual_out = outputs[0]
+            expected_out_name = self.output_specification.get("name")
+            expected_out_shape = self.output_specification.get("shape")
+            expected_classes = self.output_specification.get("classes")
+
             if expected_out_name and actual_out.name != expected_out_name:
                 return (
                     False,
                     f"Output tensor name mismatch: expected '{expected_out_name}', got '{actual_out.name}'.",
                 )
 
-            if expected_out_shape and actual_out.shape != expected_out_shape:
-                return (
-                    False,
-                    f"Output tensor shape mismatch: expected {expected_out_shape}, got {actual_out.shape}.",
-                )
+            if expected_out_shape is not None:
+                if len(actual_out.shape) != len(expected_out_shape):
+                    return (
+                        False,
+                        f"Output tensor rank mismatch: expected {len(expected_out_shape)}D, got {len(actual_out.shape)}D.",
+                    )
+                if list(actual_out.shape) != list(expected_out_shape):
+                    return (
+                        False,
+                        f"Output tensor shape mismatch: expected {expected_out_shape}, got {actual_out.shape}.",
+                    )
+
+            if hasattr(actual_out, "type"):
+                valid_float_types = ("tensor(float)", "tensor(float32)")
+                if actual_out.type not in valid_float_types:
+                    return (
+                        False,
+                        f"Output tensor dtype invalid: expected floating point tensor, got '{actual_out.type}'.",
+                    )
+
+            if expected_classes is not None and expected_out_shape is not None:
+                expected_num_classes = len(expected_classes)
+                if len(actual_out.shape) > 0 and actual_out.shape[-1] != expected_num_classes:
+                    return (
+                        False,
+                        f"Output class dimension mismatch: expected {expected_num_classes} classes, got dimension {actual_out.shape[-1]}.",
+                    )
 
             return True, "Tensor contracts verified."
         except Exception as exc:
