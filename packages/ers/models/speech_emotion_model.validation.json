@@ -1,5 +1,5 @@
 {
-  "record_id": "VAL-ers-speech-onnx-cpu-v1-1795520066",
+  "record_id": "VAL-ers-speech-onnx-cpu-v1-1795523284",
   "model_id": "ers-speech-onnx-cpu-v1",
   "model_version": "1.0.0",
   "artifact_sha256": "c5c8538e69d6f66e4724a7ca118b61c3c3e39686ba6adb53443bcb099fc0b0a2",
@@ -28,7 +28,7 @@
     "surprise",
     "disgust"
   ],
-  "evaluation_dataset": "synthetic_speech_fixture_suite",
+  "evaluation_dataset": "SYNTHETIC_SPEECH_FIXTURE_SUITE (Execution Testing Only - Accuracy Qualification BLOCKED)",
   "evaluation_split": "test",
   "evaluation_script": "eon_ers.evaluation.evaluator",
   "evaluation_script_version": "1.0.0",
@@ -97,11 +97,11 @@
   },
   "abstention_rate": 0.0,
   "evaluator": "OVIC Labs Scientific Qualification Runner",
-  "validation_timestamp": "2026-11-24T11:34:26Z",
+  "validation_timestamp": "2026-11-24T12:28:04Z",
   "validation_notes": [
     "Evaluation conducted on synthetic acoustic prosody feature suite.",
     "Baseline ONNX weights contain unverified parameters.",
-    "Accuracy qualification status: UNVALIDATED (qualification thresholds not met).",
+    "Accuracy qualification status: UNVALIDATED (qualification thresholds not met; scientific accuracy qualification BLOCKED).",
     "Evaluation used synthetic validation fixtures; not empirical accuracy qualification.",
     "Model weights have unverified provenance; prohibited from production validation.",
     "Model failed accuracy thresholds (Macro-F1 0.0357 < 0.40). Classifications must be suppressed as INSUFFICIENT_EVIDENCE."

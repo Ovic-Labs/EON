@@ -1,5 +1,5 @@
 {
-  "record_id": "VAL-ers-facial-onnx-cpu-v1-1795520066",
+  "record_id": "VAL-ers-facial-onnx-cpu-v1-1795523284",
   "model_id": "ers-facial-onnx-cpu-v1",
   "model_version": "1.0.0",
   "artifact_sha256": "0e8955c5187b2b9f69f9638e005b09abdbb1412951024e535fdefef48cc7d81b",
@@ -30,7 +30,7 @@
     "surprise",
     "disgust"
   ],
-  "evaluation_dataset": "synthetic_facial_fixture_suite",
+  "evaluation_dataset": "SYNTHETIC_FACIAL_FIXTURE_SUITE (Execution Testing Only - Accuracy Qualification BLOCKED)",
   "evaluation_split": "test",
   "evaluation_script": "eon_ers.evaluation.evaluator",
   "evaluation_script_version": "1.0.0",
@@ -99,11 +99,11 @@
   },
   "abstention_rate": 1.0,
   "evaluator": "OVIC Labs Scientific Qualification Runner",
-  "validation_timestamp": "2026-11-24T11:34:26Z",
+  "validation_timestamp": "2026-11-24T12:28:04Z",
   "validation_notes": [
     "Evaluation conducted on synthetic test partitions.",
     "Baseline ONNX weights contain unverified parameters.",
-    "Accuracy qualification status: UNVALIDATED (qualification thresholds not met).",
+    "Accuracy qualification status: UNVALIDATED (qualification thresholds not met; scientific accuracy qualification BLOCKED).",
     "Evaluation used synthetic validation fixtures; not empirical accuracy qualification.",
     "Model weights have unverified provenance; prohibited from production validation.",
     "Model failed accuracy thresholds (Macro-F1 0.0 < 0.40). Classifications must be suppressed as INSUFFICIENT_EVIDENCE."

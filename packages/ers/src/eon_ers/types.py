@@ -20,6 +20,26 @@ class QualityGrade(str, Enum):
     UNUSABLE = "unusable"
 
 
+class InputQualityStatus(str, Enum):
+    """Independent sensory input quality status separated from model qualification."""
+
+    ACCEPTABLE = "acceptable"
+    DEGRADED = "degraded"
+    UNUSABLE = "unusable"
+
+
+class ModalityEligibilityStatus(str, Enum):
+    """Eligibility classification of a sensory stream for multimodal fusion."""
+
+    CLASSIFICATION_ELIGIBLE = "classification_eligible"
+    DIAGNOSTIC_ONLY = "diagnostic_only"
+    UNVALIDATED = "unvalidated"
+    STALE = "stale"
+    QUALITY_UNUSABLE = "quality_unusable"
+    FAILED = "failed"
+    MISSING = "missing"
+
+
 class EngineState(str, Enum):
     """Lifecycle state of the ERS engine following EON lifecycle architecture."""
 

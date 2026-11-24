@@ -534,21 +534,97 @@ def create_live_app(
 def _synthesize_live_fusion(
     face_res: dict[str, Any] | None, speech_res: dict[str, Any] | None
 ) -> dict[str, Any]:
-    """Combine latest available stream observations for live UI telemetry."""
-    if face_res is None and speech_res is None:
+    """Combine latest available stream observations for live UI telemetry with validation isolation."""
+    face_val = face_res.get("is_validated", False) if face_res else False
+    speech_val = speech_res.get("is_validated", False) if speech_res else False
+
+    face_ok = face_res is not None and face_res.get("status") not in (
+        "error",
+        "consent_rejected",
+        "failed",
+    )
+    speech_ok = speech_res is not None and speech_res.get("status") not in (
+        "error",
+        "consent_rejected",
+        "failed",
+    )
+
+    face_eligible = face_ok and face_val
+    speech_eligible = speech_ok and speech_val
+
+    # Case A: Neither modality is eligible
+    if not face_eligible and not speech_eligible:
+        diag = []
+        if face_ok:
+            diag.append("facial")
+        if speech_ok:
+            diag.append("speech")
         return {
             "dominant_estimate": "INSUFFICIENT_EVIDENCE",
             "confidence": 0.0,
             "uncertainty": 1.0,
             "fused_probabilities": {},
-            "modality_weights": {"facial": 0.5, "speech": 0.5},
+            "modality_weights": {"facial": 0.0, "speech": 0.0},
             "conflicting_evidence": False,
             "conflict_metric": 0.0,
             "is_validated": False,
             "is_definitive_claim": False,
+            "classification_eligible_modalities": [],
+            "diagnostic_modalities": diag,
+            "fusion_status": "insufficient_evidence_unvalidated",
         }
 
-    # Weighting based on confidence and quality
+    # Case B: Only facial is eligible
+    if face_eligible and not speech_eligible:
+        p_f = face_res.get("emotion_probabilities", {}) if face_res else {}
+        dominant = (
+            face_res.get("dominant_estimate", "INSUFFICIENT_EVIDENCE")
+            if face_res
+            else "INSUFFICIENT_EVIDENCE"
+        )
+        conf = face_res.get("confidence", 0.0) if face_res else 0.0
+        unc = face_res.get("uncertainty", 1.0) if face_res else 1.0
+        return {
+            "dominant_estimate": dominant,
+            "confidence": conf,
+            "uncertainty": unc,
+            "fused_probabilities": p_f,
+            "modality_weights": {"facial": 1.0, "speech": 0.0},
+            "conflicting_evidence": False,
+            "conflict_metric": 0.0,
+            "is_validated": True,
+            "is_definitive_claim": False,
+            "classification_eligible_modalities": ["facial"],
+            "diagnostic_modalities": ["speech"] if speech_ok else [],
+            "fusion_status": "facial_only_validated",
+        }
+
+    # Case C: Only speech is eligible
+    if speech_eligible and not face_eligible:
+        p_s = speech_res.get("emotion_probabilities", {}) if speech_res else {}
+        dominant = (
+            speech_res.get("dominant_estimate", "INSUFFICIENT_EVIDENCE")
+            if speech_res
+            else "INSUFFICIENT_EVIDENCE"
+        )
+        conf = speech_res.get("confidence", 0.0) if speech_res else 0.0
+        unc = speech_res.get("uncertainty", 1.0) if speech_res else 1.0
+        return {
+            "dominant_estimate": dominant,
+            "confidence": conf,
+            "uncertainty": unc,
+            "fused_probabilities": p_s,
+            "modality_weights": {"facial": 0.0, "speech": 1.0},
+            "conflicting_evidence": False,
+            "conflict_metric": 0.0,
+            "is_validated": True,
+            "is_definitive_claim": False,
+            "classification_eligible_modalities": ["speech"],
+            "diagnostic_modalities": ["facial"] if face_ok else [],
+            "fusion_status": "speech_only_validated",
+        }
+
+    # Case D: Both modalities are eligible
     q_face = face_res.get("quality_score", 0.5) if face_res else 0.0
     c_face = face_res.get("confidence", 0.0) if face_res else 0.0
     q_speech = speech_res.get("quality_score", 0.5) if speech_res else 0.0
@@ -561,7 +637,6 @@ def _synthesize_live_fusion(
     w_f = round(raw_w_f / total_w, 4) if total_w > 1e-6 else 0.5
     w_s = round(raw_w_s / total_w, 4) if total_w > 1e-6 else 0.5
 
-    # Fuse probabilities
     emotions = ["neutral", "happiness", "sadness", "anger", "fear", "surprise", "disgust"]
     p_f = face_res.get("emotion_probabilities", {}) if face_res else {}
     p_s = speech_res.get("emotion_probabilities", {}) if speech_res else {}
@@ -575,24 +650,13 @@ def _synthesize_live_fusion(
     if total_prob > 1e-6:
         fused_probs = {k: round(v / total_prob, 4) for k, v in fused_probs.items()}
 
-    # Scientific honesty: If neither contributing modality is scientifically validated,
-    # strictly suppress discrete emotion claims and report INSUFFICIENT_EVIDENCE!
-    face_val = face_res.get("is_validated", False) if face_res else False
-    speech_val = speech_res.get("is_validated", False) if speech_res else False
-    is_fused_validated = face_val or speech_val
-
-    if not is_fused_validated:
-        dominant = "INSUFFICIENT_EVIDENCE"
-        conf = 0.0
-        uncertainty = 1.0
-    else:
-        dominant = (
-            max(fused_probs.items(), key=lambda it: it[1])[0]
-            if fused_probs
-            else "INSUFFICIENT_EVIDENCE"
-        )
-        conf = round(float(fused_probs.get(dominant, 0.0)), 4) if fused_probs else 0.0
-        uncertainty = round(1.0 - conf, 4)
+    dominant = (
+        max(fused_probs.items(), key=lambda it: it[1])[0]
+        if fused_probs
+        else "INSUFFICIENT_EVIDENCE"
+    )
+    conf = round(float(fused_probs.get(dominant, 0.0)), 4) if fused_probs else 0.0
+    uncertainty = round(1.0 - conf, 4)
 
     return {
         "dominant_estimate": dominant,
@@ -602,6 +666,9 @@ def _synthesize_live_fusion(
         "modality_weights": {"facial": w_f, "speech": w_s},
         "conflicting_evidence": False,
         "conflict_metric": 0.0,
-        "is_validated": is_fused_validated,
+        "is_validated": True,
         "is_definitive_claim": False,
+        "classification_eligible_modalities": ["facial", "speech"],
+        "diagnostic_modalities": [],
+        "fusion_status": "multimodal_fused",
     }

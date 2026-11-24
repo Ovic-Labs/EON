@@ -15,7 +15,14 @@ from eon_ers.speech.adapters import (
     ONNXSpeechModelAdapter,
 )
 from eon_ers.speech.features import AcousticFeatureExtractor
-from eon_ers.types import EmotionCategory, Modality, ObservationStatus, QualityGrade
+from eon_ers.types import (
+    EmotionCategory,
+    InputQualityStatus,
+    Modality,
+    ModelState,
+    ObservationStatus,
+    QualityGrade,
+)
 
 
 class SpeechPipeline:
@@ -83,6 +90,13 @@ class SpeechPipeline:
             inp.audio_payload, inp.sample_rate
         )
 
+        if quality.grade in (QualityGrade.EXCELLENT, QualityGrade.ACCEPTABLE):
+            input_quality = InputQualityStatus.ACCEPTABLE
+        elif quality.grade == QualityGrade.DEGRADED:
+            input_quality = InputQualityStatus.DEGRADED
+        else:
+            input_quality = InputQualityStatus.UNUSABLE
+
         if samples is None or quality.grade == QualityGrade.UNUSABLE:
             latency_ms = (time.perf_counter() - start_time) * 1000.0
             inp.scrub_media_payload()
@@ -101,6 +115,9 @@ class SpeechPipeline:
                 processing_latency_ms=latency_ms,
                 limitations=limitations + quality.reasons,
                 status=ObservationStatus.INSUFFICIENT_EVIDENCE,
+                input_quality=InputQualityStatus.UNUSABLE,
+                model_state=self.model_adapter.model_state,
+                is_validated=False,
                 is_definitive_claim=False,
             )
 
@@ -127,6 +144,9 @@ class SpeechPipeline:
                 limitations=limitations
                 + ["Audio frame classified as silence or background noise."],
                 status=ObservationStatus.INSUFFICIENT_EVIDENCE,
+                input_quality=input_quality,
+                model_state=self.model_adapter.model_state,
+                is_validated=False,
                 is_definitive_claim=False,
             )
 
@@ -160,6 +180,9 @@ class SpeechPipeline:
                 limitations=limitations
                 + ["Configured speech model adapter weights are unavailable."],
                 status=ObservationStatus.MODEL_UNAVAILABLE,
+                input_quality=input_quality,
+                model_state=self.model_adapter.model_state,
+                is_validated=False,
                 is_definitive_claim=False,
             )
 
@@ -184,6 +207,9 @@ class SpeechPipeline:
                 processing_latency_ms=latency_ms,
                 limitations=limitations + [f"Speech model inference failed: {exc}"],
                 status=ObservationStatus.FAILED,
+                input_quality=input_quality,
+                model_state=ModelState.MODEL_INFERENCE_FAILED,
+                is_validated=False,
                 is_definitive_claim=False,
             )
 
@@ -225,13 +251,10 @@ class SpeechPipeline:
             )
         )
 
-        # Epistemic honesty & abstention evaluation:
-        # If model is unvalidated, experimental, uniform, or below threshold,
-        # we strictly suppress discrete classification to prevent fabricated emotion claims.
-        status = ObservationStatus.OK
-        dominant_cat = raw_dominant
-
-        if is_unvalidated:
+        # Deterministic Status Precedence Policy:
+        # Precedence: FAILED > MODEL_UNAVAILABLE > MODEL_UNVALIDATED > INSUFFICIENT_EVIDENCE > DEGRADED > OK
+        # Crucial: Unvalidated model state is NEVER overwritten by degraded input quality!
+        if is_unvalidated or is_experimental:
             status = ObservationStatus.MODEL_UNVALIDATED
             dominant_cat = EmotionCategory.UNKNOWN.value
             confidence = 0.0
@@ -239,13 +262,13 @@ class SpeechPipeline:
             limitations.append(
                 "Model is unvalidated; discrete emotion categorization suppressed to prevent fabricated predictions."
             )
-        elif is_experimental:
+        elif input_quality == InputQualityStatus.UNUSABLE:
             status = ObservationStatus.INSUFFICIENT_EVIDENCE
             dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
             confidence = 0.0
             uncertainty = 1.0
             limitations.append(
-                "Abstaining from classification: unvalidated experimental feature adapter."
+                "Unusable acoustic signal quality; insufficient evidence for emotion classification."
             )
         elif is_uniform:
             status = ObservationStatus.INSUFFICIENT_EVIDENCE
@@ -267,9 +290,12 @@ class SpeechPipeline:
                 f"Low confidence ({confidence:.2f} < {self.config.confidence_threshold}) "
                 f"or high uncertainty ({uncertainty:.2f} > {self.config.uncertainty_threshold})."
             )
-
-        if quality.grade == QualityGrade.DEGRADED:
+        elif input_quality == InputQualityStatus.DEGRADED:
             status = ObservationStatus.DEGRADED
+            dominant_cat = raw_dominant
+        else:
+            status = ObservationStatus.OK
+            dominant_cat = raw_dominant
 
         latency_ms = (time.perf_counter() - start_time) * 1000.0
 
@@ -291,7 +317,10 @@ class SpeechPipeline:
             processing_latency_ms=round(latency_ms, 2),
             limitations=limitations,
             status=status,
+            input_quality=input_quality,
             model_state=self.model_adapter.model_state,
             is_validated=self.model_adapter.is_validated,
+            is_calibrated=False,
+            raw_confidence=round(raw_confidence, 4),
             is_definitive_claim=False,
         )

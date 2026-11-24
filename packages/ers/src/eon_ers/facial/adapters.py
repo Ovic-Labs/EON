@@ -10,7 +10,11 @@ from typing import Any
 
 import numpy as np
 
-from eon_ers.exceptions import ERSModelIntegrityError, ERSModelUnavailableError
+from eon_ers.exceptions import (
+    ERSModelExecutionError,
+    ERSModelIntegrityError,
+    ERSModelUnavailableError,
+)
 from eon_ers.models.loader import ModelLoader
 from eon_ers.models.manifest import ModelManifest
 from eon_ers.models.validation_record import ModelValidationRecord
@@ -87,6 +91,7 @@ class ONNXFacialModelAdapter(BaseFacialModelAdapter):
         self._num_threads = num_threads
         self._session: Any = None
         self._is_loaded = False
+        self._last_inference_failed = False
         self._manifest: ModelManifest | None = None
         self._init_session()
 
@@ -166,6 +171,8 @@ class ONNXFacialModelAdapter(BaseFacialModelAdapter):
             return ModelState.MODEL_MISSING
         if not self._is_loaded:
             return ModelState.MODEL_UNAVAILABLE
+        if self._last_inference_failed:
+            return ModelState.MODEL_INFERENCE_FAILED
         if self.is_validated:
             return ModelState.MODEL_LOADED_VALIDATED
         return ModelState.MODEL_LOADED_UNVERIFIED
@@ -176,13 +183,46 @@ class ONNXFacialModelAdapter(BaseFacialModelAdapter):
                 f"ONNX facial model {self._model_id} is not loaded or weights are unavailable."
             )
 
+        # Finiteness & numeric safety verification
+        if not np.isfinite(tensor).all():
+            self._last_inference_failed = True
+            raise ERSModelExecutionError(
+                "Input visual tensor contains non-finite numerical values (NaN or Inf)."
+            )
+
         input_name = self._session.get_inputs()[0].name
-        outputs = self._session.run(None, {input_name: tensor.astype(np.float32)})
+        try:
+            outputs = self._session.run(None, {input_name: tensor.astype(np.float32)})
+        except Exception as exc:
+            self._last_inference_failed = True
+            raise ERSModelExecutionError(f"ONNX facial model execution failed: {exc}") from exc
+
+        if not outputs or len(outputs) == 0:
+            self._last_inference_failed = True
+            raise ERSModelExecutionError("ONNX facial model returned empty output tensor list.")
+
         raw_logits = outputs[0].flatten()
+
+        if not np.isfinite(raw_logits).all():
+            self._last_inference_failed = True
+            raise ERSModelExecutionError(
+                "ONNX facial model output contains non-finite numerical values (NaN or Inf)."
+            )
+
+        if len(raw_logits) < len(SUPPORTED_EMOTIONS):
+            self._last_inference_failed = True
+            raise ERSModelExecutionError(
+                f"ONNX output dimension mismatch: expected >= {len(SUPPORTED_EMOTIONS)} classes, got {len(raw_logits)}."
+            )
 
         # Numerically stable softmax
         exp_logits = np.exp(raw_logits - np.max(raw_logits))
-        probs = exp_logits / np.sum(exp_logits)
+        sum_exp = np.sum(exp_logits)
+        if sum_exp <= 0.0 or not np.isfinite(sum_exp):
+            self._last_inference_failed = True
+            raise ERSModelExecutionError("Numerical underflow/overflow during softmax computation.")
+
+        probs = exp_logits / sum_exp
 
         result: dict[str, float] = {}
         for idx, cat in enumerate(SUPPORTED_EMOTIONS):
