@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff mypy pydantic numpy scipy pillow onnxruntime pytest pytest-asyncio pytest-cov build fastapi uvicorn websockets python-multipart httpx psutil
+          pip install ruff mypy pydantic numpy scipy pillow onnxruntime onnx pytest pytest-asyncio pytest-cov build fastapi uvicorn websockets python-multipart httpx psutil
 
       - name: Run Ruff Lint
         run: ruff check .

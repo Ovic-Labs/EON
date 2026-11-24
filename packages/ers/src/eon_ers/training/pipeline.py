@@ -3,19 +3,19 @@
 Implements an end-to-end scientific workflow:
 1. Dataset Ingestion
 2. Provenance Verification
-3. Checksum & Integrity Check
+3. Checksum & Integrity Check (with real archive verification)
 4. Subject-Independent Partitioning
 5. Zero-Leakage Validation
-6. Signal & Media Preprocessing
-7. Feature Extraction / Normalization
-8. Model Architecture & Training / Weights Import
-9. Convergence & Validation Monitoring
-10. Temperature Scaling & Calibration
-11. Independent Holdout Test Evaluation
-12. Metric Threshold Qualification
-13. ONNX Graph Export & Optimization
-14. ONNX Tensor Contract Verification
-15. Cryptographic Validation Record Generation & SHA-256 Binding
+6. Signal & Media Preprocessing (modality-specific validation, resizing, normalization)
+7. Feature Extraction & Zero-Leakage Normalization (fitted exclusively on training partition)
+8. Model Architecture & Training / Weights Import (distinguishes new training vs weights import)
+9. Convergence & Validation Monitoring (uses genuine training history telemetry)
+10. Temperature Scaling & Calibration (optimizes NLL on real validation logits)
+11. Independent Holdout Test Evaluation (runs actual inference on holdout partition)
+12. Metric Threshold Qualification (evaluates accuracy, balanced accuracy, Macro-F1)
+13. ONNX Graph Export & Optimization (constructs valid ONNX protobuf and verifies)
+14. ONNX Tensor Contract Verification (validates runtime session contracts and test inference)
+15. Cryptographic Validation Record Generation (tamper-evident proof bound to artifact SHA-256)
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ import logging
 import os
 import time
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -35,9 +36,20 @@ from eon_ers.evaluation.dataset import (
     EvaluationSample,
     create_subject_independent_partition,
 )
-from eon_ers.evaluation.evaluator import ModelEvaluator
+from eon_ers.evaluation.evaluator import EvaluationExecutionProof, ModelEvaluator
 from eon_ers.models.manifest import ModelManifest
 from eon_ers.models.validation_record import ModelValidationRecord
+from eon_ers.training.calibration import TemperatureCalibrator
+from eon_ers.training.export import ONNXModelExporter
+from eon_ers.training.features import FeatureExtractor, ZeroLeakageNormalizer
+from eon_ers.training.preprocessing import PreprocessingConfig, SamplePreprocessor
+from eon_ers.training.trainer import (
+    CPUModelTrainer,
+    TrainedModelArtifact,
+    TrainingConfig,
+    TrainingHistory,
+    TrainingMode,
+)
 from eon_ers.types import EmotionCategory
 
 logger = logging.getLogger("eon_ers.training.pipeline")
@@ -114,13 +126,29 @@ class ModelTrainingPipeline:
         model_weights_path: str | None = None,
         test_subject_ratio: float = 0.20,
         val_subject_ratio: float = 0.10,
+        archive_path: str | Path | None = None,
+        manifest_path: str | Path | None = None,
+        train_new_model: bool = False,
+        training_config: TrainingConfig | None = None,
+        preprocessing_config: PreprocessingConfig | None = None,
         training_loss_history: list[float] | None = None,
         is_calibrated: bool = False,
         optimal_temperature: float = 1.0,
         onnx_exported: bool = False,
     ) -> tuple[bool, list[PipelineStageResult], ModelValidationRecord | None]:
-        """Execute all 15 stages sequentially with strict qualification gating."""
+        """Execute all 15 stages sequentially with strict scientific qualification gating."""
         self.stage_results.clear()
+
+        # Target 7 emotion categories
+        class_labels = [
+            EmotionCategory.NEUTRAL.value,
+            EmotionCategory.HAPPINESS.value,
+            EmotionCategory.SADNESS.value,
+            EmotionCategory.ANGER.value,
+            EmotionCategory.FEAR.value,
+            EmotionCategory.SURPRISE.value,
+            EmotionCategory.DISGUST.value,
+        ]
 
         # Stage 1: Dataset Ingestion
         if not raw_samples:
@@ -160,19 +188,35 @@ class ModelTrainingPipeline:
             },
         )
 
-        # Stage 3: Integrity Check - reject empty or placeholder checksums
-        is_valid_cs = self.dataset_metadata.is_valid_checksum()
-        manifest_checksum = self.dataset_metadata.checksum
-        self._record_stage(
-            TrainingPipelineStage.STAGE_3_INTEGRITY_CHECK,
-            success=is_valid_cs,
-            message=(
-                f"Integrity check passed with valid manifest checksum {manifest_checksum[:16]}..."
-                if is_valid_cs
-                else f"Integrity check failed: invalid or unverified dataset checksum '{manifest_checksum}'."
-            ),
-            details={"checksum": manifest_checksum, "is_valid_checksum": is_valid_cs},
-        )
+        # Stage 3: Integrity Check (Integrated verify_archive)
+        archive_audit: dict[str, Any] = {}
+        if archive_path is not None:
+            # Genuinely verify archive file bytes against registered SHA-256
+            archive_ok, archive_msg, archive_audit = self.dataset_metadata.verify_archive(
+                archive_path, return_audit=True
+            )  # type: ignore[misc]
+            self._record_stage(
+                TrainingPipelineStage.STAGE_3_INTEGRITY_CHECK,
+                success=archive_ok,
+                message=archive_msg,
+                details=archive_audit if archive_ok else {"error": archive_msg},
+            )
+            if not archive_ok:
+                return False, self.stage_results, None
+        else:
+            # If no archive path is provided, check if registered checksum is valid
+            is_valid_cs = self.dataset_metadata.is_valid_checksum()
+            manifest_checksum = self.dataset_metadata.checksum
+            self._record_stage(
+                TrainingPipelineStage.STAGE_3_INTEGRITY_CHECK,
+                success=is_valid_cs,
+                message=(
+                    f"Integrity check passed with valid manifest checksum {manifest_checksum[:16]}..."
+                    if is_valid_cs
+                    else "Integrity check failed: no dataset archive file provided for byte verification and checksum is empty/unverified."
+                ),
+                details={"checksum": manifest_checksum, "is_valid_checksum": is_valid_cs},
+            )
 
         # Stage 4: Subject-Independent Partitioning
         try:
@@ -216,85 +260,352 @@ class ModelTrainingPipeline:
             )
             return False, self.stage_results, None
 
-        # Stage 6: Preprocessing - report success ONLY if actual raw media was preprocessed
-        train_has_data = any(s.data is not None for s in partition.train_samples)
-        if not train_has_data:
+        # Stage 6: Preprocessing (Real transformation across partitions)
+        preproc = SamplePreprocessor(preprocessing_config)
+        modality = self.model_manifest.modality
+
+        train_preproc, train_preproc_audit = preproc.preprocess_partition(
+            partition.train_samples, modality
+        )
+        val_preproc, val_preproc_audit = preproc.preprocess_partition(
+            partition.val_samples, modality
+        )
+        test_preproc, test_preproc_audit = preproc.preprocess_partition(
+            partition.test_samples, modality
+        )
+
+        preproc_success = (
+            len(train_preproc) > 0
+            and len(val_preproc) > 0
+            and len(test_preproc) > 0
+            and train_preproc_audit.get("corrupted_count", 0) == 0
+        )
+
+        if not preproc_success:
             self._record_stage(
                 TrainingPipelineStage.STAGE_6_PREPROCESSING,
                 success=False,
-                message="Preprocessing failed: sample data payloads are None (no raw sensory media provided).",
-                details={"has_data": False},
+                message=(
+                    f"Preprocessing failed: sample payloads missing, invalid, or corrupted "
+                    f"(train valid: {len(train_preproc)}/{len(partition.train_samples)}, corrupted: {train_preproc_audit.get('corrupted_count', 0)})."
+                ),
+                details={
+                    "train_audit": train_preproc_audit,
+                    "val_audit": val_preproc_audit,
+                    "test_audit": test_preproc_audit,
+                },
             )
         else:
+            # Update partition samples with preprocessed data
+            partition = type(partition)(
+                train_samples=train_preproc,
+                val_samples=val_preproc,
+                test_samples=test_preproc,
+            )
             self._record_stage(
                 TrainingPipelineStage.STAGE_6_PREPROCESSING,
                 success=True,
-                message=f"Preprocessing executed on {len(partition.train_samples)} training samples.",
-                details={"has_data": True, "samples_preprocessed": len(partition.train_samples)},
+                message=f"Preprocessing executed on all {partition.total_samples} samples across train/val/test.",
+                details={
+                    "preprocessed_train": len(train_preproc),
+                    "preprocessed_val": len(val_preproc),
+                    "preprocessed_test": len(test_preproc),
+                    "config": preproc.config.model_dump(),
+                },
             )
 
-        # Stage 7: Feature Normalization - report success ONLY if features are available
-        if not train_has_data:
-            self._record_stage(
-                TrainingPipelineStage.STAGE_7_FEATURE_NORMALIZATION,
-                success=False,
-                message="Feature normalization failed: sample features unavailable.",
-                details={"has_features": False},
-            )
+        # Stage 7: Feature Extraction & Zero-Leakage Normalization
+        extractor = FeatureExtractor()
+        normalizer = ZeroLeakageNormalizer()
+        features_extracted = False
+        X_train_norm: np.ndarray | None = None
+        X_val_norm: np.ndarray | None = None
+        y_train_labels: list[str] = []
+        y_val_labels: list[str] = []
+        y_test_labels: list[str] = []
+
+        if preproc_success:
+            try:
+                X_tr, y_train_labels, _ = extractor.extract_partition_matrix(
+                    partition.train_samples, modality
+                )
+                X_va, y_val_labels, _ = extractor.extract_partition_matrix(
+                    partition.val_samples, modality
+                )
+                X_te, y_test_labels, _ = extractor.extract_partition_matrix(
+                    partition.test_samples, modality
+                )
+
+                # Fit normalizer EXCLUSIVELY on training features
+                normalizer.fit(X_tr, modality=modality)
+
+                # Transform all partitions consistently
+                X_train_norm = normalizer.transform(X_tr)
+                X_val_norm = normalizer.transform(X_va)
+                _X_test_norm = normalizer.transform(X_te)
+                features_extracted = True
+
+                self._record_stage(
+                    TrainingPipelineStage.STAGE_7_FEATURE_NORMALIZATION,
+                    success=True,
+                    message=f"Feature extraction & zero-leakage normalization completed (feature dim: {X_tr.shape[1]}).",
+                    details={
+                        "feature_dim": X_tr.shape[1],
+                        "train_samples": len(X_tr),
+                        "val_samples": len(X_va),
+                        "test_samples": len(X_te),
+                        "zero_leakage_verified": True,
+                    },
+                )
+            except Exception as exc:
+                self._record_stage(
+                    TrainingPipelineStage.STAGE_7_FEATURE_NORMALIZATION,
+                    success=False,
+                    message=f"Feature extraction failed: {exc}",
+                )
         else:
             self._record_stage(
                 TrainingPipelineStage.STAGE_7_FEATURE_NORMALIZATION,
-                success=True,
-                message="Feature normalization completed across feature channels.",
-                details={"has_features": True},
+                success=False,
+                message="Feature normalization failed: preprocessing was unsuccessful or sample data is missing.",
             )
 
         # Stage 8: Model Architecture & Training / Weights Import
         effective_weights_path = model_weights_path or self.model_manifest.artifact_path
-        weights_exist = (
-            os.path.isfile(effective_weights_path) and os.path.getsize(effective_weights_path) > 0
+        trained_artifact: TrainedModelArtifact | None = None
+        executed_training_history: TrainingHistory | None = None
+
+        # Decide whether to train a new model or import existing weights
+        should_train = bool(
+            train_new_model
+            and features_extracted
+            and X_train_norm is not None
+            and X_val_norm is not None
         )
-        self._record_stage(
-            TrainingPipelineStage.STAGE_8_MODEL_TRAINING_OR_IMPORT,
-            success=weights_exist,
-            message=f"Weights import status: {'Found' if weights_exist else 'Missing or empty'} at {effective_weights_path}.",
-            details={"weights_path": effective_weights_path, "weights_exist": weights_exist},
-        )
-        if not weights_exist:
-            return False, self.stage_results, None
+
+        if should_train:
+            assert X_train_norm is not None and X_val_norm is not None
+            trainer_cfg = training_config or TrainingConfig(
+                input_dim=X_train_norm.shape[1], num_classes=len(class_labels)
+            )
+            trainer = CPUModelTrainer(trainer_cfg)
+
+            train_ok, trained_artifact, executed_training_history, train_msg = trainer.train(
+                X_train=X_train_norm,
+                y_train=y_train_labels,
+                X_val=X_val_norm,
+                y_val=y_val_labels,
+                class_labels=class_labels,
+            )
+
+            if train_ok and trained_artifact and executed_training_history:
+                self._record_stage(
+                    TrainingPipelineStage.STAGE_8_MODEL_TRAINING_OR_IMPORT,
+                    success=True,
+                    message=f"Genuine CPU model training completed: {train_msg}",
+                    details={
+                        "mode": TrainingMode.ACTUAL_MODEL_TRAINING.value,
+                        "epochs_trained": len(executed_training_history.epochs),
+                        "best_epoch": executed_training_history.best_epoch,
+                        "best_val_loss": executed_training_history.best_val_loss,
+                        "signature": executed_training_history.training_signature,
+                    },
+                )
+            else:
+                self._record_stage(
+                    TrainingPipelineStage.STAGE_8_MODEL_TRAINING_OR_IMPORT,
+                    success=False,
+                    message=f"Model training failed: {train_msg}",
+                    details={"mode": TrainingMode.TRAINING_FAILED.value, "error": train_msg},
+                )
+                return False, self.stage_results, None
+        else:
+            # Existing weights import path
+            weights_exist = (
+                os.path.isfile(effective_weights_path)
+                and os.path.getsize(effective_weights_path) > 0
+            )
+            if weights_exist:
+                self._record_stage(
+                    TrainingPipelineStage.STAGE_8_MODEL_TRAINING_OR_IMPORT,
+                    success=True,
+                    message=f"Existing weights imported from {effective_weights_path}.",
+                    details={
+                        "mode": TrainingMode.EXISTING_WEIGHTS_IMPORT.value,
+                        "weights_path": effective_weights_path,
+                    },
+                )
+            else:
+                self._record_stage(
+                    TrainingPipelineStage.STAGE_8_MODEL_TRAINING_OR_IMPORT,
+                    success=False,
+                    message=f"Weights file missing or empty at {effective_weights_path}, and train_new_model=False.",
+                    details={
+                        "mode": TrainingMode.TRAINING_UNAVAILABLE.value,
+                        "weights_path": effective_weights_path,
+                    },
+                )
+                return False, self.stage_results, None
 
         # Stage 9: Convergence & Validation Monitoring
-        # Genuinely reports success only if training loss history is provided and demonstrates convergence
-        has_loss_history = bool(training_loss_history and len(training_loss_history) >= 2)
-        converged = has_loss_history and (
-            training_loss_history[-1] < training_loss_history[0]  # type: ignore[index]
-        )
+        stage_9_success = False
+        stage_9_msg = ""
+        stage_9_details: dict[str, Any] = {}
+
+        if executed_training_history is not None:
+            # Genuine convergence verification from training history
+            hist = executed_training_history
+            if not hist.converged:
+                stage_9_success = False
+                stage_9_msg = (
+                    f"Training did not converge (best val loss: {hist.best_val_loss:.4f})."
+                )
+            elif hist.overfitting_detected:
+                stage_9_success = False
+                stage_9_msg = "Severe overfitting detected: validation loss diverged while training loss fell."
+            elif len(hist.epochs) < 2:
+                stage_9_success = False
+                stage_9_msg = f"Insufficient epochs trained ({len(hist.epochs)} < 2)."
+            else:
+                stage_9_success = True
+                stage_9_msg = (
+                    f"Convergence verified across {len(hist.epochs)} epochs "
+                    f"(train loss: {hist.train_loss[0]:.4f} -> {hist.train_loss[-1]:.4f}, "
+                    f"val loss: {hist.val_loss[0]:.4f} -> {hist.best_val_loss:.4f})."
+                )
+            stage_9_details = hist.model_dump()
+        elif training_loss_history is not None and len(training_loss_history) >= 2:
+            # Fallback check for externally linked histories
+            converged = bool(training_loss_history[-1] < training_loss_history[0])
+            stage_9_success = converged
+            stage_9_msg = (
+                f"Convergence verified across {len(training_loss_history)} epochs."
+                if converged
+                else "Convergence monitoring failed: loss did not converge."
+            )
+            stage_9_details = {"loss_history": training_loss_history, "converged": converged}
+        else:
+            stage_9_success = False
+            stage_9_msg = "Convergence monitoring failed: no verifiable training history available."
+
         self._record_stage(
             TrainingPipelineStage.STAGE_9_CONVERGENCE_MONITORING,
-            success=converged,
-            message=(
-                f"Convergence verified across {len(training_loss_history or [])} epochs (loss: {training_loss_history[0]:.4f} -> {training_loss_history[-1]:.4f})."  # type: ignore[index]
-                if converged
-                else "Convergence monitoring failed: no valid training loss history provided or loss failed to converge."
-            ),
-            details={"converged": converged, "epochs": len(training_loss_history or [])},
+            success=stage_9_success,
+            message=stage_9_msg,
+            details=stage_9_details,
         )
 
         # Stage 10: Temperature Scaling & Calibration
-        # Genuinely reports success only if temperature calibration was successfully executed and optimized
+        calib_success = False
+        calib_msg = ""
+        opt_temp = float(optimal_temperature)
+        calib_details: dict[str, Any] = {}
+
+        if trained_artifact is not None and X_val_norm is not None and len(X_val_norm) >= 2:
+            # Compute actual validation logits
+            val_logits = trained_artifact.predict_logits(X_val_norm)
+            calibrator = TemperatureCalibrator()
+            c_ok, c_res, c_msg = calibrator.calibrate(val_logits, y_val_labels, class_labels)
+
+            if c_ok and c_res is not None:
+                calib_success = True
+                opt_temp = c_res.optimal_temperature
+                calib_msg = c_msg
+                calib_details = c_res.model_dump()
+            else:
+                calib_success = False
+                calib_msg = f"Temperature calibration failed: {c_msg}"
+        elif is_calibrated and optimal_temperature > 0.0:
+            calib_success = True
+            calib_msg = f"Calibrated temperature parameter verified: T={optimal_temperature:.4f}."
+            calib_details = {"temperature": optimal_temperature, "calibrated": True}
+        else:
+            calib_success = False
+            calib_msg = (
+                "Temperature calibration was not performed or validation data was unavailable."
+            )
+
         self._record_stage(
             TrainingPipelineStage.STAGE_10_TEMPERATURE_CALIBRATION,
-            success=is_calibrated,
-            message=(
-                f"Temperature calibration step completed and verified: T={optimal_temperature:.4f}."
-                if is_calibrated
-                else "Temperature calibration was not executed or failed to optimize."
-            ),
-            details={"temperature": optimal_temperature, "is_calibrated": is_calibrated},
+            success=calib_success,
+            message=calib_msg,
+            details=calib_details,
+        )
+
+        # Stage 13 (evaluated before holdout so that exported ONNX is evaluated in Stage 11)
+        onnx_exported_success = False
+        onnx_export_msg = ""
+        onnx_export_details: dict[str, Any] = {}
+
+        if trained_artifact is not None:
+            # Execute actual ONNX export
+            exporter = ONNXModelExporter()
+            exp_ok, exp_meta, exp_msg = exporter.export(
+                artifact=trained_artifact,
+                manifest=self.model_manifest,
+                output_path=effective_weights_path,
+                temperature=opt_temp,
+            )
+            onnx_exported_success = exp_ok
+            onnx_export_msg = exp_msg
+            if exp_meta:
+                onnx_export_details = exp_meta.model_dump()
+        elif onnx_exported:
+            onnx_exported_success = True
+            onnx_export_msg = f"ONNX export verified at {effective_weights_path}."
+            onnx_export_details = {"artifact_path": effective_weights_path}
+        else:
+            onnx_exported_success = False
+            onnx_export_msg = "ONNX export was not executed; existing weights were imported."
+            onnx_export_details = {"artifact_path": effective_weights_path}
+
+        self._record_stage(
+            TrainingPipelineStage.STAGE_13_ONNX_EXPORT,
+            success=onnx_exported_success,
+            message=onnx_export_msg,
+            details=onnx_export_details,
+        )
+
+        # Stage 14: ONNX Contract Verification
+        contract_ok = False
+        contract_msg = ""
+        contract_details: dict[str, Any] = {}
+        try:
+            import onnxruntime as ort
+
+            so = ort.SessionOptions()
+            so.intra_op_num_threads = 1
+            session = ort.InferenceSession(
+                effective_weights_path, sess_options=so, providers=["CPUExecutionProvider"]
+            )
+            contract_ok, contract_msg = self.model_manifest.validate_tensor_contracts(session)
+
+            # Test inference with dummy tensor
+            inp_shape = self.model_manifest.input_specification.get("shape", [1, 128])
+            inp_name = session.get_inputs()[0].name
+            dummy_test = np.zeros(inp_shape, dtype=np.float32)
+            out_test = session.run(None, {inp_name: dummy_test})[0]
+
+            if not np.isfinite(out_test).all():
+                contract_ok = False
+                contract_msg = "Runtime test inference produced non-finite values."
+            contract_details = {
+                "contract_verified": contract_ok,
+                "test_output_shape": list(out_test.shape),
+            }
+        except Exception as exc:
+            contract_ok = False
+            contract_msg = f"Contract verification failed: {exc}"
+            contract_details = {"error": str(exc)}
+
+        self._record_stage(
+            TrainingPipelineStage.STAGE_14_CONTRACT_VERIFICATION,
+            success=contract_ok,
+            message=f"ONNX contract verification: {contract_msg}",
+            details=contract_details,
         )
 
         # Stage 11: Independent Holdout Test Evaluation
-        # Replace mock/uniform predictions with actual inference. If inference is unavailable, fail closed and mark BLOCKED.
         y_true_test = [s.label for s in partition.test_samples]
         test_has_data = len(partition.test_samples) > 0 and all(
             s.data is not None for s in partition.test_samples
@@ -317,28 +628,61 @@ class ModelTrainingPipeline:
                 )
                 input_name = session.get_inputs()[0].name
                 expected_shape = self.model_manifest.input_specification.get("shape")
-                label_classes = [
-                    c.value
-                    for c in EmotionCategory
-                    if c not in (EmotionCategory.UNKNOWN, EmotionCategory.INSUFFICIENT_EVIDENCE)
-                ]
 
                 for s in partition.test_samples:
-                    inp = np.array(s.data, dtype=np.float32)
+                    sample_payload = s.data
+                    if (
+                        expected_shape
+                        and len(expected_shape) == 2
+                        and expected_shape[1] == 128
+                        and isinstance(sample_payload, np.ndarray)
+                        and sample_payload.ndim >= 2
+                    ):
+                        raw_feat = extractor.extract_sample_features(s, modality)
+                        if normalizer.is_fitted:
+                            sample_payload = normalizer.transform(np.expand_dims(raw_feat, axis=0))[
+                                0
+                            ]
+                        else:
+                            sample_payload = raw_feat
+
+                    inp = np.array(sample_payload, dtype=np.float32)
                     if expected_shape and len(inp.shape) < len(expected_shape):
-                        inp = np.expand_dims(inp, axis=0)
+                        while len(inp.shape) < len(expected_shape):
+                            inp = np.expand_dims(inp, axis=0)
                     raw_out = session.run(None, {input_name: inp})[0]
                     logits = np.squeeze(raw_out)
                     exp_logits = np.exp(logits - np.max(logits))
                     probs_arr = exp_logits / np.sum(exp_logits)
                     p_dict = {
                         lbl: float(probs_arr[idx])
-                        for idx, lbl in enumerate(label_classes[: len(probs_arr)])
+                        for idx, lbl in enumerate(class_labels[: len(probs_arr)])
                     }
                     predicted_probs.append(p_dict)
                 inference_available = True
             except Exception as exc:
                 inference_error = f"Model inference execution failed: {exc}"
+
+        # Compute current artifact SHA-256
+        hasher = hashlib.sha256()
+        with open(effective_weights_path, "rb") as f:
+            while chunk := f.read(65536):
+                hasher.update(chunk)
+        artifact_sha256 = hasher.hexdigest().lower()
+
+        # Generate execution proof
+        execution_proof: EvaluationExecutionProof | None = None
+        if inference_available and predicted_probs:
+            archive_digest = archive_audit.get("sha256_checksum", self.dataset_metadata.checksum)
+            execution_proof = EvaluationExecutionProof.generate_proof(
+                model_id=self.model_manifest.model_id,
+                artifact_sha256=artifact_sha256,
+                dataset_archive_sha256=archive_digest,
+                dataset_name=self.dataset_metadata.name,
+                dataset_provenance=self.dataset_metadata.source,
+                subject_count=len(partition.test_subjects),
+                sample_count=len(y_true_test),
+            )
 
         val_record: ModelValidationRecord | None = None
         evaluator = ModelEvaluator()
@@ -352,6 +696,7 @@ class ModelTrainingPipeline:
                 dataset_split="test",
                 dataset_license=self.dataset_metadata.license,
                 commercial_allowed=commercial_ok,
+                execution_proof=execution_proof,
             )
             self._record_stage(
                 TrainingPipelineStage.STAGE_11_TEST_EVALUATION,
@@ -391,50 +736,7 @@ class ModelTrainingPipeline:
                 details={"status": "BLOCKED", "is_validated": False},
             )
 
-        # Stage 13: ONNX Export
-        # Report success only if an actual ONNX export operation was performed and verified
-        self._record_stage(
-            TrainingPipelineStage.STAGE_13_ONNX_EXPORT,
-            success=onnx_exported,
-            message=(
-                f"ONNX export executed and verified at {effective_weights_path}."
-                if onnx_exported
-                else "ONNX export was not executed; existing weights were imported."
-            ),
-            details={"onnx_exported": onnx_exported, "artifact_path": effective_weights_path},
-        )
-
-        # Stage 14: ONNX Contract Verification
-        # Genuinely loads the runtime session and validates tensor contracts against manifest
-        contract_ok = False
-        contract_msg = ""
-        try:
-            import onnxruntime as ort
-
-            so = ort.SessionOptions()
-            so.intra_op_num_threads = 1
-            sess = ort.InferenceSession(
-                effective_weights_path, sess_options=so, providers=["CPUExecutionProvider"]
-            )
-            contract_ok, contract_msg = self.model_manifest.validate_tensor_contracts(sess)
-        except Exception as exc:
-            contract_ok = False
-            contract_msg = f"Failed to load ONNX session for contract verification: {exc}"
-
-        self._record_stage(
-            TrainingPipelineStage.STAGE_14_CONTRACT_VERIFICATION,
-            success=contract_ok,
-            message=f"ONNX contract verification: {contract_msg}",
-            details={"contract_verified": contract_ok, "details": contract_msg},
-        )
-
         # Stage 15: Cryptographic Validation Record Generation
-        hasher = hashlib.sha256()
-        with open(effective_weights_path, "rb") as f:
-            while chunk := f.read(65536):
-                hasher.update(chunk)
-        artifact_sha256 = hasher.hexdigest().lower()
-
         if val_record is None:
             record_id = f"VAL-{self.model_manifest.model_id}-{int(time.time())}"
             val_record = ModelValidationRecord(
@@ -449,11 +751,7 @@ class ModelTrainingPipeline:
                 commercial_use_allowed=commercial_ok,
                 commercial_use_restrictions=["Research and testing baseline only."],
                 preprocessing_specification=self.model_manifest.input_specification,
-                label_mapping=[
-                    c.value
-                    for c in EmotionCategory
-                    if c not in (EmotionCategory.UNKNOWN, EmotionCategory.INSUFFICIENT_EVIDENCE)
-                ],
+                label_mapping=class_labels,
                 evaluation_dataset=self.dataset_metadata.name,
                 evaluation_split="test",
                 evaluation_script="eon_ers.training.pipeline",
@@ -469,6 +767,8 @@ class ModelTrainingPipeline:
                     f"Holdout evaluation BLOCKED: {inference_error}",
                     "Model is UNVALIDATED and prohibited from production classification claims.",
                 ],
+                dataset_archive_sha256="",
+                execution_proof_signature="",
             )
         else:
             val_record = val_record.model_copy(update={"artifact_sha256": artifact_sha256})
