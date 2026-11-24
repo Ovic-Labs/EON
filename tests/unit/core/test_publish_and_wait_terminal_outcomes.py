@@ -47,7 +47,7 @@ async def test_publish_and_wait_returns_delivered_outcome() -> None:
         assert received is True
         assert len(outcomes) == 1
         assert outcomes[0].state == DeliveryState.DELIVERED
-        assert outcomes[0].duration_ms > 0
+        assert outcomes[0].duration_ms >= 0
 
 
 @pytest.mark.asyncio

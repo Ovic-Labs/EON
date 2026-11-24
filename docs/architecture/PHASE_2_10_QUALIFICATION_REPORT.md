@@ -3,10 +3,10 @@
 
 **Document ID:** `EON-QUAL-PH2.10-001`  
 **Classification:** `QUALIFICATION REPORT`  
-**Status:** `QUALIFIED — ACCEPTED`  
+**Status:** `QUALIFIED WITH CONDITIONS`  
 **Date:** `2026-11-23`  
 **Target Repository:** `https://github.com/Ovic-Labs/EON`  
-**Branch:** `architecture/phase-2-3-to-2-10`  
+**Branch:** `audit/phase-2-3-to-2-10-requalification`  
 **Evaluator:** Lead Systems & Architecture Qualification Team  
 
 ---
@@ -15,9 +15,12 @@
 
 This qualification report provides the formal engineering acceptance review for **Phase 2.10: Design Python SDK Architecture** of the OVIC EON project.
 
-Phase 2.10 establishes the developer-facing programmatic boundary for the EON Emotional Intelligence Infrastructure. The architecture specifications and decisions produced satisfy all functional, performance, security, and developer ergonomics criteria established in the Phase 0 Product Foundation and Phase 1 Research.
+Phase 2.10 establishes the developer-facing programmatic boundary for the EON Emotional Intelligence Infrastructure. The architecture specifications and decisions produced satisfy all functional, architectural, security, and developer ergonomics criteria established in the Phase 0 Product Foundation and Phase 1 Research.
 
-Following rigorous inspection of all deliverables against architectural rules and quality gates, Phase 2.10 is hereby certified as **QUALIFIED — ACCEPTED**.
+Following rigorous inspection of all deliverables against architectural rules and quality gates, Phase 2.10 is hereby certified as **QUALIFIED WITH CONDITIONS**.
+
+### Qualification Condition
+- **Condition 1 (Provisional Sub-Millisecond Latency):** In-process dispatch latency claims ($< 0.5\text{ ms}$) remain provisional and shall not be cited as empirical performance achievements until the formal benchmark protocol documented in `EON-ARCH-SDK-001` Section 8 is executed on physical reference edge hardware (NVIDIA Jetson AGX Orin / Intel Core Ultra 5).
 
 ---
 
@@ -82,5 +85,5 @@ Every required deliverable for Sub-phase 2.10 was authored, reviewed, and valida
 
 ## 5. Sub-phase Qualification Decision
 
-**Qualification Outcome:** **QUALIFIED — ACCEPTED**  
-Sub-phase 2.10 has successfully satisfied all architectural requirements, quality gates, and governance mandates.
+**Qualification Outcome:** **QUALIFIED WITH CONDITIONS**  
+Sub-phase 2.10 has successfully satisfied all architectural requirements, quality gates, and governance mandates, with the explicit condition that in-process sub-millisecond dispatch performance remains provisional pending physical hardware benchmark execution.
