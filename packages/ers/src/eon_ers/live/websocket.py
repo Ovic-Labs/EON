@@ -93,7 +93,10 @@ async def handle_live_websocket(
                     img_b64 = payload.get("image_base64")
                     if not img_b64:
                         continue
-                    res = await manager.process_frame(session_id, img_b64, ref)
+                    res = await asyncio.wait_for(
+                        manager.process_frame(session_id, img_b64, ref),
+                        timeout=manager.engine.config.processing_timeout_seconds,
+                    )
                     latest_face_res = res
                     await websocket.send_text(
                         json.dumps(
@@ -125,7 +128,10 @@ async def handle_live_websocket(
                     sr = int(payload.get("sample_rate", 16000))
                     if not aud_b64:
                         continue
-                    res = await manager.process_audio(session_id, aud_b64, sr, ref)
+                    res = await asyncio.wait_for(
+                        manager.process_audio(session_id, aud_b64, sr, ref),
+                        timeout=manager.engine.config.processing_timeout_seconds,
+                    )
                     latest_speech_res = res
                     await websocket.send_text(
                         json.dumps(
@@ -156,7 +162,10 @@ async def handle_live_websocket(
                     txt = payload.get("text", "")
                     if not txt:
                         continue
-                    res = await manager.process_text(session_id, str(txt), ref)
+                    res = await asyncio.wait_for(
+                        manager.process_text(session_id, str(txt), ref),
+                        timeout=manager.engine.config.processing_timeout_seconds,
+                    )
                     await websocket.send_text(
                         json.dumps(
                             {
@@ -170,13 +179,16 @@ async def handle_live_websocket(
                         )
                     )
                 elif msg_type == "multimodal":
-                    fused = await manager.process_multimodal_live(
-                        session_id=session_id,
-                        image_base64=payload.get("image_base64"),
-                        audio_base64=payload.get("audio_base64"),
-                        sample_rate=int(payload.get("sample_rate", 16000)),
-                        consent_reference=ref,
-                        text=payload.get("text"),
+                    fused = await asyncio.wait_for(
+                        manager.process_multimodal_live(
+                            session_id=session_id,
+                            image_base64=payload.get("image_base64"),
+                            audio_base64=payload.get("audio_base64"),
+                            sample_rate=int(payload.get("sample_rate", 16000)),
+                            consent_reference=ref,
+                            text=payload.get("text"),
+                        ),
+                        timeout=manager.engine.config.processing_timeout_seconds,
                     )
                     await websocket.send_text(
                         json.dumps(
@@ -189,6 +201,15 @@ async def handle_live_websocket(
                             }
                         )
                     )
+            except TimeoutError:
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "type": "error",
+                            "error": f"Processing timed out after {manager.engine.config.processing_timeout_seconds}s.",
+                        }
+                    )
+                )
             except (WebSocketDisconnect, RuntimeError):
                 break
             finally:

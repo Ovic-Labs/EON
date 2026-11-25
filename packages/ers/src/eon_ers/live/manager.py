@@ -23,12 +23,28 @@ logger = logging.getLogger("eon.ers.live.manager")
 class LiveSessionManager:
     """Manages active streaming sessions, FSM transitions, consent state, and engine execution."""
 
-    def __init__(self, engine: ERSEngine | None = None) -> None:
+    def __init__(self, engine: ERSEngine | None = None, *, max_sessions: int = 256) -> None:
         self.engine = engine or ERSEngine(ERSConfig())
+        self.max_sessions = max(8, max_sessions)
         self._active_sessions: dict[str, dict[str, Any]] = {}
         self._sessions: dict[str, LiveSessionRecord] = {}
         self._video_jobs: dict[str, VideoAnalysisJobResult] = {}
         self._video_cancel_events: dict[str, threading.Event] = {}
+
+    def _prune_stale_sessions_if_needed(self) -> None:
+        """Evict terminal or expired sessions when approaching bounded session capacity."""
+        if len(self._sessions) < self.max_sessions:
+            return
+        for rec in self._sessions.values():
+            rec.check_expired()
+        evict_ids = [
+            sid
+            for sid, rec in self._sessions.items()
+            if rec.state in TERMINAL_LIVE_STATES or rec.state == LiveSessionState.EXPIRED
+        ]
+        for sid in evict_ids:
+            self._sessions.pop(sid, None)
+            self._active_sessions.pop(sid, None)
 
     async def initialize(self) -> None:
         """Ensure the underlying ERS engine is initialized and running."""
@@ -46,6 +62,7 @@ class LiveSessionManager:
         if self.engine.is_running:
             await self.engine.stop()
         self._active_sessions.clear()
+        self._video_cancel_events.clear()
 
     def create_live_session(
         self,
@@ -63,6 +80,12 @@ class LiveSessionManager:
         if existing is not None and existing.state == LiveSessionState.REVOKED:
             raise ERSPrivacyConsentError(
                 f"Session '{sid}' was explicitly revoked and cannot be reused. Create a new session ID."
+            )
+        self._prune_stale_sessions_if_needed()
+        if sid not in self._sessions and len(self._sessions) >= self.max_sessions:
+            raise ERSError(
+                f"Live session capacity reached ({self.max_sessions} active sessions). Try again later.",
+                error_code="ERS_SESSION_CAPACITY_EXCEEDED",
             )
         rec = LiveSessionRecord(
             session_id=sid,
@@ -151,7 +174,12 @@ class LiveSessionManager:
         rec = self._sessions.get(clean_session)
         if rec is not None:
             if rec.state not in TERMINAL_LIVE_STATES:
-                rec.transition_to(LiveSessionState.STOPPING)
+                if rec.state in (
+                    LiveSessionState.READY,
+                    LiveSessionState.STREAMING,
+                    LiveSessionState.PAUSED,
+                ):
+                    rec.transition_to(LiveSessionState.STOPPING)
                 rec.transition_to(LiveSessionState.CLOSED)
             rec.history.clear()
         return existed

@@ -17,6 +17,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" href="data:," />
 <title>OVIC EON — ERS Enterprise Console</title>
 <style>
   :root[data-theme="dark"] {
@@ -425,6 +426,7 @@ const state = {
   ws: null,
   wsAuthenticated: false,
   wsManuallyClosed: false,
+  wsHeartbeatTimer: null,
   camStream: null,
   micStream: null,
   audioCtx: null,
@@ -497,11 +499,26 @@ function updateConsentControls() {
     bc.className = "pill warn";
   }
   document.getElementById("btn-grant-consent").disabled = state.sessionRevoked;
-  document.getElementById("btn-revoke-consent").disabled = !state.consentGranted && state.sessionRevoked;
+  document.getElementById("btn-revoke-consent").disabled = !canCapture;
   document.getElementById("btn-start-cam").disabled = !canCapture || !!state.camStream;
   document.getElementById("btn-start-mic").disabled = !canCapture || !!state.micStream;
   document.getElementById("btn-stop-cam").disabled = !state.camStream;
   document.getElementById("btn-stop-mic").disabled = !state.micStream;
+}
+
+function formatMediaError(kind, err) {
+  const name = (err && err.name) ? err.name : "";
+  const msg = (err && err.message) ? err.message : String(err || "Unknown error");
+  if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+    return `${kind} permission denied (${name}). Allow ${kind.toLowerCase()} access in your browser site permissions (address bar icon) for ${location.origin}, then retry.`;
+  }
+  if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+    return `No ${kind.toLowerCase()} device detected (${name}). Verify hardware connection and OS privacy settings, then click Retry.`;
+  }
+  if (name === "NotReadableError" || name === "TrackStartError") {
+    return `${kind} hardware is busy or unreadable (${name}). Close any other application using the device and retry.`;
+  }
+  return `${kind} start failed: ${msg}`;
 }
 
 document.querySelectorAll(".nav-btn").forEach(btn => {
@@ -699,6 +716,10 @@ function connectWebSocket() {
   syncInputs();
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   const url = `${proto}//${location.host}/ws/live/${encodeURIComponent(state.sessionId)}`;
+  if (state.wsHeartbeatTimer) {
+    clearInterval(state.wsHeartbeatTimer);
+    state.wsHeartbeatTimer = null;
+  }
   if (state.ws) {
     state.wsManuallyClosed = true;
     state.ws.onopen = null;
@@ -710,6 +731,8 @@ function connectWebSocket() {
   }
   state.wsManuallyClosed = false;
   state.wsAuthenticated = false;
+  document.getElementById("badge-ws").textContent = "WS: connecting...";
+  document.getElementById("badge-ws").className = "pill warn";
   const ws = new WebSocket(url);
   state.ws = ws;
   ws.onopen = () => {
@@ -719,6 +742,15 @@ function connectWebSocket() {
       ws.send(JSON.stringify({ type: "auth", api_key: state.apiKey }));
     }
     ws.send(JSON.stringify({ type: "init", session_id: state.sessionId }));
+    if (state.camStream || state.micStream) {
+      sendMediaState(!!state.camStream, !!state.micStream);
+    }
+    if (state.wsHeartbeatTimer) clearInterval(state.wsHeartbeatTimer);
+    state.wsHeartbeatTimer = setInterval(() => {
+      if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+        try { state.ws.send(JSON.stringify({ type: "heartbeat", session_id: state.sessionId })); } catch (_) {}
+      }
+    }, 25000);
   };
   ws.onerror = () => {
     document.getElementById("badge-ws").textContent = "WS: error";
@@ -726,13 +758,19 @@ function connectWebSocket() {
     showError("WebSocket connection error on session " + state.sessionId);
   };
   ws.onclose = (evt) => {
+    if (state.wsHeartbeatTimer) {
+      clearInterval(state.wsHeartbeatTimer);
+      state.wsHeartbeatTimer = null;
+    }
     document.getElementById("badge-ws").textContent = evt.code === 4401 ? "WS: unauthorized" : "WS: disconnected";
     document.getElementById("badge-ws").className = "pill " + (evt.code === 4401 ? "err" : "warn");
     if (!state.wsManuallyClosed && evt.code === 4401) {
       showError("WebSocket authentication failed (4401): provide a valid X-API-Key in Settings.");
     }
   };
-  ws.onmessage = (evt) => handleWsMessage(JSON.parse(evt.data));
+  ws.onmessage = (evt) => {
+    try { handleWsMessage(JSON.parse(evt.data)); } catch (_) {}
+  };
 }
 
 function handleWsMessage(msg) {
@@ -830,11 +868,16 @@ async function startCamera() {
   }
   if (state.camStream) return;
   try {
+    document.getElementById("live-cam-stats").textContent = "Requesting permission...";
     const [w, h] = document.getElementById("cfg-res").value.split("x").map(Number);
     const devId = document.getElementById("sel-cam").value;
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { width: w, height: h, deviceId: devId ? { exact: devId } : undefined }
     });
+    if (!state.consentGranted || state.sessionRevoked) {
+      stream.getTracks().forEach(t => t.stop());
+      throw new Error("Consent is no longer active; camera capture aborted.");
+    }
     const videoEl = document.getElementById("webcam-video");
     videoEl.srcObject = stream;
     await videoEl.play();
@@ -842,20 +885,26 @@ async function startCamera() {
     stream.getVideoTracks().forEach(track => {
       track.onended = () => {
         stopCamera();
+        document.getElementById("live-cam-stats").textContent = "Disconnected";
         showError("Webcam device disconnected.");
       };
     });
     await enumerateMediaDevices();
     if (!state.ws || state.ws.readyState !== WebSocket.OPEN) connectWebSocket();
+    sendMediaState(true, null);
     const fps = Math.max(0.5, Number(document.getElementById("live-fps").value) || 2);
-    document.getElementById("live-cam-stats").textContent = `Streaming @ ${fps} FPS (${w}x${h})`;
+    document.getElementById("live-cam-stats").textContent = `Active @ ${fps} FPS (${w}x${h})`;
     if (state.camTimer) clearInterval(state.camTimer);
     state.camTimer = setInterval(captureAndSend, Math.round(1000 / fps));
     updateConsentControls();
   } catch (err) {
     stopCamera();
-    showError("Webcam start failed: " + err.message);
-    document.getElementById("live-log").textContent = "Webcam start failed: " + err.message;
+    const formatted = formatMediaError("Webcam", err);
+    document.getElementById("live-cam-stats").textContent =
+      (err && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError"))
+        ? "Permission Denied" : "Error";
+    showError(formatted);
+    document.getElementById("live-log").textContent = formatted;
   }
 }
 
@@ -921,10 +970,15 @@ async function startMic() {
   }
   if (state.micStream) return;
   try {
+    document.getElementById("mic-silence-badge").textContent = "(Requesting permission...)";
     const devId = document.getElementById("sel-mic").value;
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: { deviceId: devId ? { exact: devId } : undefined }
     });
+    if (!state.consentGranted || state.sessionRevoked) {
+      stream.getTracks().forEach(t => t.stop());
+      throw new Error("Consent is no longer active; microphone capture aborted.");
+    }
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     const audioCtx = new AudioCtx();
     const src = audioCtx.createMediaStreamSource(stream);
@@ -936,11 +990,13 @@ async function startMic() {
     stream.getAudioTracks().forEach(track => {
       track.onended = () => {
         stopMic();
+        document.getElementById("mic-silence-badge").textContent = "(Disconnected)";
         showError("Microphone device disconnected.");
       };
     });
     await enumerateMediaDevices();
     if (!state.ws || state.ws.readyState !== WebSocket.OPEN) connectWebSocket();
+    sendMediaState(null, true);
     let pcmChunks = [];
     let totalBufferedSamples = 0;
     const maxBufferedSamples = 32000;
@@ -992,8 +1048,12 @@ async function startMic() {
     updateConsentControls();
   } catch (err) {
     stopMic();
-    showError("Microphone start failed: " + err.message);
-    document.getElementById("live-log").textContent = "Microphone start failed: " + err.message;
+    const formatted = formatMediaError("Microphone", err);
+    document.getElementById("mic-silence-badge").textContent =
+      (err && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError"))
+        ? "(Permission Denied)" : "(Error)";
+    showError(formatted);
+    document.getElementById("live-log").textContent = formatted;
   }
 }
 
