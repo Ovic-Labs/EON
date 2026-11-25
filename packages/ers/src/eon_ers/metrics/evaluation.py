@@ -21,18 +21,24 @@ class ModelEvaluationFramework:
         """Compute comprehensive multiclass classification and calibration metrics."""
         n = len(y_true)
         if n == 0 or len(y_pred) != n or len(probabilities) != n:
-            raise ValueError("Mismatched sample counts in evaluation inputs")
+            raise ValueError("Mismatched or empty sample counts in evaluation inputs")
 
         if classes is None:
             classes = sorted(set(y_true) | set(y_pred))
+        if not classes:
+            raise ValueError("Evaluation class list cannot be empty.")
 
         class_to_idx = {c: i for i, c in enumerate(classes)}
         k = len(classes)
 
         # 1. Confusion Matrix
         conf_matrix = np.zeros((k, k), dtype=int)
-        for yt, yp in zip(y_true, y_pred):
-            if yt in class_to_idx and yp in class_to_idx:
+        for idx, (yt, yp) in enumerate(zip(y_true, y_pred, strict=True)):
+            if yt not in class_to_idx:
+                raise ValueError(f"Unsupported ground-truth label '{yt}' at index {idx}.")
+            if yp not in class_to_idx and yp not in ("insufficient_evidence", "unknown"):
+                raise ValueError(f"Unsupported predicted label '{yp}' at index {idx}.")
+            if yp in class_to_idx:
                 conf_matrix[class_to_idx[yt], class_to_idx[yp]] += 1
 
         # 2. Per-class Precision, Recall, F1
@@ -66,10 +72,23 @@ class ModelEvaluationFramework:
         confidences: list[float] = []
         corrects: list[bool] = []
 
-        for yt, yp, probs in zip(y_true, y_pred, probabilities):
+        for idx, (yt, yp, probs) in enumerate(zip(y_true, y_pred, probabilities, strict=True)):
             y_onehot = np.zeros(k, dtype=np.float64)
-            if yt in class_to_idx:
-                y_onehot[class_to_idx[yt]] = 1.0
+            y_onehot[class_to_idx[yt]] = 1.0
+
+            for cls_name, val in probs.items():
+                if (
+                    not isinstance(val, (int, float))
+                    or isinstance(val, bool)
+                    or not np.isfinite(val)
+                ):
+                    raise ValueError(
+                        f"Non-finite probability {val!r} for '{cls_name}' at index {idx}."
+                    )
+                if val < 0.0 or val > 1.0:
+                    raise ValueError(
+                        f"Probability out of bounds [0, 1] for '{cls_name}' at index {idx}."
+                    )
 
             p_vec = np.array([probs.get(c, 0.0) for c in classes], dtype=np.float64)
             brier_sum += np.sum((p_vec - y_onehot) ** 2)

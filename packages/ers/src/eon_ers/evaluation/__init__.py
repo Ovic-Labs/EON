@@ -11,14 +11,16 @@ from eon_ers.evaluation.dataset import (
     EvaluationPartition,
     EvaluationSample,
     create_subject_independent_partition,
+    is_valid_sha256_digest,
 )
-from eon_ers.evaluation.evaluator import ModelEvaluator
+from eon_ers.evaluation.evaluator import EvaluationExecutionProof, ModelEvaluator
 from eon_ers.evaluation.metrics import (
     compute_calibration_metrics,
     compute_classification_metrics,
     compute_confidence_distribution,
     compute_confusion_matrix,
 )
+from eon_ers.evaluation.proof import SigningKeyPair, TrustedKeyRegistry
 
 __all__ = [
     "AFFECTNET_METADATA",
@@ -26,12 +28,16 @@ __all__ = [
     "RAF_DB_METADATA",
     "RAVDESS_METADATA",
     "DatasetMetadata",
+    "EvaluationExecutionProof",
     "EvaluationPartition",
     "EvaluationSample",
     "ModelEvaluator",
+    "SigningKeyPair",
+    "TrustedKeyRegistry",
     "compute_calibration_metrics",
     "compute_classification_metrics",
     "compute_confidence_distribution",
     "compute_confusion_matrix",
     "create_subject_independent_partition",
+    "is_valid_sha256_digest",
 ]

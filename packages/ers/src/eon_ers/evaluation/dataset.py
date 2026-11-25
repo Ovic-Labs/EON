@@ -8,23 +8,33 @@ partitioning to prevent subject leakage during training and scientific evaluatio
 from __future__ import annotations
 
 import hashlib
+import hmac
 import random
 import time
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-EMPTY_BYTES_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-KNOWN_PLACEHOLDER_CHECKSUMS: frozenset[str] = frozenset(
-    {
-        EMPTY_BYTES_SHA256,
-        "0" * 64,
-        "f" * 64,
-        "a" * 64,
-        "1" * 64,
-    }
+from eon_ers.types import (
+    EMPTY_BYTES_SHA256,
+    KNOWN_PLACEHOLDER_CHECKSUMS,
+    is_valid_sha256_digest,
 )
+
+__all__ = [
+    "AFFECTNET_METADATA",
+    "CREMA_D_METADATA",
+    "EMPTY_BYTES_SHA256",
+    "KNOWN_PLACEHOLDER_CHECKSUMS",
+    "RAF_DB_METADATA",
+    "RAVDESS_METADATA",
+    "DatasetMetadata",
+    "EvaluationPartition",
+    "EvaluationSample",
+    "create_subject_independent_partition",
+    "is_valid_sha256_digest",
+]
 
 
 class DatasetMetadata(BaseModel):
@@ -59,38 +69,50 @@ class DatasetMetadata(BaseModel):
         default_factory=list, description="List of unique subject or actor identifiers."
     )
 
+    @field_validator("name", "source", "version", "license", "partition_strategy")
+    @classmethod
+    def _reject_blank_metadata(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Dataset metadata string fields cannot be empty or whitespace-only.")
+        return stripped
+
     def is_commercially_usable(self) -> bool:
         """Check if dataset can be legally used for commercial models."""
         return self.commercial_allowed
 
     def is_valid_checksum(self) -> bool:
-        """Syntactic validation only: verify whether the registered checksum is a valid, non-placeholder 64-char hex SHA-256.
+        """Syntactic validation only: check if the registered checksum is a 64-char non-placeholder hex SHA-256.
 
         IMPORTANT: Syntactic validity does NOT constitute verification of archive bytes.
         Actual verification requires verify_archive() on the physical file.
         """
-        if not self.checksum:
-            return False
-        c = self.checksum.strip().lower()
-        if len(c) != 64:
-            return False
-        if not all(ch in "0123456789abcdef" for ch in c):
-            return False
-        if c in KNOWN_PLACEHOLDER_CHECKSUMS:
-            return False
-        return True
+        return is_valid_sha256_digest(self.checksum)
 
     def verify_archive(
-        self, archive_path: str | Path, return_audit: bool = False
+        self,
+        archive_path: str | Path | None,
+        expected_sha256: str | None = None,
+        return_audit: bool = False,
     ) -> tuple[bool, str] | tuple[bool, str, dict[str, Any]]:
-        """Verify the integrity of a dataset archive file against its registered SHA-256 checksum.
+        """Verify the integrity of a dataset archive file against a trusted SHA-256 checksum.
 
-        Rejects missing, empty, malformed, placeholder, or mismatched archives.
-        Returns a tuple of (is_verified, message) or (is_verified, message, audit_record) if return_audit=True.
+        Requires physical archive bytes, recomputes SHA-256, and rejects missing,
+        empty, malformed, placeholder, or mismatched archives and metadata.
         """
         empty_audit: dict[str, Any] = {}
-        if not self.is_valid_checksum():
-            msg = f"Dataset '{self.name}' has no registered valid SHA-256 checksum (value: '{self.checksum}')."
+        target_expected = (
+            (expected_sha256 if expected_sha256 is not None else self.checksum).strip().lower()
+        )
+        if not is_valid_sha256_digest(target_expected):
+            msg = (
+                f"Dataset '{self.name}' has missing, malformed, or placeholder expected SHA-256 "
+                f"checksum (value: '{target_expected}')."
+            )
+            return (False, msg, empty_audit) if return_audit else (False, msg)
+
+        if archive_path is None or not str(archive_path).strip():
+            msg = f"Dataset archive path is missing for '{self.name}'; actual archive bytes are required."
             return (False, msg, empty_audit) if return_audit else (False, msg)
 
         path = Path(archive_path)
@@ -109,9 +131,10 @@ class DatasetMetadata(BaseModel):
                 hasher.update(chunk)
         computed = hasher.hexdigest().lower()
 
-        expected = self.checksum.strip().lower()
-        if computed != expected:
-            msg = f"Checksum mismatch for '{self.name}': expected {expected}, got {computed}."
+        if not hmac.compare_digest(computed, target_expected):
+            msg = (
+                f"Checksum mismatch for '{self.name}': expected {target_expected}, got {computed}."
+            )
             return (False, msg, empty_audit) if return_audit else (False, msg)
 
         audit_record: dict[str, Any] = {
@@ -128,10 +151,25 @@ class DatasetMetadata(BaseModel):
         return (True, msg, audit_record) if return_audit else (True, msg)
 
     def verify_manifest(
-        self, manifest_path: str | Path, expected_sha256: str | None = None
+        self, manifest_path: str | Path | None, expected_sha256: str | None = None
     ) -> tuple[bool, str, dict[str, Any]]:
-        """Verify the integrity and non-emptiness of an extracted dataset manifest file."""
+        """Verify the integrity and non-emptiness of a dataset manifest against a trusted digest."""
         empty_audit: dict[str, Any] = {}
+        target_expected = (
+            (expected_sha256 if expected_sha256 is not None else self.manifest_checksum)
+            .strip()
+            .lower()
+        )
+        if not is_valid_sha256_digest(target_expected):
+            return (
+                False,
+                f"Manifest expected SHA-256 is missing, malformed, or placeholder: '{target_expected}'.",
+                empty_audit,
+            )
+
+        if manifest_path is None or not str(manifest_path).strip():
+            return False, "Dataset manifest path is missing.", empty_audit
+
         path = Path(manifest_path)
         if not path.is_file():
             return False, f"Dataset manifest not found: {path}", empty_audit
@@ -146,20 +184,12 @@ class DatasetMetadata(BaseModel):
                 hasher.update(chunk)
         computed = hasher.hexdigest().lower()
 
-        target_expected = (expected_sha256 or self.manifest_checksum).strip().lower()
-        if target_expected:
-            if target_expected in KNOWN_PLACEHOLDER_CHECKSUMS:
-                return (
-                    False,
-                    f"Manifest checksum '{target_expected}' is a placeholder.",
-                    empty_audit,
-                )
-            if computed != target_expected:
-                return (
-                    False,
-                    f"Manifest checksum mismatch: expected {target_expected}, got {computed}.",
-                    empty_audit,
-                )
+        if not hmac.compare_digest(computed, target_expected):
+            return (
+                False,
+                f"Manifest checksum mismatch: expected {target_expected}, got {computed}.",
+                empty_audit,
+            )
 
         audit = {
             "dataset_name": self.name,

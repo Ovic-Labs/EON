@@ -123,14 +123,12 @@ class ONNXSpeechModelAdapter(BaseSpeechModelAdapter):
                 return
 
         try:
-            import onnxruntime as ort
-
-            so = ort.SessionOptions()
-            so.intra_op_num_threads = self._num_threads
-            so.inter_op_num_threads = 1
-            so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-            self._session = ort.InferenceSession(
-                self._model_path, sess_options=so, providers=["CPUExecutionProvider"]
+            self._session, _ = ModelLoader.validate_and_load_onnx_weights(
+                artifact_path=self._model_path,
+                manifest=None,
+                num_threads=self._num_threads,
+                expected_classes=SUPPORTED_EMOTIONS,
+                verify_manifest_checksum=False,
             )
             self._is_loaded = True
         except Exception:

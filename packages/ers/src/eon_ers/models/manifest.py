@@ -3,12 +3,23 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import os
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from eon_ers.types import Modality
+from eon_ers.types import Modality, is_valid_sha256_digest
+
+_DTYPE_TO_ONNX_TYPES: dict[str, tuple[str, ...]] = {
+    "float": ("tensor(float)", "tensor(float32)"),
+    "float32": ("tensor(float)", "tensor(float32)"),
+    "double": ("tensor(double)", "tensor(float64)"),
+    "float64": ("tensor(double)", "tensor(float64)"),
+    "int64": ("tensor(int64)",),
+    "int32": ("tensor(int32)",),
+    "uint8": ("tensor(uint8)",),
+}
 
 
 class ModelManifest(BaseModel):
@@ -73,12 +84,16 @@ class ModelManifest(BaseModel):
     )
 
     def verify_integrity(self, base_dir: str | None = None) -> bool:
-        """Verify that the model file exists and its SHA-256 matches the manifest digest."""
+        """Verify that the model file exists, is non-empty, and matches a non-placeholder SHA-256."""
+        expected = self.sha256_checksum.strip().lower()
+        if not is_valid_sha256_digest(expected):
+            return False
+
         path = self.artifact_path
         if base_dir and not os.path.isabs(path):
             path = os.path.join(base_dir, path)
 
-        if not os.path.isfile(path):
+        if not os.path.isfile(path) or os.path.getsize(path) == 0:
             return False
 
         hasher = hashlib.sha256()
@@ -87,7 +102,7 @@ class ModelManifest(BaseModel):
                 hasher.update(chunk)
 
         computed = hasher.hexdigest().lower()
-        return computed == self.sha256_checksum.lower()
+        return hmac.compare_digest(computed, expected)
 
     def validate_tensor_contracts(self, session: Any) -> tuple[bool, str]:
         """Validate that the loaded ONNX session inputs and outputs match the manifest."""
@@ -122,7 +137,19 @@ class ModelManifest(BaseModel):
                         f"Input tensor shape mismatch: expected {expected_in_shape}, got {actual_in.shape}.",
                     )
 
-            if expected_in_dtype or hasattr(actual_in, "type"):
+            if expected_in_dtype is not None:
+                allowed_in_types = _DTYPE_TO_ONNX_TYPES.get(str(expected_in_dtype).strip().lower())
+                if allowed_in_types is None:
+                    return (
+                        False,
+                        f"Unsupported manifest input dtype specification: '{expected_in_dtype}'.",
+                    )
+                if actual_in.type not in allowed_in_types:
+                    return (
+                        False,
+                        f"Input tensor dtype invalid: expected {allowed_in_types}, got '{actual_in.type}'.",
+                    )
+            elif hasattr(actual_in, "type"):
                 valid_float_types = ("tensor(float)", "tensor(float32)")
                 if actual_in.type not in valid_float_types:
                     return (
@@ -137,6 +164,7 @@ class ModelManifest(BaseModel):
             actual_out = outputs[0]
             expected_out_name = self.output_specification.get("name")
             expected_out_shape = self.output_specification.get("shape")
+            expected_out_dtype = self.output_specification.get("dtype")
             expected_classes = self.output_specification.get("classes")
 
             if expected_out_name and actual_out.name != expected_out_name:
@@ -157,7 +185,21 @@ class ModelManifest(BaseModel):
                         f"Output tensor shape mismatch: expected {expected_out_shape}, got {actual_out.shape}.",
                     )
 
-            if hasattr(actual_out, "type"):
+            if expected_out_dtype is not None:
+                allowed_out_types = _DTYPE_TO_ONNX_TYPES.get(
+                    str(expected_out_dtype).strip().lower()
+                )
+                if allowed_out_types is None:
+                    return (
+                        False,
+                        f"Unsupported manifest output dtype specification: '{expected_out_dtype}'.",
+                    )
+                if actual_out.type not in allowed_out_types:
+                    return (
+                        False,
+                        f"Output tensor dtype invalid: expected {allowed_out_types}, got '{actual_out.type}'.",
+                    )
+            elif hasattr(actual_out, "type"):
                 valid_float_types = ("tensor(float)", "tensor(float32)")
                 if actual_out.type not in valid_float_types:
                     return (
