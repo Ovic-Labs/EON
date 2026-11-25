@@ -67,9 +67,13 @@ class ConsentManager:
         clean_ref = consent_reference.strip()
 
         with self._lock:
+            if clean_session in self._revoked_sessions:
+                raise ERSPrivacyConsentError(
+                    f"Consent registration rejected: Session '{clean_session}' has been explicitly revoked "
+                    "and cannot be reactivated. Start a new session ID to grant fresh consent."
+                )
             self._consents[clean_session] = _hash_reference(clean_ref)
             self._display_masks[clean_session] = _format_display_mask(clean_ref)
-            self._revoked_sessions.discard(clean_session)
             masked = _mask_reference(clean_ref)
             logger.info("Registered active consent for session '%s' [%s].", clean_session, masked)
 

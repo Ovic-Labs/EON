@@ -133,7 +133,11 @@ def test_consent_revocation_racing_with_processing() -> None:
             if i % 10 == 0:
                 cm.revoke_consent(session_id)
             elif i % 10 == 5:
-                cm.register_consent(session_id, token)
+                # Revoked sessions are terminal and cannot be reactivated; register fresh sub-sessions concurrently
+                try:
+                    cm.register_consent(session_id, token)
+                except ERSPrivacyConsentError:
+                    cm.register_consent(f"{session_id}-fresh-{i}", token)
 
     with ThreadPoolExecutor(max_workers=4) as executor:
         f1 = executor.submit(validator_worker)

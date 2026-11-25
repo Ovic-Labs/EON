@@ -105,12 +105,22 @@ class ModelStatusResponse(BaseModel):
 
 
 class DeviceStatusResponse(BaseModel):
-    """Connected sensor hardware status."""
+    """Verified sensory hardware capture telemetry."""
 
     model_config = ConfigDict(extra="forbid")
 
     camera_active: bool = Field(default=False)
     microphone_active: bool = Field(default=False)
+    camera_state: str = Field(
+        default="unknown",
+        description="Verified capture state ('active', 'inactive', or 'unknown').",
+    )
+    microphone_state: str = Field(
+        default="unknown",
+        description="Verified capture state ('active', 'inactive', or 'unknown').",
+    )
+    active_session_count: int = Field(default=0, ge=0)
+    last_capture_timestamp: float | None = Field(default=None)
     has_consent: bool = Field(default=False)
     session_id: str | None = Field(default=None)
 

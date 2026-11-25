@@ -13,6 +13,7 @@ from eon_ers.api.rate_limits import SlidingWindowRateLimiter
 from eon_ers.api.schemas import (
     ConsentRegisterRequest,
     CreateLiveSessionRequest,
+    DeviceStatusResponse,
     MultimodalAnalyzeRequest,
     ProcessObservationRequest,
     TextAnalyzeRequest,
@@ -253,6 +254,14 @@ def build_v1_router(
         principal: AuthenticatedPrincipal = Depends(get_principal),
     ) -> dict[str, Any]:
         _require_perm(principal, "analyze:run")
+        rec = manager.get_live_session(req.session_id)
+        if rec is not None:
+            try:
+                auth_manager.authorize_session_owner(principal, rec.owner_id)
+            except ERSError as exc:
+                raise HTTPException(
+                    status_code=403, detail=exc.to_error_payload()["error"]
+                ) from exc
         try:
             res = await manager.submit_video_job(
                 req.session_id, req.video_base64, req.consent_reference
@@ -275,6 +284,14 @@ def build_v1_router(
         job = manager.get_video_job(job_id)
         if job is None:
             raise HTTPException(status_code=404, detail=f"Video job '{job_id}' not found.")
+        rec = manager.get_live_session(job.session_id)
+        if rec is not None:
+            try:
+                auth_manager.authorize_session_owner(principal, rec.owner_id)
+            except ERSError as exc:
+                raise HTTPException(
+                    status_code=403, detail=exc.to_error_payload()["error"]
+                ) from exc
         return job.model_dump()
 
     @router.delete("/api/v1/analyze/video/{job_id}")
@@ -283,6 +300,16 @@ def build_v1_router(
         principal: AuthenticatedPrincipal = Depends(get_principal),
     ) -> dict[str, Any]:
         _require_perm(principal, "analyze:run")
+        job = manager.get_video_job(job_id)
+        if job is not None:
+            rec = manager.get_live_session(job.session_id)
+            if rec is not None:
+                try:
+                    auth_manager.authorize_session_owner(principal, rec.owner_id)
+                except ERSError as exc:
+                    raise HTTPException(
+                        status_code=403, detail=exc.to_error_payload()["error"]
+                    ) from exc
         cancelled = manager.cancel_video_job(job_id)
         if not cancelled:
             raise HTTPException(status_code=404, detail=f"Video job '{job_id}' not found.")
@@ -294,6 +321,14 @@ def build_v1_router(
         principal: AuthenticatedPrincipal = Depends(get_principal),
     ) -> dict[str, Any]:
         _require_perm(principal, "analyze:run")
+        rec = manager.get_live_session(req.session_id)
+        if rec is not None:
+            try:
+                auth_manager.authorize_session_owner(principal, rec.owner_id)
+            except ERSError as exc:
+                raise HTTPException(
+                    status_code=403, detail=exc.to_error_payload()["error"]
+                ) from exc
         if req.image_base64 is None and req.audio_base64 is None and req.text is None:
             raise HTTPException(
                 status_code=400,
@@ -316,14 +351,20 @@ def build_v1_router(
         principal: AuthenticatedPrincipal = Depends(get_principal),
     ) -> dict[str, Any]:
         _require_perm(principal, "sessions:manage")
-        rec = manager.create_live_session(
-            session_id=req.session_id or f"live-{uuid.uuid4().hex[:10]}",
-            owner_id=principal.principal_id,
-            consent_reference=req.consent_reference,
-            consent_scope=req.consent_scope,
-            history_opt_in=req.history_opt_in,
-            ttl_seconds=req.ttl_seconds,
-        )
+        try:
+            rec = manager.create_live_session(
+                session_id=req.session_id or f"live-{uuid.uuid4().hex[:10]}",
+                owner_id=principal.principal_id,
+                consent_reference=req.consent_reference,
+                consent_scope=req.consent_scope,
+                history_opt_in=req.history_opt_in,
+                ttl_seconds=req.ttl_seconds,
+            )
+        except ERSError as exc:
+            status_code = 409 if "revoked" in exc.message.lower() else 400
+            raise HTTPException(
+                status_code=status_code, detail=exc.to_error_payload()["error"]
+            ) from exc
         return rec.to_public_dict()
 
     @router.get("/api/v1/live/sessions")
@@ -444,7 +485,10 @@ def build_v1_router(
                 "is_revoked": False,
             }
         except ERSError as exc:
-            raise HTTPException(status_code=400, detail=exc.to_error_payload()["error"]) from exc
+            status_code = 409 if "revoked" in exc.message.lower() else 400
+            raise HTTPException(
+                status_code=status_code, detail=exc.to_error_payload()["error"]
+            ) from exc
 
     @router.get("/api/v1/consent/{session_id}")
     async def get_consent_v1(
@@ -484,7 +528,15 @@ def build_v1_router(
             "is_revoked": True,
         }
 
-    # ---- Diagnostics, Datasets & Evaluation Reports (UI & Ops integration) ----
+    # ---- Devices, Diagnostics, Datasets & Evaluation Reports (UI & Ops integration) ----
+
+    @router.get("/api/v1/devices", response_model=DeviceStatusResponse)
+    async def get_v1_devices(
+        principal: AuthenticatedPrincipal = Depends(get_principal),
+    ) -> DeviceStatusResponse:
+        _require_perm(principal, "health:read")
+        st = manager.get_verified_device_status()
+        return DeviceStatusResponse(**st)
 
     @router.get("/api/v1/diagnostics")
     async def get_v1_diagnostics(

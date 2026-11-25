@@ -1,4 +1,4 @@
-"""Versioned WebSocket streaming handler with bounded queue backpressure and heartbeats."""
+"""Versioned WebSocket streaming handler with bounded queue backpressure, auth, and heartbeats."""
 
 from __future__ import annotations
 
@@ -10,10 +10,10 @@ from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from eon_ers.api.authentication import APIKeyAuthManager
+from eon_ers.api.authentication import APIKeyAuthManager, AuthenticatedPrincipal
 from eon_ers.api.rate_limits import SlidingWindowRateLimiter
 from eon_ers.core.version import ERS_WS_PROTOCOL_VERSION
-from eon_ers.exceptions import ERSError
+from eon_ers.exceptions import ERSError, ERSPrivacyConsentError
 from eon_ers.live.manager import LiveSessionManager
 from eon_ers.live.session import LiveSessionState
 
@@ -22,10 +22,12 @@ logger = logging.getLogger("eon.ers.live.websocket")
 MAX_WS_PAYLOAD_BYTES = 5 * 1024 * 1024
 ALLOWED_WS_MESSAGE_TYPES: frozenset[str] = frozenset(
     {
+        "auth",
         "init",
         "capabilities",
         "heartbeat",
         "ping",
+        "media_state",
         "frame",
         "audio",
         "text",
@@ -46,19 +48,23 @@ async def handle_live_websocket(
     fusion_synthesizer: Any,
     auth_manager: APIKeyAuthManager | None = None,
 ) -> None:
-    """Handle versioned live streaming with explicit schemas, rate limits, and backpressure."""
-    if auth_manager is not None and auth_manager.require_auth:
-        api_key = websocket.headers.get("x-api-key") or websocket.query_params.get("api_key")
+    """Handle versioned live streaming with explicit schemas, auth, rate limits, and backpressure."""
+    principal: AuthenticatedPrincipal | None = None
+    requires_auth = bool(auth_manager is not None and auth_manager.require_auth)
+
+    if requires_auth and auth_manager is not None:
+        api_key = websocket.headers.get("x-api-key")
         auth_hdr = websocket.headers.get("authorization")
-        try:
-            principal = auth_manager.authenticate(api_key=api_key, authorization=auth_hdr)
-            auth_manager.authorize(principal, "analyze:run")
-            rec = manager.get_live_session(session_id)
-            if rec is not None:
-                auth_manager.authorize_session_owner(principal, rec.owner_id)
-        except ERSError as exc:
-            await websocket.close(code=4401, reason=exc.message[:100])
-            return
+        if api_key or auth_hdr:
+            try:
+                principal = auth_manager.authenticate(api_key=api_key, authorization=auth_hdr)
+                auth_manager.authorize(principal, "analyze:run")
+                rec = manager.get_live_session(session_id)
+                if rec is not None:
+                    auth_manager.authorize_session_owner(principal, rec.owner_id)
+            except ERSError as exc:
+                await websocket.close(code=4401, reason=exc.message[:100])
+                return
 
     await websocket.accept()
     metrics = manager.engine.metrics
@@ -233,11 +239,58 @@ async def handle_live_websocket(
                 )
                 continue
 
+            if msg_type == "auth":
+                if auth_manager is not None:
+                    try:
+                        principal = auth_manager.authenticate(
+                            api_key=payload.get("api_key"),
+                            authorization=payload.get("authorization"),
+                        )
+                        auth_manager.authorize(principal, "analyze:run")
+                        rec = manager.get_live_session(session_id)
+                        if rec is not None:
+                            auth_manager.authorize_session_owner(principal, rec.owner_id)
+                    except ERSError as exc:
+                        await websocket.send_text(
+                            json.dumps({"type": "error", "error": exc.message})
+                        )
+                        await websocket.close(code=4401, reason=exc.message[:100])
+                        break
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "type": "status",
+                            "status": "authenticated",
+                            "session_id": session_id,
+                        }
+                    )
+                )
+                continue
+
+            if requires_auth and principal is None:
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "type": "error",
+                            "error": "WebSocket authentication required. Send {'type': 'auth', 'api_key': ...} or provide X-API-Key header.",
+                        }
+                    )
+                )
+                await websocket.close(code=4401, reason="Authentication required")
+                break
+
             ref = payload.get("consent_reference")
+            owner_id = principal.principal_id if principal is not None else "anonymous"
 
             if msg_type == "init":
                 if ref:
-                    manager.register_session_consent(session_id, str(ref))
+                    try:
+                        manager.register_session_consent(session_id, str(ref), owner_id=owner_id)
+                    except ERSPrivacyConsentError as exc:
+                        await websocket.send_text(
+                            json.dumps({"type": "error", "error": exc.message})
+                        )
+                        continue
                 await websocket.send_text(
                     json.dumps(
                         {
@@ -245,6 +298,7 @@ async def handle_live_websocket(
                             "status": "session_initialized",
                             "protocol_version": ERS_WS_PROTOCOL_VERSION,
                             "session_id": session_id,
+                            "has_active_consent": manager.has_active_consent(session_id),
                         }
                     )
                 )
@@ -271,11 +325,29 @@ async def handle_live_websocket(
                         }
                     )
                 )
+            elif msg_type == "media_state":
+                manager.set_session_device_state(
+                    session_id,
+                    camera_active=payload.get("camera_active"),
+                    microphone_active=payload.get("microphone_active"),
+                )
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "type": "status",
+                            "status": "media_state_updated",
+                            "session_id": session_id,
+                        }
+                    )
+                )
             elif msg_type == "pause":
                 paused = True
                 rec = manager.get_live_session(session_id)
                 if rec is not None and rec.state == LiveSessionState.STREAMING:
                     rec.transition_to(LiveSessionState.PAUSED)
+                manager.set_session_device_state(
+                    session_id, camera_active=False, microphone_active=False
+                )
                 await websocket.send_text(
                     json.dumps({"type": "status", "status": "paused", "session_id": session_id})
                 )
@@ -289,6 +361,14 @@ async def handle_live_websocket(
                 )
             elif msg_type == "revoke":
                 manager.revoke_session_consent(session_id)
+                latest_face_res = None
+                latest_speech_res = None
+                while not queue.empty():
+                    try:
+                        queue.get_nowait()
+                        queue.task_done()
+                    except asyncio.QueueEmpty:
+                        break
                 await websocket.send_text(
                     json.dumps(
                         {
@@ -299,6 +379,9 @@ async def handle_live_websocket(
                     )
                 )
             elif msg_type in ("stop", "cancel"):
+                manager.set_session_device_state(
+                    session_id, camera_active=False, microphone_active=False
+                )
                 await websocket.send_text(
                     json.dumps({"type": "status", "status": "stopped", "session_id": session_id})
                 )
@@ -326,4 +409,5 @@ async def handle_live_websocket(
         logger.error("WebSocket exception on session '%s': %s", session_id, exc, exc_info=True)
     finally:
         worker_task.cancel()
+        manager.set_session_device_state(session_id, camera_active=False, microphone_active=False)
         metrics.record_ws_disconnect()

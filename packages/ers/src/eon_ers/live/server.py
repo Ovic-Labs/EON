@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncGenerator
 
-from fastapi import FastAPI, HTTPException, Request, WebSocket
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from eon_ers.api.authentication import APIKeyAuthManager
+from eon_ers.api.authentication import APIKeyAuthManager, AuthenticatedPrincipal, Role
 from eon_ers.api.rate_limits import SlidingWindowRateLimiter
 from eon_ers.api.routes import build_v1_router
 from eon_ers.api.schemas import (
@@ -50,14 +51,32 @@ def create_live_app(
     model_registry: ModelRegistry | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI live streaming application."""
-    ers_engine = engine or ERSEngine(
-        ERSConfig(
-            facial_model_path="packages/ers/models/facial_emotion_model.onnx",
-            speech_model_path="packages/ers/models/speech_emotion_model.onnx",
+    env_auth = os.getenv("EON_ERS_API_AUTH", "").strip().lower() in ("1", "true", "yes")
+    if engine is not None:
+        ers_engine = engine
+    else:
+        ers_engine = ERSEngine(
+            ERSConfig(
+                facial_model_path="packages/ers/models/facial_emotion_model.onnx",
+                speech_model_path="packages/ers/models/speech_emotion_model.onnx",
+                require_api_auth=env_auth,
+            )
         )
-    )
     manager = session_manager or LiveSessionManager(ers_engine)
-    auth = auth_manager or APIKeyAuthManager(require_auth=ers_engine.config.require_api_auth)
+    auth = auth_manager or APIKeyAuthManager(
+        require_auth=(ers_engine.config.require_api_auth or env_auth)
+    )
+    bootstrap_keys = os.getenv("EON_ERS_BOOTSTRAP_API_KEYS", "").strip()
+    if bootstrap_keys:
+        for entry in bootstrap_keys.split(","):
+            parts = [p.strip() for p in entry.split(":", 2)]
+            if len(parts) == 3 and parts[0] and parts[2]:
+                role = (
+                    Role(parts[1].lower())
+                    if parts[1].lower() in {r.value for r in Role}
+                    else Role.OPERATOR
+                )
+                auth.issue_key(parts[0], role, raw_secret=parts[2])
     limiter = SlidingWindowRateLimiter(
         max_requests_per_minute=ers_engine.config.rate_limit_requests_per_minute
     )
@@ -65,6 +84,40 @@ def create_live_app(
     default_models_dir = Path("packages/ers/models")
     if model_registry is None and default_models_dir.is_dir():
         registry.discover_directory(default_models_dir)
+
+    def _legacy_principal(
+        request: Request,
+        x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+        authorization: str | None = Header(default=None, alias="Authorization"),
+    ) -> AuthenticatedPrincipal:
+        try:
+            principal = auth.authenticate(api_key=x_api_key, authorization=authorization)
+            cid = (
+                principal.key_id
+                if principal.authenticated
+                else (request.client.host if request.client else "anonymous")
+            )
+            limiter.check_and_record(cid)
+            return principal
+        except ERSError as exc:
+            status = 429 if "RATE_LIMIT" in exc.error_code else 401
+            raise HTTPException(status_code=status, detail=exc.to_error_payload()["error"]) from exc
+
+    def _require_legacy_perm(principal: AuthenticatedPrincipal, perm: str) -> None:
+        try:
+            auth.authorize(principal, perm)
+        except ERSError as exc:
+            raise HTTPException(status_code=403, detail=exc.to_error_payload()["error"]) from exc
+
+    def _require_legacy_owner(principal: AuthenticatedPrincipal, session_id: str) -> None:
+        rec = manager.get_live_session(session_id)
+        if rec is not None:
+            try:
+                auth.authorize_session_owner(principal, rec.owner_id)
+            except ERSError as exc:
+                raise HTTPException(
+                    status_code=403, detail=exc.to_error_payload()["error"]
+                ) from exc
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -86,8 +139,8 @@ def create_live_app(
     async def ers_exception_handler(request: Request, exc: ERSError) -> JSONResponse:
         return JSONResponse(status_code=400, content=exc.to_error_payload())
 
-    # Secure local CORS policy (disallowing insecure wildcard credentials)
-    allowed_origins = [
+    # Secure local CORS policy (explicit origins & headers; never allow '*' with credentials)
+    default_origins = [
         "http://localhost:8000",
         "http://127.0.0.1:8000",
         "http://localhost:3000",
@@ -95,12 +148,18 @@ def create_live_app(
         "http://localhost:8080",
         "http://127.0.0.1:8080",
     ]
+    env_origins = [
+        o.strip()
+        for o in os.getenv("EON_ERS_CORS_ORIGINS", "").split(",")
+        if o.strip() and o.strip() != "*"
+    ]
+    allowed_origins = env_origins or default_origins
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-        allow_headers=["*"],
+        allow_headers=["Content-Type", "Authorization", "X-API-Key", "X-Request-ID"],
     )
 
     @app.get("/", response_class=HTMLResponse)
@@ -123,8 +182,11 @@ def create_live_app(
         )
 
     @app.get("/api/models", response_model=ModelStatusResponse)
-    async def get_models_status() -> ModelStatusResponse:
+    async def get_models_status(
+        principal: AuthenticatedPrincipal = Depends(_legacy_principal),
+    ) -> ModelStatusResponse:
         """Inspect detailed lifecycle, provenance, and scientific validation states of all models."""
+        _require_legacy_perm(principal, "models:read")
         models: list[ModelStatusDetail] = []
         if ers_engine._facial_pipeline and ers_engine._facial_pipeline.model_adapter:
             fa = ers_engine._facial_pipeline.model_adapter
@@ -192,20 +254,22 @@ def create_live_app(
         )
 
     @app.get("/api/devices", response_model=DeviceStatusResponse)
-    async def get_devices_status() -> DeviceStatusResponse:
-        """Inspect sensory hardware connectivity."""
-        return DeviceStatusResponse(
-            camera_active=True,
-            microphone_active=True,
-            has_consent=len(manager._active_sessions) > 0,
-            session_id=next(iter(manager._active_sessions.keys()))
-            if manager._active_sessions
-            else None,
-        )
+    async def get_devices_status(
+        principal: AuthenticatedPrincipal = Depends(_legacy_principal),
+    ) -> DeviceStatusResponse:
+        """Inspect verified sensory capture telemetry (never fabricated as active)."""
+        _require_legacy_perm(principal, "health:read")
+        st = manager.get_verified_device_status()
+        return DeviceStatusResponse(**st)
 
     @app.get("/api/telemetry/{session_id}", response_model=PerformanceTelemetryResponse)
-    async def get_telemetry(session_id: str) -> PerformanceTelemetryResponse:
+    async def get_telemetry(
+        session_id: str,
+        principal: AuthenticatedPrincipal = Depends(_legacy_principal),
+    ) -> PerformanceTelemetryResponse:
         """Return execution latency percentiles and host memory metrics."""
+        _require_legacy_perm(principal, "health:read")
+        _require_legacy_owner(principal, session_id)
         summary = ers_engine.get_metrics()
         p50 = summary.get("latency_p50_ms", 0.0)
         p95 = summary.get("latency_p95_ms", 0.0)
@@ -232,10 +296,17 @@ def create_live_app(
         )
 
     @app.post("/api/consent/register")
-    async def register_consent(req: ConsentRegisterRequest) -> dict[str, Any]:
+    async def register_consent(
+        req: ConsentRegisterRequest,
+        principal: AuthenticatedPrincipal = Depends(_legacy_principal),
+    ) -> dict[str, Any]:
         """Pre-register user consent for a live session."""
+        _require_legacy_perm(principal, "consent:manage")
+        _require_legacy_owner(principal, req.session_id)
         try:
-            manager.register_session_consent(req.session_id, req.consent_reference)
+            manager.register_session_consent(
+                req.session_id, req.consent_reference, owner_id=principal.principal_id
+            )
             return {
                 "status": "registered",
                 "session_id": req.session_id,
@@ -243,11 +314,17 @@ def create_live_app(
                 "is_revoked": False,
             }
         except ERSPrivacyConsentError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            status_code = 409 if "revoked" in str(exc).lower() else 400
+            raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
     @app.post("/api/consent/revoke")
-    async def revoke_consent(req: ConsentRevokeRequest) -> dict[str, Any]:
+    async def revoke_consent(
+        req: ConsentRevokeRequest,
+        principal: AuthenticatedPrincipal = Depends(_legacy_principal),
+    ) -> dict[str, Any]:
         """Revoke active consent for a session immediately."""
+        _require_legacy_perm(principal, "consent:manage")
+        _require_legacy_owner(principal, req.session_id)
         manager.revoke_session_consent(req.session_id)
         return {
             "status": "revoked",
@@ -257,8 +334,13 @@ def create_live_app(
         }
 
     @app.get("/api/consent/status/{session_id}", response_model=ConsentStatusResponse)
-    async def get_consent_status(session_id: str) -> ConsentStatusResponse:
+    async def get_consent_status(
+        session_id: str,
+        principal: AuthenticatedPrincipal = Depends(_legacy_principal),
+    ) -> ConsentStatusResponse:
         """Inspect active consent status for a session without reading raw credentials."""
+        _require_legacy_perm(principal, "consent:manage")
+        _require_legacy_owner(principal, session_id)
         st = manager.get_session_consent_status(session_id)
         return ConsentStatusResponse(
             session_id=str(st["session_id"]),
@@ -270,8 +352,13 @@ def create_live_app(
         )
 
     @app.post("/api/process/unimodal", response_model=ProcessObservationResponse)
-    async def process_unimodal(req: ProcessObservationRequest) -> ProcessObservationResponse:
+    async def process_unimodal(
+        req: ProcessObservationRequest,
+        principal: AuthenticatedPrincipal = Depends(_legacy_principal),
+    ) -> ProcessObservationResponse:
         """Process a single sensory observation via REST."""
+        _require_legacy_perm(principal, "analyze:run")
+        _require_legacy_owner(principal, req.session_id)
         start_time = time.perf_counter()
         if req.modality == Modality.FACIAL:
             if not req.image_base64:
@@ -333,25 +420,40 @@ def create_live_app(
         )
 
     @app.post("/api/process/frame")
-    async def process_frame_endpoint(req: dict[str, Any]) -> dict[str, Any]:
+    async def process_frame_endpoint(
+        req: dict[str, Any],
+        principal: AuthenticatedPrincipal = Depends(_legacy_principal),
+    ) -> dict[str, Any]:
         """Convenience REST endpoint for processing a single visual frame."""
-        session_id = req.get("session_id", "default")
-        image_b64 = req.get("image_base64", "")
+        _require_legacy_perm(principal, "analyze:run")
+        session_id = str(req.get("session_id", "default"))
+        _require_legacy_owner(principal, session_id)
+        image_b64 = str(req.get("image_base64", ""))
         consent_ref = req.get("consent_reference")
         return await manager.process_frame(session_id, image_b64, consent_ref)
 
     @app.post("/api/process/audio")
-    async def process_audio_endpoint(req: dict[str, Any]) -> dict[str, Any]:
+    async def process_audio_endpoint(
+        req: dict[str, Any],
+        principal: AuthenticatedPrincipal = Depends(_legacy_principal),
+    ) -> dict[str, Any]:
         """Convenience REST endpoint for processing an audio chunk."""
-        session_id = req.get("session_id", "default")
-        audio_b64 = req.get("audio_base64", "")
+        _require_legacy_perm(principal, "analyze:run")
+        session_id = str(req.get("session_id", "default"))
+        _require_legacy_owner(principal, session_id)
+        audio_b64 = str(req.get("audio_base64", ""))
         sample_rate = int(req.get("sample_rate", 16000))
         consent_ref = req.get("consent_reference")
         return await manager.process_audio(session_id, audio_b64, sample_rate, consent_ref)
 
     @app.post("/api/process/multimodal")
-    async def process_multimodal(req: LiveMultimodalMessage) -> dict[str, Any]:
+    async def process_multimodal(
+        req: LiveMultimodalMessage,
+        principal: AuthenticatedPrincipal = Depends(_legacy_principal),
+    ) -> dict[str, Any]:
         """Process concurrent facial and audio signals via REST."""
+        _require_legacy_perm(principal, "analyze:run")
+        _require_legacy_owner(principal, req.session_id)
         res = await manager.process_multimodal_live(
             session_id=req.session_id,
             image_base64=req.image_base64,
@@ -362,8 +464,13 @@ def create_live_app(
         return res
 
     @app.post("/api/session/reset")
-    async def reset_session(req: ResetSessionRequest) -> dict[str, Any]:
+    async def reset_session(
+        req: ResetSessionRequest,
+        principal: AuthenticatedPrincipal = Depends(_legacy_principal),
+    ) -> dict[str, Any]:
         """Flush session temporal ring buffer."""
+        _require_legacy_perm(principal, "sessions:manage")
+        _require_legacy_owner(principal, req.session_id)
         ers_engine.tracker.reset_session(req.session_id)
         return {"status": "reset", "session_id": req.session_id}
 

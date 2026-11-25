@@ -119,6 +119,8 @@ class LiveSessionRecord(BaseModel):
     dropped_frames: int = 0
     camera_active: bool = False
     microphone_active: bool = False
+    last_camera_at: float | None = None
+    last_microphone_at: float | None = None
     history: collections.deque[dict[str, Any]] = Field(
         default_factory=lambda: collections.deque(maxlen=100),
         exclude=True,

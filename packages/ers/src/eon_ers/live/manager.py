@@ -59,6 +59,11 @@ class LiveSessionManager:
     ) -> LiveSessionRecord:
         """Create a managed live session following the explicit lifecycle FSM."""
         sid = (session_id or f"live-{uuid.uuid4().hex[:12]}").strip()
+        existing = self._sessions.get(sid)
+        if existing is not None and existing.state == LiveSessionState.REVOKED:
+            raise ERSPrivacyConsentError(
+                f"Session '{sid}' was explicitly revoked and cannot be reused. Create a new session ID."
+            )
         rec = LiveSessionRecord(
             session_id=sid,
             owner_id=owner_id,
@@ -91,8 +96,13 @@ class LiveSessionManager:
         self, session_id: str, consent_reference: str, *, owner_id: str = "anonymous"
     ) -> None:
         """Register active user consent without caching plaintext secrets."""
-        self.engine.register_consent(session_id, consent_reference)
         clean_session = session_id.strip()
+        existing = self._sessions.get(clean_session)
+        if existing is not None and existing.state == LiveSessionState.REVOKED:
+            raise ERSPrivacyConsentError(
+                f"Consent registration rejected: Session '{clean_session}' is permanently revoked. Use a new session ID."
+            )
+        self.engine.register_consent(session_id, consent_reference)
         self._active_sessions[clean_session] = {
             "created_at": time.time(),
             "owner_id": owner_id,
@@ -125,6 +135,9 @@ class LiveSessionManager:
         rec = self._sessions.get(clean_session)
         if rec is not None and rec.state not in TERMINAL_LIVE_STATES:
             rec.transition_to(LiveSessionState.REVOKED)
+        elif rec is not None:
+            rec.camera_active = False
+            rec.microphone_active = False
         logger.info("Live session '%s' consent revoked and state removed.", clean_session)
 
     def delete_live_session(self, session_id: str) -> bool:
@@ -171,15 +184,84 @@ class LiveSessionManager:
         self, session_id: str, *, camera: bool = False, mic: bool = False
     ) -> None:
         rec = self._sessions.get(session_id.strip())
+        now = time.time()
         if rec is not None and rec.state == LiveSessionState.READY:
             rec.transition_to(LiveSessionState.STREAMING)
         if rec is not None:
             if camera:
                 rec.camera_active = True
+                rec.last_camera_at = now
                 rec.frame_count += 1
             if mic:
                 rec.microphone_active = True
+                rec.last_microphone_at = now
                 rec.audio_count += 1
+
+    def set_session_device_state(
+        self,
+        session_id: str,
+        *,
+        camera_active: bool | None = None,
+        microphone_active: bool | None = None,
+    ) -> None:
+        """Update verified device state (for example on client stop or track disconnect)."""
+        rec = self._sessions.get(session_id.strip())
+        if rec is None:
+            return
+        if camera_active is not None:
+            rec.camera_active = bool(camera_active)
+        if microphone_active is not None:
+            rec.microphone_active = bool(microphone_active)
+
+    def get_verified_device_status(self, stale_after_seconds: float = 15.0) -> dict[str, Any]:
+        """Compute true observed device telemetry rather than static hardcoded flags."""
+        now = time.time()
+        cam_active = False
+        mic_active = False
+        latest_capture: float | None = None
+        consented_sessions: list[str] = []
+
+        for sid, rec in self._sessions.items():
+            rec.check_expired()
+            if rec.state in TERMINAL_LIVE_STATES or not self.has_active_consent(sid):
+                rec.camera_active = False
+                rec.microphone_active = False
+                continue
+            consented_sessions.append(sid)
+            if rec.camera_active and rec.last_camera_at is not None:
+                if (
+                    now - rec.last_camera_at
+                ) <= stale_after_seconds and rec.state != LiveSessionState.PAUSED:
+                    cam_active = True
+                    latest_capture = max(latest_capture or 0.0, rec.last_camera_at)
+                else:
+                    rec.camera_active = False
+            if rec.microphone_active and rec.last_microphone_at is not None:
+                if (
+                    now - rec.last_microphone_at
+                ) <= stale_after_seconds and rec.state != LiveSessionState.PAUSED:
+                    mic_active = True
+                    latest_capture = max(latest_capture or 0.0, rec.last_microphone_at)
+                else:
+                    rec.microphone_active = False
+
+        for sid in self._active_sessions:
+            if sid not in consented_sessions and self.has_active_consent(sid):
+                consented_sessions.append(sid)
+
+        has_consent = len(consented_sessions) > 0
+        return {
+            "camera_active": cam_active,
+            "microphone_active": mic_active,
+            "camera_state": "active" if cam_active else ("inactive" if has_consent else "unknown"),
+            "microphone_state": "active"
+            if mic_active
+            else ("inactive" if has_consent else "unknown"),
+            "active_session_count": len(consented_sessions),
+            "last_capture_timestamp": latest_capture,
+            "has_consent": has_consent,
+            "session_id": consented_sessions[0] if consented_sessions else None,
+        }
 
     async def process_frame(
         self, session_id: str, image_base64: str, consent_reference: str | None = None
