@@ -24,7 +24,7 @@ def check_manifest_compatibility(
         )
     if not manifest.cpu_supported:
         reasons.append("Model manifest declares cpu_supported=False; CPU support is mandatory.")
-    if "CPUExecutionProvider" not in manifest.accelerator_support:
+    if manifest.accelerator_support and "CPUExecutionProvider" not in manifest.accelerator_support:
         reasons.append("CPUExecutionProvider missing from manifest.accelerator_support.")
 
     allowed = supported_major_versions or {1}
