@@ -17,6 +17,21 @@ import logging
 from enum import Enum
 from typing import Any, Callable, Protocol, runtime_checkable
 
+from eon_ers.safety.actuator_isolation import FORBIDDEN_MOTION_KEYS, assert_no_actuator_commands
+
+__all__ = [
+    "CoreEventBusAdapter",
+    "CoreIntegrationStatus",
+    "EONCoreEventBusProtocol",
+    "FORBIDDEN_MOTION_KEYS",
+    "TOPIC_FUSION_COMPLETED",
+    "TOPIC_INPUT_RECEIVED",
+    "TOPIC_MODEL_UNAVAILABLE",
+    "TOPIC_OBSERVATION_CREATED",
+    "TOPIC_PROCESSING_DEGRADED",
+    "TOPIC_PROCESSING_FAILED",
+]
+
 logger = logging.getLogger("eon.ers.core")
 
 # Well-known ERS event topics conforming to EON event taxonomy
@@ -26,20 +41,6 @@ TOPIC_FUSION_COMPLETED = "ers.fusion.completed"
 TOPIC_PROCESSING_DEGRADED = "ers.processing.degraded"
 TOPIC_MODEL_UNAVAILABLE = "ers.model.unavailable"
 TOPIC_PROCESSING_FAILED = "ers.processing.failed"
-
-# Explicit robot actuator & motion command blacklisted tokens
-FORBIDDEN_MOTION_KEYS = {
-    "cmd_vel",
-    "motion",
-    "actuator",
-    "motor",
-    "joint",
-    "trajectory",
-    "velocity",
-    "move",
-    "wheel",
-    "torque",
-}
 
 
 class CoreIntegrationStatus(str, Enum):
@@ -113,14 +114,7 @@ class CoreEventBusAdapter:
             RuntimeError: If payload attempts to issue robot movement or actuator commands.
         """
         # Safety enforcement: ERS must never authorize or issue robot motion commands
-        if isinstance(payload, dict):
-            for k in payload.keys():
-                k_str = str(k).lower()
-                if any(forbidden in k_str for forbidden in FORBIDDEN_MOTION_KEYS):
-                    raise RuntimeError(
-                        f"Safety violation: ERS event payload contains forbidden motion key '{k}'. "
-                        f"ERS is strictly a perceptual system and must never issue robot actuator commands."
-                    )
+        assert_no_actuator_commands(payload)
 
         # 1. Forward to external eon.core bus if present
         if self._external_bus is not None:

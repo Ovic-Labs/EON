@@ -23,6 +23,14 @@ class ERSConfig(BaseModel):
         default=True,
         description="Enable speech acoustic prosody recognition pipeline.",
     )
+    enable_text: bool = Field(
+        default=True,
+        description="Enable textual sentiment and affect analysis pipeline.",
+    )
+    enable_video: bool = Field(
+        default=True,
+        description="Enable bounded video decoding and facial frame analysis pipeline.",
+    )
     enable_multimodal_fusion: bool = Field(
         default=True,
         description="Enable multimodal alignment and probability fusion.",
@@ -56,6 +64,84 @@ class ERSConfig(BaseModel):
     speech_model_path: str | None = Field(
         default=None,
         description="Optional local filesystem path to custom speech ONNX model weights.",
+    )
+    text_model_id: str = Field(
+        default="ers-text-affect-cpu-v1",
+        description="Registered identifier for the text affect model.",
+    )
+    text_model_path: str | None = Field(
+        default=None,
+        description="Optional local filesystem path to custom text affect ONNX model weights.",
+    )
+
+    # Payload, resource, and video bounds
+    max_image_bytes: int = Field(
+        default=10 * 1024 * 1024,
+        ge=1024,
+        le=100 * 1024 * 1024,
+        description="Maximum accepted decoded image payload size in bytes.",
+    )
+    max_audio_bytes: int = Field(
+        default=20 * 1024 * 1024,
+        ge=1024,
+        le=200 * 1024 * 1024,
+        description="Maximum accepted decoded audio payload size in bytes.",
+    )
+    max_text_length: int = Field(
+        default=8192,
+        ge=1,
+        le=100000,
+        description="Maximum accepted UTF-8 text length in characters.",
+    )
+    video_max_bytes: int = Field(
+        default=50 * 1024 * 1024,
+        ge=1024,
+        le=500 * 1024 * 1024,
+        description="Maximum accepted video upload payload size in bytes.",
+    )
+    video_max_frames: int = Field(
+        default=120,
+        ge=1,
+        le=5000,
+        description="Maximum decoded frames sampled per video analysis request.",
+    )
+    video_sample_fps: float = Field(
+        default=2.0,
+        gt=0.05,
+        le=60.0,
+        description="Target frame sampling rate for bounded video processing.",
+    )
+    processing_timeout_seconds: float = Field(
+        default=10.0,
+        gt=0.1,
+        le=300.0,
+        description="Per-operation processing timeout budget in seconds.",
+    )
+    correlated_agreement_dampening: float = Field(
+        default=0.85,
+        ge=0.5,
+        le=1.0,
+        description="Confidence cap factor preventing over-confidence when correlated modalities agree.",
+    )
+    max_ws_queue_size: int = Field(
+        default=32,
+        ge=1,
+        le=1024,
+        description="Bounded live WebSocket processing queue capacity before dropping stale frames.",
+    )
+    ws_max_messages_per_second: float = Field(
+        default=30.0,
+        gt=0.1,
+        le=500.0,
+        description="Per-connection WebSocket inbound message rate limit.",
+    )
+    require_api_auth: bool = Field(
+        default=False,
+        description="Enforce API key authentication and RBAC authorization across REST and WS endpoints.",
+    )
+    enable_session_history: bool = Field(
+        default=False,
+        description="Whether opted-in session observation summaries are retained in volatile memory.",
     )
 
     # Image processing thresholds
