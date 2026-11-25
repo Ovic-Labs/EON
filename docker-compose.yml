@@ -1,0 +1,47 @@
+services:
+  ers-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ovic-eon-ers:0.2.0
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=64m
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OMP_NUM_THREADS=4
+      - EON_ERS_API_AUTH=${EON_ERS_API_AUTH:-true}
+    volumes:
+      - ./packages/ers/models:/app/packages/ers/models:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 1024M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - ers-internal
+
+  ers-proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      ers-api:
+        condition: service_healthy
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
+    networks:
+      - ers-internal
+
+networks:
+  ers-internal:
+    driver: bridge

@@ -1,7 +1,7 @@
 {
   "benchmark_metadata": {
     "benchmark_version": "2.0.0",
-    "timestamp_iso": "2026-11-24T10:22:46Z",
+    "timestamp_iso": "2026-11-25T04:58:05Z",
     "synthetic_fixtures_notice": "Synthetic image and audio fixtures used strictly for latency and memory benchmarking. These fixtures DO NOT evaluate affective recognition accuracy or classification quality."
   },
   "environment": {
@@ -27,86 +27,86 @@
     "iterations": 30
   },
   "memory_metrics": {
-    "peak_rss_mb": 138.63,
+    "peak_rss_mb": 162.15,
     "rss_measurement_source": "psutil.Process().memory_info().rss",
-    "cpu_utilization_percent": 25.7
+    "cpu_utilization_percent": 23.3
   },
-  "initialization_ms": 9.88,
+  "initialization_ms": 945.01,
   "cold_latencies_ms": {
-    "facial": 17.7,
-    "speech": 12.99,
-    "multimodal": 9.03
+    "facial": 15.21,
+    "speech": 20.36,
+    "multimodal": 28.98
   },
   "warm_latencies_ms": {
     "facial_total": {
-      "mean": 2.53,
-      "std": 1.16,
-      "p50": 2.62,
-      "p90": 4.12,
-      "p95": 4.47,
-      "p99": 5.6,
-      "min": 1.32,
-      "max": 6.03
+      "mean": 4.9,
+      "std": 0.55,
+      "p50": 4.71,
+      "p90": 5.55,
+      "p95": 5.85,
+      "p99": 6.24,
+      "min": 4.13,
+      "max": 6.38
     },
     "facial_preprocessing_est": {
-      "mean": 0.89,
-      "std": 0.41,
-      "p50": 0.92,
-      "p90": 1.44,
-      "p95": 1.56,
-      "p99": 1.96,
-      "min": 0.46,
-      "max": 2.11
+      "mean": 1.71,
+      "std": 0.19,
+      "p50": 1.65,
+      "p90": 1.94,
+      "p95": 2.05,
+      "p99": 2.18,
+      "min": 1.45,
+      "max": 2.23
     },
     "facial_inference_est": {
-      "mean": 1.65,
-      "std": 0.75,
-      "p50": 1.71,
-      "p90": 2.68,
-      "p95": 2.9,
-      "p99": 3.64,
-      "min": 0.86,
-      "max": 3.92
+      "mean": 3.18,
+      "std": 0.36,
+      "p50": 3.06,
+      "p90": 3.61,
+      "p95": 3.8,
+      "p99": 4.05,
+      "min": 2.69,
+      "max": 4.15
     },
     "speech_total": {
-      "mean": 5.07,
-      "std": 1.95,
-      "p50": 4.39,
-      "p90": 5.99,
-      "p95": 7.01,
-      "p99": 12.51,
-      "min": 4.09,
-      "max": 14.71
+      "mean": 10.87,
+      "std": 2.47,
+      "p50": 10.32,
+      "p90": 12.88,
+      "p95": 15.76,
+      "p99": 19.34,
+      "min": 8.68,
+      "max": 20.63
     },
     "speech_preprocessing_est": {
-      "mean": 2.03,
-      "std": 0.78,
-      "p50": 1.76,
-      "p90": 2.4,
-      "p95": 2.8,
-      "p99": 5.0,
-      "min": 1.64,
-      "max": 5.88
+      "mean": 4.35,
+      "std": 0.99,
+      "p50": 4.13,
+      "p90": 5.15,
+      "p95": 6.31,
+      "p99": 7.74,
+      "min": 3.47,
+      "max": 8.25
     },
     "speech_inference_est": {
-      "mean": 3.04,
-      "std": 1.17,
-      "p50": 2.63,
-      "p90": 3.59,
-      "p95": 4.2,
-      "p99": 7.5,
-      "min": 2.45,
-      "max": 8.83
+      "mean": 6.52,
+      "std": 1.48,
+      "p50": 6.19,
+      "p90": 7.73,
+      "p95": 9.46,
+      "p99": 11.61,
+      "min": 5.21,
+      "max": 12.38
     },
     "multimodal_fusion_total": {
-      "mean": 12.14,
-      "std": 3.18,
-      "p50": 11.38,
-      "p90": 14.9,
-      "p95": 18.74,
-      "p99": 22.38,
-      "min": 7.38,
-      "max": 23.56
+      "mean": 21.69,
+      "std": 2.2,
+      "p50": 21.53,
+      "p90": 23.75,
+      "p95": 25.45,
+      "p99": 27.33,
+      "min": 17.52,
+      "max": 27.73
     }
   }
 }

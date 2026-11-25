@@ -1,5 +1,5 @@
 {
-  "timestamp_utc": "2026-11-24T10:49:16Z",
+  "timestamp_utc": "2026-11-25T04:58:11Z",
   "environment": {
     "operating_system": "Windows-10-10.0.26300-SP0",
     "processor": "Intel64 Family 6 Model 181 Stepping 0, GenuineIntel",
@@ -18,93 +18,93 @@
   "stages": {
     "frame_decode": {
       "iterations": 40,
-      "mean_ms": 0.74,
-      "median_ms": 0.61,
-      "std_ms": 0.411,
-      "min_ms": 0.522,
-      "max_ms": 2.447,
-      "p95_ms": 1.301,
-      "p99_ms": 2.369
+      "mean_ms": 1.269,
+      "median_ms": 1.126,
+      "std_ms": 0.299,
+      "min_ms": 0.963,
+      "max_ms": 2.103,
+      "p95_ms": 1.816,
+      "p99_ms": 2.029
     },
     "face_detect_landmarks": {
       "iterations": 40,
-      "mean_ms": 0.381,
-      "median_ms": 0.348,
-      "std_ms": 0.125,
-      "min_ms": 0.327,
-      "max_ms": 0.938,
-      "p95_ms": 0.465,
-      "p99_ms": 0.922
+      "mean_ms": 1.686,
+      "median_ms": 1.626,
+      "std_ms": 0.227,
+      "min_ms": 1.449,
+      "max_ms": 2.418,
+      "p95_ms": 2.199,
+      "p99_ms": 2.401
     },
     "facial_inference": {
       "iterations": 40,
-      "mean_ms": 0.203,
-      "median_ms": 0.19,
-      "std_ms": 0.064,
-      "min_ms": 0.176,
-      "max_ms": 0.594,
-      "p95_ms": 0.232,
-      "p99_ms": 0.457
+      "mean_ms": 0.422,
+      "median_ms": 0.397,
+      "std_ms": 0.077,
+      "min_ms": 0.334,
+      "max_ms": 0.679,
+      "p95_ms": 0.588,
+      "p99_ms": 0.647
     },
     "audio_decode": {
       "iterations": 40,
-      "mean_ms": 0.518,
-      "median_ms": 0.485,
-      "std_ms": 0.188,
-      "min_ms": 0.451,
-      "max_ms": 1.66,
-      "p95_ms": 0.549,
-      "p99_ms": 1.302
+      "mean_ms": 0.917,
+      "median_ms": 0.874,
+      "std_ms": 0.124,
+      "min_ms": 0.808,
+      "max_ms": 1.35,
+      "p95_ms": 1.215,
+      "p99_ms": 1.343
     },
     "speech_prosody_inference": {
       "iterations": 40,
-      "mean_ms": 3.741,
-      "median_ms": 3.504,
-      "std_ms": 0.674,
-      "min_ms": 3.386,
-      "max_ms": 7.13,
-      "p95_ms": 4.99,
-      "p99_ms": 6.438
+      "mean_ms": 7.276,
+      "median_ms": 6.598,
+      "std_ms": 1.64,
+      "min_ms": 5.88,
+      "max_ms": 14.156,
+      "p95_ms": 10.428,
+      "p99_ms": 12.719
     },
     "multimodal_fusion": {
       "iterations": 40,
-      "mean_ms": 0.123,
-      "median_ms": 0.109,
-      "std_ms": 0.059,
-      "min_ms": 0.095,
-      "max_ms": 0.458,
-      "p95_ms": 0.153,
-      "p99_ms": 0.377
+      "mean_ms": 0.136,
+      "median_ms": 0.113,
+      "std_ms": 0.065,
+      "min_ms": 0.079,
+      "max_ms": 0.353,
+      "p95_ms": 0.266,
+      "p99_ms": 0.351
     },
     "temporal_smoothing": {
       "iterations": 40,
-      "mean_ms": 0.008,
-      "median_ms": 0.008,
-      "std_ms": 0.002,
-      "min_ms": 0.006,
-      "max_ms": 0.014,
-      "p95_ms": 0.013,
-      "p99_ms": 0.013
+      "mean_ms": 0.022,
+      "median_ms": 0.02,
+      "std_ms": 0.007,
+      "min_ms": 0.012,
+      "max_ms": 0.041,
+      "p95_ms": 0.039,
+      "p99_ms": 0.041
     },
     "serialization": {
       "iterations": 40,
-      "mean_ms": 0.101,
-      "median_ms": 0.026,
-      "std_ms": 0.451,
-      "min_ms": 0.024,
-      "max_ms": 2.92,
-      "p95_ms": 0.041,
-      "p99_ms": 1.802
+      "mean_ms": 0.06,
+      "median_ms": 0.052,
+      "std_ms": 0.029,
+      "min_ms": 0.044,
+      "max_ms": 0.23,
+      "p95_ms": 0.086,
+      "p99_ms": 0.175
     },
     "end_to_end_live_stream": {
       "iterations": 40,
-      "mean_ms": 10.858,
-      "median_ms": 10.818,
-      "std_ms": 1.793,
-      "min_ms": 6.63,
-      "max_ms": 14.537,
-      "p95_ms": 14.348,
-      "p99_ms": 14.537
+      "mean_ms": 25.449,
+      "median_ms": 23.022,
+      "std_ms": 11.915,
+      "min_ms": 15.91,
+      "max_ms": 94.079,
+      "p95_ms": 35.936,
+      "p99_ms": 72.746
     }
   }
 }

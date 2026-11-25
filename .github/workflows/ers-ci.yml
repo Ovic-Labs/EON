@@ -67,3 +67,17 @@ jobs:
       - name: Build Distribution Packages
         if: matrix.python-version == '3.11'
         run: python -m build packages/ers --outdir dist/
+
+  docker-build:
+    name: CPU Container Build & Smoke Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Production CPU Docker Image
+        run: docker build -t ovic-eon-ers:ci .
+
+      - name: Smoke Test Container Import & Health Probe
+        run: |
+          docker run --rm ovic-eon-ers:ci python -c "from eon_ers import ERSEngine; from eon_ers.live.server import create_live_app; app = create_live_app(); print('Docker container OK:', app.title)"
