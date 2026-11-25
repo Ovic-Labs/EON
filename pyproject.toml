@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Emotional Intelligence Infrastructure for Robotics."
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.13"
 authors = [
     { name = "OVIC Labs", email = "engineering@oviclabs.com" },
 ]
@@ -27,7 +27,7 @@ dev = [
     "pytest-asyncio>=0.23.0",
     "ruff>=0.4.0",
     "mypy>=1.10.0",
-    "onnxruntime>=1.15.0",
+    "onnxruntime>=1.23.0",
     "onnx>=1.14.0",
 ]
 

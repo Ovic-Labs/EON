@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-The Emotion Recognition System (ERS) is OVIC EON's first intelligence engine. It runs CPU-first on edge hardware (such as Intel Core Ultra 5 225U / x86_64 CPUs) across Python 3.10, 3.11, and 3.12 without requiring discrete GPUs or cloud AI APIs.
+The Emotion Recognition System (ERS) is OVIC EON's first intelligence engine. It runs CPU-first on edge hardware (such as Intel Core Ultra 5 225U / x86_64 CPUs) across Python 3.11 and 3.12 without requiring discrete GPUs or cloud AI APIs.
 
 ### Key Architectural & Security Invariants
 
@@ -18,7 +18,7 @@ The Emotion Recognition System (ERS) is OVIC EON's first intelligence engine. It
 
 ### Prerequisites
 
-- Python 3.10, 3.11, or 3.12 (CPU-only compatible)
+- Python 3.11 or 3.12 (CPU-only compatible; required by ONNX Runtime `>=1.23.0` for shipped IR-14 ONNX graphs)
 - Pip package installer
 - Git
 

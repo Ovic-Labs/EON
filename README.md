@@ -1,7 +1,7 @@
 # OVIC EON — Emotional Intelligence Infrastructure for Robotics
 
 [![ERS CI](https://github.com/Ovic-Labs/EON/actions/workflows/ers-ci.yml/badge.svg)](https://github.com/Ovic-Labs/EON/actions/workflows/ers-ci.yml)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Architecture: Edge-First CPU](https://img.shields.io/badge/hardware-CPU--first%20Edge-green.svg)]()
 
@@ -14,7 +14,7 @@
 
 ## ERS — Emotion Recognition System (Phase 3.1.8)
 
-The **Emotion Recognition System (ERS)** is EON's first operational intelligence engine. ERS transforms raw sensory inputs into structured, epistemic affective observations with explicit model qualification state and uncertainty bounds, running strictly local on edge CPUs (validated on Intel Core Ultra 5 225U / x86_64 CPUs across Python 3.10, 3.11, and 3.12).
+The **Emotion Recognition System (ERS)** is EON's first operational intelligence engine. ERS transforms raw sensory inputs into structured, epistemic affective observations with explicit model qualification state and uncertainty bounds, running strictly local on edge CPUs (validated on Intel Core Ultra 5 225U / x86_64 CPUs across Python 3.11 and 3.12).
 
 ### Key Architectural & Security Tenets
 
@@ -34,7 +34,7 @@ The **Emotion Recognition System (ERS)** is EON's first operational intelligence
 ```text
 .
 ├── .github/workflows/
-│   └── ers-ci.yml                  # GitHub Actions CI (ruff, mypy, pip-audit, pytest matrix 3.10-3.12, build)
+│   └── ers-ci.yml                  # GitHub Actions CI (ruff, mypy, pip-audit, pytest matrix 3.11-3.12, build)
 ├── docs/ers/                       # ERS Engineering Documentation & Qualification Reports
 │   ├── API_REFERENCE.md
 │   ├── DEVELOPER_GUIDE.md
@@ -72,7 +72,7 @@ The **Emotion Recognition System (ERS)** is EON's first operational intelligence
 
 ## Quickstart
 
-### 1. Installation (CPU-Only, Python 3.10–3.12)
+### 1. Installation (CPU-Only, Python 3.11–3.12)
 
 ```bash
 # Clone the repository

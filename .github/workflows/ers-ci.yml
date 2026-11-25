@@ -24,7 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip "setuptools>=84.1.0"
           pip install ruff mypy pip-audit pydantic numpy scipy pillow cryptography onnxruntime onnx pytest pytest-asyncio pytest-cov build fastapi uvicorn websockets python-multipart httpx psutil
 
       - name: Run Ruff Lint
@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
 
       - name: Install ERS and dependencies
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip "setuptools>=84.1.0"
           pip install -e "packages/ers[dev,ml,live]"
           pip install build
 
