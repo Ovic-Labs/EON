@@ -4,16 +4,18 @@
 
 ### Methods
 
-- `async initialize() -> None`: Initializes pipelines, evaluates device configuration, and loads verified model adapters.
+- `async initialize() -> None`: Initializes facial, speech, and fusion pipelines and loads verified model adapters.
 - `async start() -> None`: Transitions engine state from `INITIALIZED` to `RUNNING`.
-- `async process(input: ERSInput) -> EmotionObservation | FusionResult`: Universal routing method executing facial, speech, or multimodal processing based on `input.modality`.
-- `async process_facial(input: ERSInput) -> EmotionObservation`: Executes 12-stage facial expression pipeline with quality checks and temporal smoothing.
-- `async process_speech(input: ERSInput) -> EmotionObservation`: Executes 12-stage speech acoustic pipeline with prosody extraction and temporal smoothing.
-- `async process_multimodal(facial_input: ERSInput | None, speech_input: ERSInput | None) -> FusionResult`: Executes time-window alignment, reliability weighting, and Bayesian probability fusion.
-- `health() -> dict[str, Any]`: Returns component health status, pipeline availability, and lifecycle state.
+- `register_consent(session_id: str, consent_reference: str) -> None`: Registers active consent (stores SHA-256 digest only).
+- `revoke_consent(session_id: str) -> None`: Immediately revokes active session consent.
+- `async process(inp: ERSInput) -> EmotionObservation | FusionResult`: Routes input by modality; enforces consent and scrubs media payloads in `try/finally`.
+- `async process_facial(inp: ERSInput) -> EmotionObservation`: Executes 12-stage facial pipeline with quality checks, unvalidated suppression, and temporal smoothing.
+- `async process_speech(inp: ERSInput) -> EmotionObservation`: Executes 12-stage speech acoustic pipeline with prosody extraction, unvalidated suppression, and temporal smoothing.
+- `async process_multimodal(facial_input: ERSInput | None, speech_input: ERSInput | None) -> FusionResult`: Executes concurrent unimodal pipelines, alignment, eligibility/validation isolation, Bayesian fusion, and temporal smoothing.
+- `health() -> dict[str, Any]`: Returns component health status, pipeline readiness, and lifecycle state.
 - `get_metrics() -> dict[str, Any]`: Returns throughput, p50/p90/p95/p99 latency percentiles, and memory RSS statistics.
-- `reset_session(session_id: str) -> None`: Securely flushes temporal smoothing buffers and session history.
-- `async stop() -> None`: Gracefully drains queues and stops processing workers.
+- `reset_session(session_id: str) -> None`: Flushes temporal smoothing buffers and session history.
+- `async stop() -> None`: Drains resources and clears active session buffers.
 
 ---
 
@@ -46,7 +48,7 @@
 - `timestamp: float`
 - `modality: Modality`
 - `consent_reference: str`
-- `image_payload: bytes | None`
+- `image_payload: bytes | None` (`scrub_media_payload()` clears both image & audio payloads)
 - `audio_payload: bytes | None`
 - `sample_rate: int | None`
 - `image_dimensions: tuple[int, int] | None`
@@ -54,35 +56,51 @@
 - `quality_metadata: dict[str, Any]`
 
 ### `EmotionObservation`
-- `observation_id: str`
-- `timestamp: float`
-- `modality: Modality`
+- `observation_id: str`, `timestamp: float`, `modality: Modality`
 - `expression_observations: dict[str, Any]`
 - `emotion_probabilities: dict[str, float]`
 - `dominant_estimate: str`
-- `confidence: float` (0.0 to 1.0)
-- `uncertainty: float` (0.0 to 1.0)
-- `quality_score: float` (0.0 to 1.0)
-- `model_id: str`
-- `model_version: str`
-- `processing_latency_ms: float`
+- `confidence: float`, `uncertainty: float`, `quality_score: float` (`0.0` to `1.0`)
+- `model_id: str`, `model_version: str`, `processing_latency_ms: float`
+- `status: ObservationStatus`, `input_quality: InputQualityStatus`, `model_state: ModelState`
+- `is_calibrated: bool`, `raw_confidence: float | None`, `is_validated: bool`
 - `limitations: list[str]`
-- `status: ObservationStatus`
 - `is_definitive_claim: bool = False` (Frozen invariant)
 
 ### `FusionResult`
-- `result_id: str`
-- `timestamp: float`
-- `facial_observation: EmotionObservation | None`
-- `speech_observation: EmotionObservation | None`
-- `fused_probabilities: dict[str, float]`
-- `dominant_estimate: str`
-- `modality_weights: dict[str, float]`
-- `confidence: float`
-- `uncertainty: float`
-- `conflicting_evidence: bool`
-- `conflict_metric: float`
-- `missing_modalities: list[Modality]`
-- `quality_summary: dict[str, float]`
-- `limitations: list[str]`
+- `result_id: str`, `timestamp: float`
+- `facial_observation: EmotionObservation | None`, `speech_observation: EmotionObservation | None`
+- `fused_probabilities: dict[str, float]`, `dominant_estimate: str`
+- `modality_weights: dict[str, float]`, `confidence: float`, `uncertainty: float`
+- `conflicting_evidence: bool`, `conflict_metric: float`, `missing_modalities: list[Modality]`
+- `quality_summary: dict[str, float]`, `limitations: list[str]`
+- `contributing_model_states: dict[str, str]`, `classification_eligible_modalities: list[str]`
+- `diagnostic_modalities: list[str]`, `fusion_status: str`, `is_validated: bool`
 - `is_definitive_claim: bool = False` (Frozen invariant)
+
+---
+
+## 4. Model Integrity & Loading (`eon_ers.models`)
+
+- `ModelManifest`: Cryptographic SHA-256 manifest, tensor shape/name/dtype contracts (`validate_tensor_contracts()`), class ordering (`validate_class_ordering()`), and `verify_integrity()`.
+- `ModelLoader.validate_and_load_onnx_weights(...)`: Validates non-empty file, SHA-256, `framework`/`modality`/major version compatibility, ONNX protobuf integrity (`onnx.checker`), external tensor completeness, initializer finiteness, contracts, and CPU smoke inference.
+- `ModelLoader.load_onnx_session(...)`: Integrity-checked wrapper returning an `onnxruntime.InferenceSession`.
+- `ModelValidationRecord`: Auditable empirical validation record with `verify_artifact_binding()` and Ed25519 proof metadata (`execution_proof_key_id`, `execution_proof_algorithm`, `execution_proof_signature`).
+
+---
+
+## 5. Dataset Integrity, Ed25519 Proofs & Evaluation (`eon_ers.evaluation`)
+
+- `DatasetMetadata`: Provenance metadata with `verify_archive()`, `verify_manifest()`, and `safe_extract_archive()` (traversal, symlink, size-limit, and compression-ratio bomb protection).
+- `EvaluationSample`, `EvaluationPartition`, `create_subject_independent_partition()`: Enforces unique `sample_id`s and strictly disjoint train/val/test subject sets.
+- `SigningKeyPair`, `TrustedKeyRegistry`, `EvaluationExecutionProof`: Ed25519 signing/verification with key rotation (`rotate_key`) and revocation (`revoke_key`).
+- `ModelEvaluator.evaluate_predictions(...)`: Validates sample count alignment, supported labels, probability schema/finiteness/unit-sum, manifest dimensions, and Ed25519 execution proof before computing classification/calibration metrics.
+
+---
+
+## 6. Training & ONNX Export (`eon_ers.training`)
+
+- `SamplePreprocessor`, `FeatureExtractor`, `ZeroLeakageNormalizer`: Deterministic media preprocessing and zero-leakage feature scaling fitted strictly on training data.
+- `CPUModelTrainer`, `TemperatureCalibrator`: CPU-only MLP training with Adam optimization and bounded scalar NLL temperature scaling.
+- `ONNXModelExporter`: Strict dimension matching (zero padding/truncation), atomic `.onnx.tmp` export, and CPU ONNX Runtime vs. NumPy numerical parity verification (`ONNX_LOGIT_PARITY_ATOL`, `ONNX_PROB_PARITY_ATOL`).
+- `ModelTrainingPipeline`: 15-stage end-to-end training/validation orchestrator requiring physical archive verification, genuine stage execution, and all-stage pass gating.

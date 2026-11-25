@@ -111,3 +111,9 @@ All checks listed below were executed locally on `fix/ers-phase-3-1-7-integrity-
 2. **Missing External Benchmark Datasets:** Academic datasets (`AffectNet`, `RAF-DB`, `RAVDESS`, `CREMA-D`) require external licensing/download and are not present in this repository (`checksum=""`). Empirical holdout qualification across these datasets remains **BLOCKED**.
 3. **Key Provisioning:** In production deployments, trusted signing private keys must be injected securely via environment/secret management (`EON_ERS_SIGNING_KEY_ID` + `EON_ERS_SIGNING_PRIVATE_KEY_PEM` / path) and verified against an externally managed public key registry; no hardcoded private keys exist in source control.
 4. **Activation Policy:** No unvalidated model is activated as `MODEL_LOADED_VALIDATED`; runtime safety banners and `INSUFFICIENT_EVIDENCE` / `MODEL_UNVALIDATED` protections remain fully enforced.
+
+---
+
+## 6. Phase 3.1.8 Independent Audit Follow-Up
+
+Following merge of PR #12 (`80a2942`), an independent full-repository audit was executed in Phase 3.1.8 to verify remaining edge cases across consent isolation (`LiveSessionManager` / `ConsentManager`), multimodal `ERSEngine` propagation, dashboard JS/API contracts, archive extraction safety, model modality/framework/version enforcement, Ed25519 key rotation/revocation, and CI multi-version Python coverage. See [PHASE_3_1_8_FINAL_QUALIFICATION_REPORT.md](PHASE_3_1_8_FINAL_QUALIFICATION_REPORT.md).
