@@ -795,6 +795,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             const state = {
                 theme: "dark",
                 sessionId: "session-" + Math.random().toString(36).substring(2, 10),
+                consentReference: "live-consent-" + Math.random().toString(36).substring(2, 12),
                 videoStream: null,
                 audioStream: null,
                 audioContext: null,
@@ -897,17 +898,19 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
                     if (data.models) {
                         for (const m of data.models) {
-                            if (m.name.includes("facial")) {
+                            const mod = (m.modality || m.model_id || "").toLowerCase();
+                            if (mod.includes("facial")) {
                                 elements.modelFacialState.textContent = m.state;
                                 elements.modelFacialState.className = "metric-badge " + (m.is_validated ? "badge-verified" : "badge-unvalidated");
-                            } else if (m.name.includes("speech")) {
+                            } else if (mod.includes("speech")) {
                                 elements.modelSpeechState.textContent = m.state;
                                 elements.modelSpeechState.className = "metric-badge " + (m.is_validated ? "badge-verified" : "badge-unvalidated");
                             }
                         }
                     }
 
-                    if (data.all_models_validated) {
+                    const allValidated = data.overall_qualification === "VALIDATED";
+                    if (allValidated) {
                         elements.modelIntegrityBanner.className = "system-banner banner-info";
                         elements.modelIntegrityBanner.innerHTML = "<strong>Validated Baseline:</strong> All models verified against validation records.";
                         elements.overallModelStateBadge.textContent = "VALIDATED";
@@ -1097,7 +1100,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 }
 
                 const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-                const wsUrl = `${protocol}//${window.location.host}/ws/stream`;
+                const wsUrl = `${protocol}//${window.location.host}/ws/live/${encodeURIComponent(state.sessionId)}`;
 
                 elements.wsStatusDot.className = "status-dot warning";
                 elements.wsStatusText.textContent = "CONNECTING...";
@@ -1115,6 +1118,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                     state.wsReconnectAttempts = 0;
                     elements.wsStatusDot.className = "status-dot active";
                     elements.wsStatusText.textContent = "CONNECTED";
+                    try {
+                        state.ws.send(JSON.stringify({
+                            type: "init",
+                            session_id: state.sessionId,
+                            consent_reference: state.consentReference
+                        }));
+                    } catch (e) {}
                     logEvent("Live telemetry WebSocket connected.");
                 };
 
@@ -1157,27 +1167,28 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             // Handle server perception responses
             function handleWsMessage(raw) {
                 try {
-                    const data = JSON.parse(raw);
-                    if (data.type === "pong") {
+                    const msg = JSON.parse(raw);
+                    if (msg.type === "pong") {
                         return;
                     }
 
-                    if (data.type === "error") {
-                        logEvent("Server returned error: " + data.message, "error");
+                    if (msg.type === "error") {
+                        logEvent("Server returned error: " + (msg.error || msg.message || "unknown error"), "error");
                         return;
                     }
 
-                    if (data.type === "observation") {
-                        renderObservation(data);
+                    if (msg.type === "observation" || msg.type === "fusion") {
+                        const obsPayload = msg.data || msg;
+                        renderObservation(obsPayload, msg.timestamp);
                     }
                 } catch (e) {
                     logEvent("Failed to parse server message: " + e.message, "error");
                 }
             }
 
-            function renderObservation(obs) {
+            function renderObservation(obs, serverTimestamp) {
                 // Update classification UI
-                const dominant = obs.dominant_category || "insufficient_evidence";
+                const dominant = obs.dominant_estimate || obs.dominant_category || "insufficient_evidence";
                 const confidence = obs.confidence !== undefined ? obs.confidence : 0.0;
                 const isValidated = obs.is_validated === true;
 
@@ -1193,8 +1204,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 }
 
                 // Render class probabilities
-                if (obs.probabilities) {
-                    for (const [cat, p] of Object.entries(obs.probabilities)) {
+                const probs = obs.emotion_probabilities || obs.fused_probabilities || obs.probabilities;
+                if (probs) {
+                    for (const [cat, p] of Object.entries(probs)) {
                         const bar = document.getElementById(`prob-bar-${cat}`);
                         const val = document.getElementById(`prob-val-${cat}`);
                         if (bar && val) {
@@ -1206,9 +1218,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 }
 
                 // Calculate Latency if timestamp matches
-                if (obs.timestamp) {
+                const ts = obs.timestamp || serverTimestamp;
+                if (ts) {
                     const now = Date.now();
-                    const roundtrip = Math.max(1, now - (obs.client_sent_timestamp || (obs.timestamp * 1000)));
+                    const roundtrip = Math.max(1, now - (obs.client_sent_timestamp || (ts * 1000)));
                     recordLatency(roundtrip);
                 }
             }
@@ -1254,7 +1267,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                     const payload = {
                         type: "frame",
                         session_id: state.sessionId,
-                        data: frameData,
+                        consent_reference: state.consentReference,
+                        image_base64: frameData,
                         format: "image/jpeg",
                         client_timestamp: Date.now()
                     };

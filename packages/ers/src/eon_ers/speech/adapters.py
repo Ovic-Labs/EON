@@ -18,7 +18,7 @@ from eon_ers.exceptions import (
 from eon_ers.models.loader import ModelLoader
 from eon_ers.models.manifest import ModelManifest
 from eon_ers.models.validation_record import ModelValidationRecord
-from eon_ers.types import EmotionCategory, ModelState
+from eon_ers.types import EmotionCategory, Modality, ModelState
 
 SUPPORTED_EMOTIONS = [
     EmotionCategory.NEUTRAL.value,
@@ -112,6 +112,8 @@ class ONNXSpeechModelAdapter(BaseSpeechModelAdapter):
                     self._manifest,
                     num_threads=self._num_threads,
                     expected_classes=SUPPORTED_EMOTIONS,
+                    expected_modality=Modality.SPEECH,
+                    supported_major_versions={1},
                 )
                 self._is_loaded = True
                 return

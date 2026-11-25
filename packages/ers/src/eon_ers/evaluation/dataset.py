@@ -7,10 +7,15 @@ partitioning to prevent subject leakage during training and scientific evaluatio
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import hmac
+import json
 import random
+import shutil
+import tarfile
 import time
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -191,6 +196,65 @@ class DatasetMetadata(BaseModel):
                 empty_audit,
             )
 
+        # Structured manifest format validation (JSON / CSV)
+        suffix = path.suffix.lower()
+        try:
+            if suffix == ".json":
+                parsed = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(parsed, (dict, list)):
+                    return (
+                        False,
+                        "JSON dataset manifest must decode to an object or array.",
+                        empty_audit,
+                    )
+                if (
+                    isinstance(parsed, dict)
+                    and "samples" in parsed
+                    and isinstance(parsed["samples"], list)
+                ):
+                    seen_ids: set[str] = set()
+                    for item in parsed["samples"]:
+                        if isinstance(item, dict) and "sample_id" in item:
+                            sid = str(item["sample_id"]).strip()
+                            if not sid or sid in seen_ids:
+                                return (
+                                    False,
+                                    f"Duplicate or blank sample_id '{sid}' in JSON manifest.",
+                                    empty_audit,
+                                )
+                            seen_ids.add(sid)
+            elif suffix == ".csv":
+                with open(path, encoding="utf-8", newline="") as cf:
+                    reader = csv.DictReader(cf)
+                    fieldnames = set(reader.fieldnames or [])
+                    required_cols = {"sample_id", "subject_id", "label"}
+                    if not required_cols.issubset(fieldnames):
+                        return (
+                            False,
+                            f"CSV manifest missing required columns: {sorted(required_cols - fieldnames)}.",
+                            empty_audit,
+                        )
+                    seen_csv_ids: set[str] = set()
+                    for row in reader:
+                        sid = str(row.get("sample_id", "")).strip()
+                        subj = str(row.get("subject_id", "")).strip()
+                        lbl = str(row.get("label", "")).strip()
+                        if not sid or not subj or not lbl:
+                            return (
+                                False,
+                                "CSV manifest contains blank sample_id, subject_id, or label.",
+                                empty_audit,
+                            )
+                        if sid in seen_csv_ids:
+                            return (
+                                False,
+                                f"Duplicate sample_id '{sid}' detected in CSV manifest.",
+                                empty_audit,
+                            )
+                        seen_csv_ids.add(sid)
+        except Exception as exc:
+            return False, f"Malformed dataset manifest ({suffix}): {exc}", empty_audit
+
         audit = {
             "dataset_name": self.name,
             "manifest_path": str(path.resolve()),
@@ -200,19 +264,212 @@ class DatasetMetadata(BaseModel):
         }
         return True, f"Dataset manifest verified ({computed[:16]}...).", audit
 
+    def safe_extract_archive(
+        self,
+        archive_path: str | Path,
+        dest_dir: str | Path,
+        *,
+        expected_sha256: str | None = None,
+        max_archive_bytes: int = 2 * 1024 * 1024 * 1024,
+        max_extracted_bytes: int = 4 * 1024 * 1024 * 1024,
+        max_files: int = 100_000,
+        max_compression_ratio: float = 100.0,
+    ) -> tuple[bool, str, dict[str, Any]]:
+        """Safely verify and extract a dataset archive with traversal and decompression-bomb limits."""
+        empty_audit: dict[str, Any] = {}
+        ok, msg, archive_audit = self.verify_archive(
+            archive_path, expected_sha256=expected_sha256, return_audit=True
+        )  # type: ignore[misc]
+        if not ok:
+            return False, msg, empty_audit
+
+        src = Path(archive_path)
+        archive_size = src.stat().st_size
+        if archive_size > max_archive_bytes:
+            return (
+                False,
+                f"Archive size ({archive_size} bytes) exceeds limit ({max_archive_bytes} bytes).",
+                empty_audit,
+            )
+
+        dest = Path(dest_dir).resolve()
+        dest.mkdir(parents=True, exist_ok=True)
+        name_lower = src.name.lower()
+
+        def _validate_rel_member(member_name: str) -> Path:
+            normalized = member_name.replace("\\", "/")
+            if not normalized or normalized.startswith("/") or ":" in normalized.split("/")[0]:
+                raise ValueError(
+                    f"Unsafe absolute or drive-qualified archive path: {member_name!r}"
+                )
+            parts = [p for p in normalized.split("/") if p]
+            if any(part == ".." for part in parts):
+                raise ValueError(f"Path traversal detected in archive member: {member_name!r}")
+            target = (dest / Path(*parts)).resolve() if parts else dest
+            if target != dest and dest not in target.parents:
+                raise ValueError(f"Archive member escapes extraction root: {member_name!r}")
+            return target
+
+        extracted_files = 0
+        total_uncompressed = 0
+
+        try:
+            if name_lower.endswith(".zip"):
+                if not zipfile.is_zipfile(src):
+                    return False, f"Invalid or corrupted ZIP archive format: {src}", empty_audit
+                with zipfile.ZipFile(src, "r") as zf:
+                    infos = zf.infolist()
+                    if len(infos) > max_files:
+                        return (
+                            False,
+                            f"Archive entry count ({len(infos)}) exceeds max_files ({max_files}).",
+                            empty_audit,
+                        )
+                    for info in infos:
+                        # Reject symlinks encoded in Unix external_attr (S_IFLNK = 0o120000)
+                        if (info.external_attr >> 16) & 0o170000 == 0o120000:
+                            return (
+                                False,
+                                f"Symlink member rejected in ZIP archive: {info.filename!r}",
+                                empty_audit,
+                            )
+                        target = _validate_rel_member(info.filename)
+                        if info.is_dir():
+                            target.mkdir(parents=True, exist_ok=True)
+                            continue
+                        total_uncompressed += max(0, info.file_size)
+                        if total_uncompressed > max_extracted_bytes:
+                            return (
+                                False,
+                                f"Uncompressed size exceeds max_extracted_bytes ({max_extracted_bytes}).",
+                                empty_audit,
+                            )
+                        if (
+                            archive_size > 0
+                            and (total_uncompressed / archive_size) > max_compression_ratio
+                        ):
+                            return (
+                                False,
+                                f"Decompression ratio exceeds limit ({max_compression_ratio}x); potential zip bomb.",
+                                empty_audit,
+                            )
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        with zf.open(info, "r") as z_in, open(target, "wb") as out_f:
+                            written = 0
+                            while chunk := z_in.read(65536):
+                                written += len(chunk)
+                                if (
+                                    total_uncompressed - info.file_size + written
+                                ) > max_extracted_bytes:
+                                    raise ValueError(
+                                        "Actual extracted bytes exceed max_extracted_bytes limit."
+                                    )
+                                out_f.write(chunk)
+                        extracted_files += 1
+            elif name_lower.endswith((".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tar.xz")):
+                with tarfile.open(src, mode="r:*") as tf:
+                    members = tf.getmembers()
+                    if len(members) > max_files:
+                        return (
+                            False,
+                            f"Archive entry count ({len(members)}) exceeds max_files ({max_files}).",
+                            empty_audit,
+                        )
+                    for member in members:
+                        if member.issym() or member.islnk() or member.isdev() or member.isfifo():
+                            return (
+                                False,
+                                f"Unsafe link/device entry rejected in TAR archive: {member.name!r}",
+                                empty_audit,
+                            )
+                        target = _validate_rel_member(member.name)
+                        if member.isdir():
+                            target.mkdir(parents=True, exist_ok=True)
+                            continue
+                        if not member.isfile():
+                            return (
+                                False,
+                                f"Unsupported TAR member type rejected: {member.name!r}",
+                                empty_audit,
+                            )
+                        total_uncompressed += max(0, member.size)
+                        if total_uncompressed > max_extracted_bytes:
+                            return (
+                                False,
+                                f"Uncompressed size exceeds max_extracted_bytes ({max_extracted_bytes}).",
+                                empty_audit,
+                            )
+                        if (
+                            archive_size > 0
+                            and (total_uncompressed / archive_size) > max_compression_ratio
+                        ):
+                            return (
+                                False,
+                                f"Decompression ratio exceeds limit ({max_compression_ratio}x); potential archive bomb.",
+                                empty_audit,
+                            )
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        src_file = tf.extractfile(member)
+                        if src_file is None:
+                            return (
+                                False,
+                                f"Could not extract TAR member {member.name!r}.",
+                                empty_audit,
+                            )
+                        with src_file, open(target, "wb") as out_f:
+                            shutil.copyfileobj(src_file, out_f, length=65536)
+                        extracted_files += 1
+            else:
+                return (
+                    False,
+                    f"Unsupported dataset archive format for '{src.name}'; expected .zip or .tar(.gz/.bz2/.xz).",
+                    empty_audit,
+                )
+        except Exception as exc:
+            return False, f"Safe archive extraction failed: {exc}", empty_audit
+
+        audit = {
+            **archive_audit,
+            "extracted_to": str(dest),
+            "extracted_files": extracted_files,
+            "extracted_bytes": total_uncompressed,
+        }
+        return True, f"Dataset archive safely extracted ({extracted_files} files).", audit
+
 
 class EvaluationSample(BaseModel):
     """A single evaluation or training sample bound to a unique subject."""
 
     model_config = ConfigDict(extra="allow", frozen=True)
 
-    sample_id: str = Field(..., description="Unique sample identifier.")
-    subject_id: str = Field(..., description="Unique speaker or actor identifier.")
-    label: str = Field(..., description="Ground-truth emotion label.")
+    sample_id: str = Field(..., min_length=1, description="Unique sample identifier.")
+    subject_id: str = Field(..., min_length=1, description="Unique speaker or actor identifier.")
+    label: str = Field(..., min_length=1, description="Ground-truth emotion label.")
     data: Any = Field(default=None, description="Feature array, tensor, or file reference.")
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional sample metadata."
     )
+
+    @field_validator("sample_id", "subject_id", "label")
+    @classmethod
+    def _reject_blank_sample_fields(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("EvaluationSample sample_id, subject_id, and label cannot be blank.")
+        return stripped
+
+
+def validate_samples_collection(samples: list[EvaluationSample]) -> None:
+    """Reject empty batches, malformed samples, or duplicate sample_ids."""
+    if not samples:
+        raise ValueError("Sample list cannot be empty.")
+    seen_ids: set[str] = set()
+    for idx, sample in enumerate(samples):
+        if not isinstance(sample, EvaluationSample):
+            raise ValueError(f"Malformed sample entry at index {idx}: expected EvaluationSample.")
+        if sample.sample_id in seen_ids:
+            raise ValueError(f"Duplicate sample_id detected: '{sample.sample_id}'.")
+        seen_ids.add(sample.sample_id)
 
 
 class EvaluationPartition:
@@ -224,6 +481,7 @@ class EvaluationPartition:
         val_samples: list[EvaluationSample],
         test_samples: list[EvaluationSample],
     ) -> None:
+        validate_samples_collection(train_samples + val_samples + test_samples)
         self.train_samples = train_samples
         self.val_samples = val_samples
         self.test_samples = test_samples
@@ -271,8 +529,7 @@ def create_subject_independent_partition(
     seed: int = 42,
 ) -> EvaluationPartition:
     """Partition samples into train/val/test by subject ID to guarantee zero speaker/actor leakage."""
-    if not samples:
-        raise ValueError("Cannot partition an empty sample list.")
+    validate_samples_collection(samples)
 
     unique_subjects = sorted({s.subject_id for s in samples})
     if len(unique_subjects) < 3:

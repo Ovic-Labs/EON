@@ -32,7 +32,7 @@ from eon_ers.engine import ERSEngine
 from eon_ers.exceptions import ERSPrivacyConsentError
 from eon_ers.live.dashboard import get_dashboard_html
 from eon_ers.live.manager import LiveSessionManager
-from eon_ers.types import Modality
+from eon_ers.types import Modality, ModelState
 
 logger = logging.getLogger("eon.ers.live.server")
 
@@ -235,18 +235,15 @@ def create_live_app(
 
     @app.get("/api/consent/status/{session_id}", response_model=ConsentStatusResponse)
     async def get_consent_status(session_id: str) -> ConsentStatusResponse:
-        """Inspect active consent status for a session."""
-        is_active = manager.has_active_consent(session_id)
-        with ers_engine.consent_mgr._lock:
-            is_revoked = session_id in ers_engine.consent_mgr._revoked_sessions
-            ref = ers_engine.consent_mgr._consents.get(session_id)
-            masked = (ref[:4] + "***" + ref[-2:]) if ref and len(ref) >= 6 else None
-
+        """Inspect active consent status for a session without reading raw credentials."""
+        st = manager.get_session_consent_status(session_id)
         return ConsentStatusResponse(
-            session_id=session_id,
-            has_active_consent=is_active,
-            is_revoked=is_revoked,
-            masked_reference=masked,
+            session_id=str(st["session_id"]),
+            has_active_consent=bool(st["has_active_consent"]),
+            is_revoked=bool(st["is_revoked"]),
+            masked_reference=str(st["masked_reference"])
+            if isinstance(st.get("masked_reference"), str)
+            else None,
         )
 
     @app.post("/api/process/unimodal", response_model=ProcessObservationResponse)
@@ -298,6 +295,10 @@ def create_live_app(
             processing_latency_ms=res["latency_ms"],
             limitations=res.get("limitations", []),
             status=res["status"],
+            model_state=ModelState(
+                res.get("model_state", ModelState.MODEL_LOADED_UNVERIFIED.value)
+            ),
+            is_validated=bool(res.get("is_validated", False)),
             is_definitive_claim=False,
         )
 

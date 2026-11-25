@@ -9,12 +9,15 @@ SHA-256 and backed by empirical evaluation metrics.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import os
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from eon_ers.types import is_valid_sha256_digest
 
 
 class ModelValidationRecord(BaseModel):
@@ -94,7 +97,10 @@ class ModelValidationRecord(BaseModel):
 
     def verify_artifact_binding(self, artifact_path: str) -> bool:
         """Cryptographically verify that this validation record binds to the target artifact."""
-        if not os.path.isfile(artifact_path):
+        expected = self.artifact_sha256.strip().lower()
+        if not is_valid_sha256_digest(expected):
+            return False
+        if not os.path.isfile(artifact_path) or os.path.getsize(artifact_path) == 0:
             return False
 
         hasher = hashlib.sha256()
@@ -103,7 +109,7 @@ class ModelValidationRecord(BaseModel):
                 hasher.update(chunk)
 
         computed = hasher.hexdigest().lower()
-        return computed == self.artifact_sha256.lower()
+        return hmac.compare_digest(computed, expected)
 
     @classmethod
     def load_from_file(cls, path: str | Path) -> ModelValidationRecord:

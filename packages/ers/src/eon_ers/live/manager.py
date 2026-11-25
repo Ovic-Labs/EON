@@ -40,30 +40,27 @@ class LiveSessionManager:
         self._active_sessions.clear()
 
     def register_session_consent(self, session_id: str, consent_reference: str) -> None:
-        """Register active user consent for a live session."""
+        """Register active user consent for a live session without caching plaintext secrets."""
         self.engine.register_consent(session_id, consent_reference)
-        self._active_sessions[session_id] = {
-            "consent_reference": consent_reference,
+        clean_session = session_id.strip()
+        self._active_sessions[clean_session] = {
             "created_at": time.time(),
             "frame_count": 0,
             "audio_count": 0,
         }
-        logger.info("Live session '%s' registered with consent.", session_id)
+        logger.info("Live session '%s' registered with consent.", clean_session)
 
     def revoke_session_consent(self, session_id: str) -> None:
         """Immediately revoke consent for a session and invalidate its state."""
         self.engine.revoke_consent(session_id)
-        if session_id in self._active_sessions:
-            del self._active_sessions[session_id]
-        logger.info("Live session '%s' consent revoked and state removed.", session_id)
+        clean_session = session_id.strip()
+        if clean_session in self._active_sessions:
+            del self._active_sessions[clean_session]
+        logger.info("Live session '%s' consent revoked and state removed.", clean_session)
 
     def has_active_consent(self, session_id: str) -> bool:
         """Check whether a session has active registered consent."""
-        with self.engine.consent_mgr._lock:
-            return (
-                session_id in self.engine.consent_mgr._consents
-                and session_id not in self.engine.consent_mgr._revoked_sessions
-            )
+        return self.engine.consent_mgr.has_active_consent(session_id)
 
     def has_consent(self, session_id: str) -> bool:
         """Alias for has_active_consent."""
@@ -71,22 +68,7 @@ class LiveSessionManager:
 
     def get_session_consent_status(self, session_id: str) -> dict[str, Any]:
         """Inspect and return current consent state for a session."""
-        with self.engine.consent_mgr._lock:
-            has_active = (
-                session_id in self.engine.consent_mgr._consents
-                and session_id not in self.engine.consent_mgr._revoked_sessions
-            )
-            is_revoked = session_id in self.engine.consent_mgr._revoked_sessions
-            ref = self.engine.consent_mgr._consents.get(session_id)
-            masked = None
-            if ref:
-                masked = (ref[:5] + "***" + ref[-3:]) if len(ref) > 8 else "***"
-            return {
-                "session_id": session_id,
-                "has_active_consent": has_active,
-                "is_revoked": is_revoked,
-                "masked_reference": masked,
-            }
+        return self.engine.consent_mgr.get_status(session_id)
 
     def get_health_status(self) -> dict[str, Any]:
         """Return engine and server health status report."""
@@ -105,15 +87,12 @@ class LiveSessionManager:
     ) -> dict[str, Any]:
         """Ingest and process a single visual webcam frame.
 
-        Enforces zero disk retention: decodes in volatile memory, processes,
-        and immediately scrubs raw payload buffers.
+        Requires caller-supplied consent_reference; never substitutes cached secrets.
+        Enforces zero disk retention and scrubs media buffers on all paths.
         """
         start_time = time.perf_counter()
-        ref = consent_reference or self._get_consent_reference(session_id)
 
-        # 1. Base64 decode validation
         try:
-            # Strip data URL prefix if present (e.g., 'data:image/jpeg;base64,...')
             if "," in image_base64:
                 image_base64 = image_base64.split(",", 1)[1]
             raw_bytes = base64.b64decode(image_base64, validate=True)
@@ -128,10 +107,19 @@ class LiveSessionManager:
                 "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
             }
 
+        if not consent_reference or not consent_reference.strip():
+            return {
+                "status": "consent_rejected",
+                "session_id": session_id,
+                "modality": Modality.FACIAL.value,
+                "error": "Missing or empty consent_reference; explicit caller consent is required.",
+                "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
+            }
+
         inp = ERSInput(
             session_id=session_id,
             modality=Modality.FACIAL,
-            consent_reference=ref or "",
+            consent_reference=consent_reference,
             image_payload=raw_bytes,
         )
 
@@ -175,6 +163,8 @@ class LiveSessionManager:
                 "error": str(exc),
                 "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
             }
+        finally:
+            inp.scrub_media_payload()
 
     async def process_audio(
         self,
@@ -183,9 +173,8 @@ class LiveSessionManager:
         sample_rate: int = 16000,
         consent_reference: str | None = None,
     ) -> dict[str, Any]:
-        """Ingest and process a single microphone audio chunk."""
+        """Ingest and process a single microphone audio chunk with caller-supplied consent."""
         start_time = time.perf_counter()
-        ref = consent_reference or self._get_consent_reference(session_id)
 
         try:
             if "," in audio_base64:
@@ -202,10 +191,19 @@ class LiveSessionManager:
                 "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
             }
 
+        if not consent_reference or not consent_reference.strip():
+            return {
+                "status": "consent_rejected",
+                "session_id": session_id,
+                "modality": Modality.SPEECH.value,
+                "error": "Missing or empty consent_reference; explicit caller consent is required.",
+                "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
+            }
+
         inp = ERSInput(
             session_id=session_id,
             modality=Modality.SPEECH,
-            consent_reference=ref or "",
+            consent_reference=consent_reference,
             audio_payload=raw_bytes,
             sample_rate=sample_rate,
         )
@@ -250,6 +248,8 @@ class LiveSessionManager:
                 "error": str(exc),
                 "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
             }
+        finally:
+            inp.scrub_media_payload()
 
     async def process_multimodal_live(
         self,
@@ -259,9 +259,16 @@ class LiveSessionManager:
         sample_rate: int = 16000,
         consent_reference: str | None = None,
     ) -> dict[str, Any]:
-        """Ingest and fuse concurrent facial and speech observations."""
+        """Ingest and fuse concurrent facial and speech observations with caller-supplied consent."""
         start_time = time.perf_counter()
-        ref = consent_reference or self._get_consent_reference(session_id)
+
+        if not consent_reference or not consent_reference.strip():
+            return {
+                "status": "consent_rejected",
+                "session_id": session_id,
+                "error": "Missing or empty consent_reference; explicit caller consent is required.",
+                "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
+            }
 
         face_inp = None
         if image_base64 is not None:
@@ -269,10 +276,12 @@ class LiveSessionManager:
                 if "," in image_base64:
                     image_base64 = image_base64.split(",", 1)[1]
                 face_bytes = base64.b64decode(image_base64, validate=True)
+                if len(face_bytes) == 0:
+                    raise ValueError("Decoded multimodal face payload is empty.")
                 face_inp = ERSInput(
                     session_id=session_id,
                     modality=Modality.FACIAL,
-                    consent_reference=ref or "",
+                    consent_reference=consent_reference,
                     image_payload=face_bytes,
                 )
             except Exception as exc:
@@ -288,14 +297,18 @@ class LiveSessionManager:
                 if "," in audio_base64:
                     audio_base64 = audio_base64.split(",", 1)[1]
                 speech_bytes = base64.b64decode(audio_base64, validate=True)
+                if len(speech_bytes) == 0:
+                    raise ValueError("Decoded multimodal speech payload is empty.")
                 speech_inp = ERSInput(
                     session_id=session_id,
                     modality=Modality.SPEECH,
-                    consent_reference=ref or "",
+                    consent_reference=consent_reference,
                     audio_payload=speech_bytes,
                     sample_rate=sample_rate,
                 )
             except Exception as exc:
+                if face_inp is not None:
+                    face_inp.scrub_media_payload()
                 return {
                     "status": "error",
                     "error": f"Invalid multimodal speech payload: {exc}",
@@ -307,7 +320,8 @@ class LiveSessionManager:
             latency_ms = (time.perf_counter() - start_time) * 1000.0
             return {
                 "status": "ok"
-                if fused.confidence >= self.engine.config.confidence_threshold
+                if fused.is_validated
+                and fused.confidence >= self.engine.config.confidence_threshold
                 else "insufficient_evidence",
                 "session_id": session_id,
                 "result_id": fused.result_id,
@@ -340,10 +354,8 @@ class LiveSessionManager:
                 "error": str(exc),
                 "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
             }
-
-    def _get_consent_reference(self, session_id: str) -> str | None:
-        sess = self._active_sessions.get(session_id)
-        if sess:
-            return sess.get("consent_reference")
-        with self.engine.consent_mgr._lock:
-            return self.engine.consent_mgr._consents.get(session_id)
+        finally:
+            if face_inp is not None:
+                face_inp.scrub_media_payload()
+            if speech_inp is not None:
+                speech_inp.scrub_media_payload()

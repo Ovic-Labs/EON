@@ -166,8 +166,12 @@ class ERSEngine:
                 f"ERS engine cannot process in state {self.lifecycle.state.value}"
             )
 
-        # Validate consent before processing
-        self.consent_mgr.validate_consent(inp.session_id, inp.consent_reference)
+        # Validate consent before processing; scrub payloads even on rejection
+        try:
+            self.consent_mgr.validate_consent(inp.session_id, inp.consent_reference)
+        except Exception:
+            inp.scrub_media_payload()
+            raise
 
         async with self._concurrency_semaphore:
             # Publish input received event
@@ -228,7 +232,11 @@ class ERSEngine:
                 is_definitive_claim=False,
             )
 
-        self.consent_mgr.validate_consent(inp.session_id, inp.consent_reference)
+        try:
+            self.consent_mgr.validate_consent(inp.session_id, inp.consent_reference)
+        except Exception:
+            inp.scrub_media_payload()
+            raise
 
         # Run pipeline in worker thread to prevent blocking asyncio event loop
         loop = asyncio.get_running_loop()
@@ -308,7 +316,11 @@ class ERSEngine:
                 is_definitive_claim=False,
             )
 
-        self.consent_mgr.validate_consent(inp.session_id, inp.consent_reference)
+        try:
+            self.consent_mgr.validate_consent(inp.session_id, inp.consent_reference)
+        except Exception:
+            inp.scrub_media_payload()
+            raise
 
         loop = asyncio.get_running_loop()
         obs: EmotionObservation = await loop.run_in_executor(
@@ -394,9 +406,15 @@ class ERSEngine:
 
         fused = self._fusion_pipeline.fuse(face_obs, speech_obs)
 
-        # Apply temporal smoothing to fused distribution
+        # Apply temporal smoothing to fused distribution, preserving unvalidated isolation
         smoothed_probs = self.tracker.record_observation(session_id, fused)
-        smoothed_dominant = max(smoothed_probs.items(), key=lambda it: it[1])[0]
+        if not fused.is_validated or fused.dominant_estimate in (
+            EmotionCategory.INSUFFICIENT_EVIDENCE.value,
+            EmotionCategory.UNKNOWN.value,
+        ):
+            smoothed_dominant = fused.dominant_estimate
+        else:
+            smoothed_dominant = max(smoothed_probs.items(), key=lambda it: it[1])[0]
 
         final_fused = FusionResult(
             result_id=fused.result_id,
@@ -413,6 +431,13 @@ class ERSEngine:
             missing_modalities=fused.missing_modalities,
             quality_summary=fused.quality_summary,
             limitations=fused.limitations,
+            contributing_model_states=fused.contributing_model_states,
+            classification_eligible_modalities=fused.classification_eligible_modalities,
+            diagnostic_modalities=fused.diagnostic_modalities,
+            fusion_status=fused.fusion_status,
+            contributing_artifact_hashes=fused.contributing_artifact_hashes,
+            contributing_validation_records=fused.contributing_validation_records,
+            is_validated=fused.is_validated,
             is_definitive_claim=False,
         )
 

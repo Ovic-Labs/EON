@@ -90,7 +90,12 @@ class SigningKeyPair:
         password: bytes | None = None,
     ) -> SigningKeyPair:
         """Load an Ed25519 signing key pair from a PEM file."""
-        pem_bytes = Path(path).read_bytes()
+        p = Path(path)
+        if not p.is_file():
+            raise FileNotFoundError(f"Signing private key file not found: {p}")
+        pem_bytes = p.read_bytes()
+        if not pem_bytes.strip():
+            raise ValueError(f"Signing private key file is empty: {p}")
         return cls.from_pem(key_id=key_id, pem_data=pem_bytes, password=password)
 
     @classmethod
@@ -98,39 +103,55 @@ class SigningKeyPair:
         """Load signing key pair from environment configuration, if present.
 
         Reads `EON_ERS_SIGNING_KEY_ID` and either `EON_ERS_SIGNING_PRIVATE_KEY_PEM`
-        or `EON_ERS_SIGNING_PRIVATE_KEY_PATH`. Returns None if unconfigured.
+        or `EON_ERS_SIGNING_PRIVATE_KEY_PATH`. Returns None if completely unconfigured.
+        Raises ValueError if partially configured or malformed.
         """
         key_id = os.environ.get("EON_ERS_SIGNING_KEY_ID", "").strip()
         pem_inline = os.environ.get("EON_ERS_SIGNING_PRIVATE_KEY_PEM", "").strip()
         pem_path = os.environ.get("EON_ERS_SIGNING_PRIVATE_KEY_PATH", "").strip()
-        if not key_id:
+        if not key_id and not pem_inline and not pem_path:
             return None
+        if not key_id:
+            raise ValueError(
+                "Environment key provisioning incomplete: EON_ERS_SIGNING_KEY_ID is required."
+            )
         if pem_inline:
             return cls.from_pem(key_id=key_id, pem_data=pem_inline)
         if pem_path:
             return cls.from_pem_file(key_id=key_id, path=pem_path)
-        return None
+        raise ValueError(
+            "Environment key provisioning incomplete: set EON_ERS_SIGNING_PRIVATE_KEY_PEM or EON_ERS_SIGNING_PRIVATE_KEY_PATH."
+        )
 
     def __repr__(self) -> str:
         return f"SigningKeyPair(key_id={self._key_id!r}, algorithm='Ed25519')"
 
 
 class TrustedKeyRegistry:
-    """Registry of trusted Ed25519 public keys indexed by explicit key_id."""
+    """Registry of trusted Ed25519 public keys indexed by explicit key_id with rotation & revocation."""
 
     def __init__(self) -> None:
         self._keys: dict[str, Ed25519PublicKey] = {}
+        self._revoked_keys: set[str] = set()
 
     def register_public_key(self, key_id: str, public_key: Ed25519PublicKey) -> None:
         """Register a trusted Ed25519 public key for a non-empty key identifier."""
         cleaned_id = key_id.strip()
         if not cleaned_id:
             raise ValueError("Trusted key_id must be a non-empty string.")
+        if not isinstance(public_key, Ed25519PublicKey):
+            raise ValueError("Trusted public key must be an Ed25519PublicKey instance.")
+        if cleaned_id in self._revoked_keys:
+            raise ValueError(
+                f"Cannot re-register revoked key_id '{cleaned_id}'; use a new key identifier."
+            )
         self._keys[cleaned_id] = public_key
 
     def register_public_key_pem(self, key_id: str, pem_data: bytes | str) -> None:
         """Load and register a trusted Ed25519 public key from PEM data."""
         raw = pem_data.encode("utf-8") if isinstance(pem_data, str) else pem_data
+        if not raw.strip():
+            raise ValueError("Public key PEM payload cannot be empty.")
         loaded = serialization.load_pem_public_key(raw)
         if not isinstance(loaded, Ed25519PublicKey):
             raise ValueError("Provided public key is not an Ed25519 public key.")
@@ -141,21 +162,60 @@ class TrustedKeyRegistry:
         self.register_public_key(keypair.key_id, keypair.public_key)
 
     def revoke_key(self, key_id: str) -> bool:
-        """Remove a key identifier from the trusted registry."""
-        return self._keys.pop(key_id.strip(), None) is not None
+        """Permanently revoke a key identifier so it can no longer verify execution proofs."""
+        cleaned = key_id.strip()
+        existed = self._keys.pop(cleaned, None) is not None
+        if cleaned:
+            self._revoked_keys.add(cleaned)
+        return existed
+
+    def rotate_key(
+        self,
+        old_key_id: str,
+        new_key_id: str,
+        new_public_key: Ed25519PublicKey | SigningKeyPair,
+        *,
+        revoke_old: bool = True,
+    ) -> None:
+        """Rotate signing authority from old_key_id to new_key_id safely."""
+        clean_old = old_key_id.strip()
+        clean_new = new_key_id.strip()
+        if not clean_new or clean_new == clean_old:
+            raise ValueError("Key rotation requires a distinct, non-empty new_key_id.")
+        pub = (
+            new_public_key.public_key
+            if isinstance(new_public_key, SigningKeyPair)
+            else new_public_key
+        )
+        self.register_public_key(clean_new, pub)
+        if revoke_old and clean_old:
+            self.revoke_key(clean_old)
+
+    def is_revoked(self, key_id: str) -> bool:
+        """Return True if key_id has been explicitly revoked."""
+        return key_id.strip() in self._revoked_keys
 
     def is_trusted(self, key_id: str) -> bool:
-        """Check whether key_id exists in the trusted public-key registry."""
-        return key_id.strip() in self._keys
+        """Check whether key_id is currently active and trusted."""
+        cleaned = key_id.strip()
+        return cleaned in self._keys and cleaned not in self._revoked_keys
 
     def get_public_key(self, key_id: str) -> Ed25519PublicKey | None:
         """Retrieve the trusted Ed25519 public key for key_id, or None."""
-        return self._keys.get(key_id.strip())
+        cleaned = key_id.strip()
+        if cleaned in self._revoked_keys:
+            return None
+        return self._keys.get(cleaned)
 
     @property
     def trusted_key_ids(self) -> list[str]:
         """List all currently trusted key identifiers."""
         return sorted(self._keys.keys())
+
+    @property
+    def revoked_key_ids(self) -> list[str]:
+        """List all revoked key identifiers."""
+        return sorted(self._revoked_keys)
 
 
 class EvaluationExecutionProof(BaseModel):
@@ -363,8 +423,22 @@ class EvaluationExecutionProof(BaseModel):
         expected_dataset_archive_sha256: str | None = None,
     ) -> tuple[bool, str]:
         """Verify proof integrity, payload bounds, and Ed25519 signature against trusted public keys."""
+        proof_ver: str = str(self.proof_version)
+        if proof_ver != "2.0.0":
+            return False, f"Unsupported execution proof version: '{proof_ver}'."
+
+        sig_alg: str = str(self.signature_algorithm)
+        if sig_alg != "Ed25519":
+            return (
+                False,
+                f"Algorithm confusion rejected: expected 'Ed25519', got '{sig_alg}'.",
+            )
+
         if key_registry is None:
             return False, "No trusted public-key registry provided for proof verification."
+
+        if key_registry.is_revoked(self.key_id):
+            return False, f"Execution proof signed by revoked key_id: '{self.key_id}'."
 
         if not self.key_id or not key_registry.is_trusted(self.key_id):
             return False, f"Untrusted or unknown execution proof key_id: '{self.key_id}'."

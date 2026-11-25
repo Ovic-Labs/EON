@@ -15,6 +15,7 @@ from eon_ers.exceptions import (
     ERSModelUnavailableError,
 )
 from eon_ers.models.manifest import ModelManifest
+from eon_ers.types import Modality
 
 
 def _resolve_onnx_numpy_dtype(tensor_type: str) -> np.dtype[Any]:
@@ -42,6 +43,9 @@ class ModelLoader:
         num_threads: int = 1,
         expected_classes: list[str] | None = None,
         verify_manifest_checksum: bool = True,
+        expected_modality: Modality | None = None,
+        expected_framework: str = "onnx",
+        supported_major_versions: set[int] | None = None,
     ) -> tuple[Any, dict[str, Any]]:
         """Actually load ONNX weights, verify protobuf structure, initializers, contracts, and smoke inference.
 
@@ -59,6 +63,27 @@ class ModelLoader:
         file_size = path.stat().st_size
         if file_size == 0:
             raise ERSModelIntegrityError(f"Model weights file '{path}' is empty (0 bytes).")
+
+        if manifest is not None:
+            if manifest.framework.strip().lower() != expected_framework.lower():
+                raise ERSModelIntegrityError(
+                    f"Incompatible model framework '{manifest.framework}' for '{manifest.model_id}'; expected '{expected_framework}'."
+                )
+            if expected_modality is not None and manifest.modality != expected_modality:
+                raise ERSModelIntegrityError(
+                    f"Incompatible model modality '{manifest.modality.value}' for '{manifest.model_id}'; expected '{expected_modality.value}'."
+                )
+            if supported_major_versions is not None:
+                try:
+                    major_ver = int(manifest.version.strip().split(".", 1)[0])
+                except (ValueError, IndexError) as exc:
+                    raise ERSModelIntegrityError(
+                        f"Malformed semantic version '{manifest.version}' for model '{manifest.model_id}'."
+                    ) from exc
+                if major_ver not in supported_major_versions:
+                    raise ERSModelIntegrityError(
+                        f"Incompatible model major version {major_ver} ('{manifest.version}') for '{manifest.model_id}'; supported={sorted(supported_major_versions)}."
+                    )
 
         # Compute file SHA-256
         hasher = hashlib.sha256()
@@ -212,6 +237,8 @@ class ModelLoader:
         base_dir: str | None = None,
         num_threads: int = 4,
         expected_classes: list[str] | None = None,
+        expected_modality: Modality | None = None,
+        supported_major_versions: set[int] | None = None,
     ) -> Any:
         """Load an ONNX Runtime InferenceSession with verified SHA-256 integrity, weights, and tensor contracts."""
         path = manifest.artifact_path
@@ -236,5 +263,7 @@ class ModelLoader:
             num_threads=num_threads,
             expected_classes=expected_classes,
             verify_manifest_checksum=False,  # already verified above with base_dir
+            expected_modality=expected_modality,
+            supported_major_versions=supported_major_versions,
         )
         return session

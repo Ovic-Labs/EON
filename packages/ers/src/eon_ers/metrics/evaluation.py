@@ -65,6 +65,13 @@ class ModelEvaluationFramework:
             }
 
         macro_f1 = float(np.mean(f1_scores)) if f1_scores else 0.0
+        recalls = [
+            float(conf_matrix[i, i]) / float(np.sum(conf_matrix[i, :]))
+            if np.sum(conf_matrix[i, :]) > 0
+            else 0.0
+            for i in range(k)
+        ]
+        balanced_accuracy = float(np.mean(recalls)) if recalls else 0.0
         accuracy = float(np.trace(conf_matrix)) / float(n) if n > 0 else 0.0
 
         # 3. Brier Score: Mean squared error between one-hot labels and predicted probabilities
@@ -108,7 +115,11 @@ class ModelEvaluationFramework:
         for b in range(num_calibration_bins):
             bin_lower = bins[b]
             bin_upper = bins[b + 1]
-            in_bin = (conf_arr > bin_lower) & (conf_arr <= bin_upper)
+            in_bin = (
+                (conf_arr >= bin_lower) & (conf_arr <= bin_upper)
+                if b == 0
+                else (conf_arr > bin_lower) & (conf_arr <= bin_upper)
+            )
             prop_in_bin = np.mean(in_bin)
             if prop_in_bin > 0:
                 acc_in_bin = np.mean(corr_arr[in_bin])
@@ -122,6 +133,7 @@ class ModelEvaluationFramework:
         return {
             "total_samples": n,
             "accuracy": round(accuracy, 4),
+            "balanced_accuracy": round(balanced_accuracy, 4),
             "macro_f1": round(macro_f1, 4),
             "brier_score": round(brier_score, 4),
             "expected_calibration_error": round(float(ece), 4),
