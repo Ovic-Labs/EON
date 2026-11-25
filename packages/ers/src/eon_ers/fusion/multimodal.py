@@ -163,17 +163,37 @@ class MultimodalFusionPipeline:
         facial_obs: EmotionObservation | None,
         speech_obs: EmotionObservation | None,
         current_time: float | None = None,
+        *,
+        text_obs: EmotionObservation | None = None,
+        session_id: str | None = None,
     ) -> FusionResult:
-        """Fuse facial and acoustic speech observations with strict validation isolation."""
+        """Fuse facial, acoustic speech, and optional text affect observations with validation isolation."""
+        t0 = time.perf_counter()
         now = current_time or time.time()
         limitations: list[str] = [
             "Epistemic modesty: Fused multimodal emotion estimates reflect probabilistic observable cues, not certified psychological diagnosis."
         ]
 
+        include_text = text_obs is not None
+
         # 1. Temporal alignment & staleness filter
-        aligned_face, aligned_speech, alignment_caveats = self.aligner.align(
-            facial_obs, speech_obs, current_time=now
-        )
+        if include_text:
+            aligned_map, alignment_caveats = self.aligner.align_many(
+                {
+                    Modality.FACIAL.value: facial_obs,
+                    Modality.SPEECH.value: speech_obs,
+                    Modality.TEXT.value: text_obs,
+                },
+                current_time=now,
+            )
+            aligned_face = aligned_map[Modality.FACIAL.value]
+            aligned_speech = aligned_map[Modality.SPEECH.value]
+            aligned_text = aligned_map[Modality.TEXT.value]
+        else:
+            aligned_face, aligned_speech, alignment_caveats = self.aligner.align(
+                facial_obs, speech_obs, current_time=now
+            )
+            aligned_text = None
         limitations.extend(alignment_caveats)
 
         missing_modalities: list[Modality] = []
@@ -181,12 +201,16 @@ class MultimodalFusionPipeline:
             missing_modalities.append(Modality.FACIAL)
         if aligned_speech is None:
             missing_modalities.append(Modality.SPEECH)
+        if include_text and aligned_text is None:
+            missing_modalities.append(Modality.TEXT)
 
         quality_summary: dict[str, float] = {}
         if aligned_face is not None:
             quality_summary["facial_quality"] = aligned_face.quality_score
         if aligned_speech is not None:
             quality_summary["speech_quality"] = aligned_speech.quality_score
+        if aligned_text is not None:
+            quality_summary["text_quality"] = aligned_text.quality_score
 
         # 2. Traceability: Collect contributing model states
         contributing_states: dict[str, str] = {}
@@ -194,44 +218,53 @@ class MultimodalFusionPipeline:
             contributing_states[Modality.FACIAL.value] = aligned_face.model_state.value
         if aligned_speech is not None:
             contributing_states[Modality.SPEECH.value] = aligned_speech.model_state.value
+        if aligned_text is not None:
+            contributing_states[Modality.TEXT.value] = aligned_text.model_state.value
 
         # 3. Evaluate Modality Eligibility
-        face_eligible, face_status, face_reason = evaluate_modality_eligibility(
-            aligned_face, now, self.aligner.max_staleness_seconds
-        )
-        speech_eligible, speech_status, speech_reason = evaluate_modality_eligibility(
-            aligned_speech, now, self.aligner.max_staleness_seconds
-        )
+        obs_by_name: dict[str, EmotionObservation | None] = {
+            Modality.FACIAL.value: aligned_face,
+            Modality.SPEECH.value: aligned_speech,
+        }
+        if include_text:
+            obs_by_name[Modality.TEXT.value] = aligned_text
 
+        eligible_obs: dict[str, EmotionObservation] = {}
         eligible_modalities: list[str] = []
         diagnostic_modalities: list[str] = []
+        excluded_modalities: list[str] = [m.value for m in missing_modalities]
 
-        if face_eligible:
-            eligible_modalities.append(Modality.FACIAL.value)
-        elif aligned_face is not None:
-            diagnostic_modalities.append(Modality.FACIAL.value)
-            limitations.append(f"Facial stream isolated to diagnostic-only: {face_reason}")
-
-        if speech_eligible:
-            eligible_modalities.append(Modality.SPEECH.value)
-        elif aligned_speech is not None:
-            diagnostic_modalities.append(Modality.SPEECH.value)
-            limitations.append(f"Speech stream isolated to diagnostic-only: {speech_reason}")
+        for mod_name, mod_obs in obs_by_name.items():
+            is_el, _, reason = evaluate_modality_eligibility(
+                mod_obs, now, self.aligner.max_staleness_seconds
+            )
+            if is_el and mod_obs is not None:
+                eligible_modalities.append(mod_name)
+                eligible_obs[mod_name] = mod_obs
+            elif mod_obs is not None:
+                diagnostic_modalities.append(mod_name)
+                excluded_modalities.append(mod_name)
+                limitations.append(
+                    f"{mod_name.capitalize()} stream isolated to diagnostic-only: {reason}"
+                )
 
         # 4. Strict Fusion Decision Tree based on Eligible Modalities
+        base_zero_weights = {k: 0.0 for k in obs_by_name}
 
-        # Case A: Neither modality is eligible for classification
+        # Case A: No modality is eligible for classification
         if not eligible_modalities:
             limitations.append(
-                "Neither sensory modality is validated or eligible. Classification suppressed to INSUFFICIENT_EVIDENCE."
+                "No sensory modality is validated or eligible. Classification suppressed to INSUFFICIENT_EVIDENCE."
             )
             return FusionResult(
+                session_id=session_id,
                 timestamp=now,
                 facial_observation=aligned_face,
                 speech_observation=aligned_speech,
+                text_observation=aligned_text,
                 fused_probabilities={EmotionCategory.INSUFFICIENT_EVIDENCE.value: 1.0},
                 dominant_estimate=EmotionCategory.INSUFFICIENT_EVIDENCE.value,
-                modality_weights={Modality.FACIAL.value: 0.0, Modality.SPEECH.value: 0.0},
+                modality_weights=base_zero_weights,
                 confidence=0.0,
                 uncertainty=1.0,
                 conflicting_evidence=False,
@@ -242,68 +275,32 @@ class MultimodalFusionPipeline:
                 contributing_model_states=contributing_states,
                 classification_eligible_modalities=[],
                 diagnostic_modalities=diagnostic_modalities,
+                excluded_modalities=excluded_modalities,
                 fusion_status="insufficient_evidence_unvalidated",
                 is_validated=False,
+                processing_latency_ms=round((time.perf_counter() - t0) * 1000.0, 2),
                 is_definitive_claim=False,
             )
 
-        # Case B: Facial eligible only (Speech is unvalidated, failed, stale, or absent)
-        if eligible_modalities == [Modality.FACIAL.value]:
-            assert aligned_face is not None
-            weights = {Modality.FACIAL.value: 1.0, Modality.SPEECH.value: 0.0}
-            if aligned_speech is not None:
-                limitations.append(
-                    "Speech stream is unvalidated/diagnostic; classification is strictly grounded in validated facial evidence."
-                )
-            else:
-                limitations.append(
-                    "Speech modality was absent; result reflects facial-only observation."
-                )
-
+        # Case B/C/T: Single eligible modality fallback
+        if len(eligible_modalities) == 1:
+            sole_name = eligible_modalities[0]
+            sole_obs = eligible_obs[sole_name]
+            weights = {k: (1.0 if k == sole_name else 0.0) for k in obs_by_name}
+            limitations.append(
+                f"Single-modality fallback grounded strictly in validated {sole_name} evidence."
+            )
             return FusionResult(
+                session_id=session_id,
                 timestamp=now,
                 facial_observation=aligned_face,
-                speech_observation=aligned_speech,  # Retained for diagnostic observability
-                fused_probabilities=dict(aligned_face.emotion_probabilities),
-                dominant_estimate=aligned_face.dominant_estimate,
-                modality_weights=weights,
-                confidence=aligned_face.confidence,
-                uncertainty=aligned_face.uncertainty,
-                conflicting_evidence=False,
-                conflict_metric=0.0,
-                missing_modalities=missing_modalities,
-                quality_summary=quality_summary,
-                limitations=limitations,
-                contributing_model_states=contributing_states,
-                classification_eligible_modalities=eligible_modalities,
-                diagnostic_modalities=diagnostic_modalities,
-                fusion_status="facial_only_validated",
-                is_validated=True,
-                is_definitive_claim=False,
-            )
-
-        # Case C: Speech eligible only (Facial is unvalidated, failed, stale, or absent)
-        if eligible_modalities == [Modality.SPEECH.value]:
-            assert aligned_speech is not None
-            weights = {Modality.FACIAL.value: 0.0, Modality.SPEECH.value: 1.0}
-            if aligned_face is not None:
-                limitations.append(
-                    "Facial stream is unvalidated/diagnostic; classification is strictly grounded in validated speech evidence."
-                )
-            else:
-                limitations.append(
-                    "Facial modality was absent; result reflects speech-only observation."
-                )
-
-            return FusionResult(
-                timestamp=now,
-                facial_observation=aligned_face,  # Retained for diagnostic observability
                 speech_observation=aligned_speech,
-                fused_probabilities=dict(aligned_speech.emotion_probabilities),
-                dominant_estimate=aligned_speech.dominant_estimate,
+                text_observation=aligned_text,
+                fused_probabilities=dict(sole_obs.emotion_probabilities),
+                dominant_estimate=sole_obs.dominant_estimate,
                 modality_weights=weights,
-                confidence=aligned_speech.confidence,
-                uncertainty=aligned_speech.uncertainty,
+                confidence=sole_obs.confidence,
+                uncertainty=sole_obs.uncertainty,
                 conflicting_evidence=False,
                 conflict_metric=0.0,
                 missing_modalities=missing_modalities,
@@ -312,45 +309,47 @@ class MultimodalFusionPipeline:
                 contributing_model_states=contributing_states,
                 classification_eligible_modalities=eligible_modalities,
                 diagnostic_modalities=diagnostic_modalities,
-                fusion_status="speech_only_validated",
+                excluded_modalities=excluded_modalities,
+                fusion_status=f"{sole_name}_only_validated",
                 is_validated=True,
+                processing_latency_ms=round((time.perf_counter() - t0) * 1000.0, 2),
                 is_definitive_claim=False,
             )
 
-        # Case D: Both modalities are validated and eligible for fusion
-        assert aligned_face is not None and aligned_speech is not None
-        weights = self.weighter.compute_weights(aligned_face, aligned_speech)
-        w_face = weights[Modality.FACIAL.value]
-        w_speech = weights[Modality.SPEECH.value]
+        # Case D: Multi-modality (2 or 3 validated eligible streams) Bayesian log-opinion fusion
+        weights = (
+            self.weighter.compute_weights(aligned_face, aligned_speech)
+            if not include_text and len(eligible_modalities) == 2
+            else self.weighter.compute_n_weights(
+                {k: (eligible_obs[k] if k in eligible_obs else None) for k in obs_by_name}
+            )
+        )
 
-        # Conflict estimation via Jensen-Shannon Divergence
-        jsd = self.divergence_calc.jensen_shannon_divergence(
-            aligned_face.emotion_probabilities, aligned_speech.emotion_probabilities
+        # Conflict estimation across all eligible probability distributions
+        jsd = self.divergence_calc.multi_stream_divergence(
+            {k: v.emotion_probabilities for k, v in eligible_obs.items()}
         )
         is_conflicting = bool(jsd > self.config.conflict_threshold)
         if is_conflicting:
             limitations.append(
-                f"Statistically divergent evidence between face and speech streams (JSD: {jsd:.2f} > {self.config.conflict_threshold})."
+                f"Statistically divergent evidence across modalities (max JSD: {jsd:.2f} > {self.config.conflict_threshold})."
             )
 
-        # Logarithmic Bayesian probability fusion of eligible streams
         all_categories = sorted(
-            set(aligned_face.emotion_probabilities.keys())
-            | set(aligned_speech.emotion_probabilities.keys())
+            {cat for obs in eligible_obs.values() for cat in obs.emotion_probabilities.keys()}
         )
         eps = 1e-6
         log_fused: dict[str, float] = {}
         for cat in all_categories:
-            p_face = aligned_face.emotion_probabilities.get(cat, eps)
-            p_speech = aligned_speech.emotion_probabilities.get(cat, eps)
-            log_p = w_face * np.log(max(eps, p_face)) + w_speech * np.log(max(eps, p_speech))
+            log_p = sum(
+                weights.get(mod, 0.0) * np.log(max(eps, obs.emotion_probabilities.get(cat, eps)))
+                for mod, obs in eligible_obs.items()
+            )
             log_fused[cat] = float(log_p)
 
-        # Softmax normalization
         log_vals = np.array(list(log_fused.values()), dtype=np.float64)
         exp_vals = np.exp(log_vals - np.max(log_vals))
         fused_probs_arr = exp_vals / np.sum(exp_vals)
-
         fused_probabilities: dict[str, float] = {
             cat: round(float(fused_probs_arr[i]), 4) for i, cat in enumerate(log_fused.keys())
         }
@@ -358,14 +357,20 @@ class MultimodalFusionPipeline:
         dominant_cat = max(fused_probabilities.items(), key=lambda item: item[1])[0]
         max_fused_prob = float(fused_probabilities[dominant_cat])
 
-        # Attenuate confidence if conflict is detected
-        avg_quality = float(0.5 * (aligned_face.quality_score + aligned_speech.quality_score))
+        avg_quality = float(
+            sum(obs.quality_score for obs in eligible_obs.values()) / len(eligible_obs)
+        )
         conflict_attenuation = float(1.0 - 0.4 * jsd)
+        # Prevent false over-confidence merely from agreeing correlated streams
+        corr_cap = (
+            self.config.correlated_agreement_dampening
+            if not is_conflicting and len(eligible_obs) >= 2
+            else 1.0
+        )
         fused_confidence = float(
-            np.clip(max_fused_prob * avg_quality * conflict_attenuation, 0.0, 1.0)
+            np.clip(min(corr_cap, max_fused_prob) * avg_quality * conflict_attenuation, 0.0, 1.0)
         )
 
-        # Composite fused uncertainty
         clean_probs = fused_probs_arr[fused_probs_arr > 1e-12]
         entropy = -np.sum(clean_probs * np.log(clean_probs))
         k = len(fused_probabilities)
@@ -379,22 +384,23 @@ class MultimodalFusionPipeline:
             )
         )
 
-        # Threshold gating on fused observation
         if (
             fused_confidence < self.config.confidence_threshold
             or fused_uncertainty > self.config.uncertainty_threshold
         ):
-            dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
-            fused_confidence = 0.0
-            fused_uncertainty = 1.0
             limitations.append(
                 f"Abstention triggered: Fused confidence {fused_confidence:.2f} < {self.config.confidence_threshold} or uncertainty {fused_uncertainty:.2f} > {self.config.uncertainty_threshold}."
             )
+            dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
+            fused_confidence = 0.0
+            fused_uncertainty = 1.0
 
         return FusionResult(
+            session_id=session_id,
             timestamp=now,
             facial_observation=aligned_face,
             speech_observation=aligned_speech,
+            text_observation=aligned_text,
             fused_probabilities=fused_probabilities,
             dominant_estimate=dominant_cat,
             modality_weights=weights,
@@ -408,7 +414,9 @@ class MultimodalFusionPipeline:
             contributing_model_states=contributing_states,
             classification_eligible_modalities=eligible_modalities,
             diagnostic_modalities=diagnostic_modalities,
+            excluded_modalities=excluded_modalities,
             fusion_status="multimodal_fused",
             is_validated=True,
+            processing_latency_ms=round((time.perf_counter() - t0) * 1000.0, 2),
             is_definitive_claim=False,
         )

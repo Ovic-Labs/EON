@@ -28,7 +28,9 @@ from eon_ers.privacy.consent import ConsentManager
 from eon_ers.privacy.retention import MediaRetentionGuard
 from eon_ers.speech.pipeline import SpeechPipeline
 from eon_ers.temporal.tracking import SessionObservationTracker
+from eon_ers.text.postprocessing import TextPipeline
 from eon_ers.types import EmotionCategory, EngineState, Modality, ObservationStatus
+from eon_ers.video.pipeline import VideoAnalysisJobResult, VideoPipeline
 
 logger = logging.getLogger("eon.ers.engine")
 
@@ -57,6 +59,8 @@ class ERSEngine:
         # Pipelines initialized in initialize()
         self._facial_pipeline: FacialPipeline | None = None
         self._speech_pipeline: SpeechPipeline | None = None
+        self._text_pipeline: TextPipeline | None = None
+        self._video_pipeline: VideoPipeline | None = None
         self._fusion_pipeline: MultimodalFusionPipeline | None = None
 
     @property
@@ -88,6 +92,14 @@ class ERSEngine:
 
             if self.config.enable_speech:
                 self._speech_pipeline = SpeechPipeline(self.config)
+
+            if self.config.enable_text:
+                self._text_pipeline = TextPipeline(self.config)
+
+            if self.config.enable_video:
+                self._video_pipeline = VideoPipeline(
+                    self.config, facial_pipeline=self._facial_pipeline
+                )
 
             if self.config.enable_multimodal_fusion:
                 self._fusion_pipeline = MultimodalFusionPipeline(self.config)
@@ -145,9 +157,13 @@ class ERSEngine:
         h = self.lifecycle.get_health_status()
         h["facial_enabled"] = self.config.enable_facial
         h["speech_enabled"] = self.config.enable_speech
+        h["text_enabled"] = self.config.enable_text
+        h["video_enabled"] = self.config.enable_video
         h["fusion_enabled"] = self.config.enable_multimodal_fusion
         h["facial_pipeline_ready"] = self._facial_pipeline is not None
         h["speech_pipeline_ready"] = self._speech_pipeline is not None
+        h["text_pipeline_ready"] = self._text_pipeline is not None
+        h["video_pipeline_ready"] = self._video_pipeline is not None
         return h
 
     def get_metrics(self) -> dict[str, Any]:
@@ -184,29 +200,52 @@ class ERSEngine:
                 return await self.process_facial(inp)
             elif inp.modality == Modality.SPEECH:
                 return await self.process_speech(inp)
+            elif inp.modality == Modality.TEXT:
+                return await self.process_text(inp)
             elif inp.modality == Modality.MULTIMODAL:
-                # If multimodal envelope contains both payloads
-                face_inp = ERSInput(
-                    observation_id=f"{inp.observation_id}-face",
-                    session_id=inp.session_id,
-                    timestamp=inp.timestamp,
-                    modality=Modality.FACIAL,
-                    consent_reference=inp.consent_reference,
-                    image_payload=inp.image_payload,
-                    image_dimensions=inp.image_dimensions,
-                    source_metadata=inp.source_metadata,
+                # If multimodal envelope contains any subset of facial/speech/text payloads
+                face_inp = (
+                    ERSInput(
+                        observation_id=f"{inp.observation_id}-face",
+                        session_id=inp.session_id,
+                        timestamp=inp.timestamp,
+                        modality=Modality.FACIAL,
+                        consent_reference=inp.consent_reference,
+                        image_payload=inp.image_payload,
+                        image_dimensions=inp.image_dimensions,
+                        source_metadata=inp.source_metadata,
+                    )
+                    if inp.image_payload is not None
+                    else None
                 )
-                speech_inp = ERSInput(
-                    observation_id=f"{inp.observation_id}-speech",
-                    session_id=inp.session_id,
-                    timestamp=inp.timestamp,
-                    modality=Modality.SPEECH,
-                    consent_reference=inp.consent_reference,
-                    audio_payload=inp.audio_payload,
-                    sample_rate=inp.sample_rate,
-                    source_metadata=inp.source_metadata,
+                speech_inp = (
+                    ERSInput(
+                        observation_id=f"{inp.observation_id}-speech",
+                        session_id=inp.session_id,
+                        timestamp=inp.timestamp,
+                        modality=Modality.SPEECH,
+                        consent_reference=inp.consent_reference,
+                        audio_payload=inp.audio_payload,
+                        sample_rate=inp.sample_rate,
+                        source_metadata=inp.source_metadata,
+                    )
+                    if inp.audio_payload is not None
+                    else None
                 )
-                return await self.process_multimodal(face_inp, speech_inp)
+                text_inp = (
+                    ERSInput(
+                        observation_id=f"{inp.observation_id}-text",
+                        session_id=inp.session_id,
+                        timestamp=inp.timestamp,
+                        modality=Modality.TEXT,
+                        consent_reference=inp.consent_reference,
+                        text_payload=inp.text_payload,
+                        source_metadata=inp.source_metadata,
+                    )
+                    if inp.text_payload is not None
+                    else None
+                )
+                return await self.process_multimodal(face_inp, speech_inp, text_input=text_inp)
             else:
                 raise ValueError(f"Unsupported modality: {inp.modality}")
 
@@ -255,24 +294,12 @@ class ERSEngine:
         else:
             smoothed_dominant = max(smoothed_probs.items(), key=lambda it: it[1])[0]
 
-        smoothed_obs = EmotionObservation(
-            observation_id=obs.observation_id,
-            timestamp=obs.timestamp,
-            modality=obs.modality,
-            expression_observations=obs.expression_observations,
-            emotion_probabilities=smoothed_probs,
-            dominant_estimate=smoothed_dominant,
-            confidence=obs.confidence,
-            uncertainty=obs.uncertainty,
-            quality_score=obs.quality_score,
-            model_id=obs.model_id,
-            model_version=obs.model_version,
-            processing_latency_ms=obs.processing_latency_ms,
-            limitations=obs.limitations,
-            status=obs.status,
-            model_state=obs.model_state,
-            is_validated=obs.is_validated,
-            is_definitive_claim=False,
+        smoothed_obs = obs.model_copy(
+            update={
+                "emotion_probabilities": smoothed_probs,
+                "dominant_estimate": smoothed_dominant,
+                "is_definitive_claim": False,
+            }
         )
 
         self.metrics.record_process(
@@ -337,24 +364,12 @@ class ERSEngine:
         else:
             smoothed_dominant = max(smoothed_probs.items(), key=lambda it: it[1])[0]
 
-        smoothed_obs = EmotionObservation(
-            observation_id=obs.observation_id,
-            timestamp=obs.timestamp,
-            modality=obs.modality,
-            expression_observations=obs.expression_observations,
-            emotion_probabilities=smoothed_probs,
-            dominant_estimate=smoothed_dominant,
-            confidence=obs.confidence,
-            uncertainty=obs.uncertainty,
-            quality_score=obs.quality_score,
-            model_id=obs.model_id,
-            model_version=obs.model_version,
-            processing_latency_ms=obs.processing_latency_ms,
-            limitations=obs.limitations,
-            status=obs.status,
-            model_state=obs.model_state,
-            is_validated=obs.is_validated,
-            is_definitive_claim=False,
+        smoothed_obs = obs.model_copy(
+            update={
+                "emotion_probabilities": smoothed_probs,
+                "dominant_estimate": smoothed_dominant,
+                "is_definitive_claim": False,
+            }
         )
 
         self.metrics.record_process(
@@ -376,35 +391,140 @@ class ERSEngine:
 
         return smoothed_obs
 
-    async def process_multimodal(
-        self, facial_input: ERSInput | None, speech_input: ERSInput | None
-    ) -> FusionResult:
-        """Process synchronized facial and acoustic observations and return fused estimate."""
-        start_time = time.perf_counter()
-        session_id = (
-            facial_input.session_id
-            if facial_input
-            else (speech_input.session_id if speech_input else "default")
-        )
-
-        # Process unimodal streams concurrently
-        face_obs = None
-        speech_obs = None
-
-        if facial_input is not None and speech_input is not None:
-            face_obs, speech_obs = await asyncio.gather(
-                self.process_facial(facial_input),
-                self.process_speech(speech_input),
+    async def process_text(self, inp: ERSInput) -> EmotionObservation:
+        """Process UTF-8 text input for distinct textual sentiment and affect estimation."""
+        if not self.config.enable_text or self._text_pipeline is None:
+            inp.scrub_media_payload()
+            return EmotionObservation(
+                observation_id=inp.observation_id,
+                timestamp=inp.timestamp,
+                modality=Modality.TEXT,
+                expression_observations={},
+                emotion_probabilities={EmotionCategory.INSUFFICIENT_EVIDENCE.value: 1.0},
+                dominant_estimate=EmotionCategory.INSUFFICIENT_EVIDENCE.value,
+                confidence=0.0,
+                uncertainty=1.0,
+                quality_score=0.0,
+                model_id="none",
+                model_version="0.0.0",
+                processing_latency_ms=0.0,
+                limitations=["Text affect pipeline is disabled in configuration."],
+                status=ObservationStatus.INSUFFICIENT_EVIDENCE,
+                is_definitive_claim=False,
             )
-        elif facial_input is not None:
-            face_obs = await self.process_facial(facial_input)
-        elif speech_input is not None:
-            speech_obs = await self.process_speech(speech_input)
+
+        try:
+            self.consent_mgr.validate_consent(inp.session_id, inp.consent_reference)
+        except Exception:
+            inp.scrub_media_payload()
+            raise
+
+        loop = asyncio.get_running_loop()
+        obs: EmotionObservation = await loop.run_in_executor(None, self._text_pipeline.process, inp)
+
+        self.metrics.record_process(
+            total_latency_ms=obs.processing_latency_ms,
+            modality="text",
+            is_error=(obs.status == ObservationStatus.FAILED),
+            is_abstention=(obs.status == ObservationStatus.INSUFFICIENT_EVIDENCE),
+        )
+        await self.event_bus.publish(
+            TOPIC_OBSERVATION_CREATED,
+            {
+                "observation_id": obs.observation_id,
+                "modality": obs.modality.value,
+                "dominant_estimate": obs.dominant_estimate,
+                "confidence": obs.confidence,
+            },
+        )
+        return obs
+
+    async def process_video(
+        self,
+        job_id: str,
+        inp: ERSInput,
+        cancel_event: Any | None = None,
+    ) -> VideoAnalysisJobResult:
+        """Process a bounded video upload through streaming frame decoding and facial analysis."""
+        try:
+            self.consent_mgr.validate_consent(inp.session_id, inp.consent_reference)
+        except Exception:
+            inp.scrub_media_payload()
+            raise
+
+        if not self.config.enable_video or self._video_pipeline is None:
+            inp.scrub_media_payload()
+            return VideoAnalysisJobResult(
+                job_id=job_id,
+                session_id=inp.session_id,
+                status="failed",
+                error="Video processing pipeline is disabled in configuration.",
+            )
+
+        video_bytes = inp.video_payload or b""
+        inp.scrub_media_payload()
+        loop = asyncio.get_running_loop()
+        res: VideoAnalysisJobResult = await loop.run_in_executor(
+            None,
+            lambda: self._video_pipeline.process_video(  # type: ignore[union-attr]
+                job_id=job_id,
+                session_id=inp.session_id,
+                consent_reference=inp.consent_reference,
+                video_bytes=video_bytes,
+                cancel_event=cancel_event,
+            ),
+        )
+        self.metrics.record_process(
+            total_latency_ms=res.processing_latency_ms,
+            modality="video",
+            is_error=(res.status == "failed"),
+            is_abstention=(not res.is_validated),
+        )
+        return res
+
+    async def process_multimodal(
+        self,
+        facial_input: ERSInput | None,
+        speech_input: ERSInput | None,
+        *,
+        text_input: ERSInput | None = None,
+    ) -> FusionResult:
+        """Process synchronized facial, vocal speech, and optional text observations."""
+        start_time = time.perf_counter()
+        first_inp = facial_input or speech_input or text_input
+        session_id = first_inp.session_id if first_inp is not None else "default"
+
+        tasks: list[tuple[str, Any]] = []
+        if facial_input is not None:
+            tasks.append(("facial", self.process_facial(facial_input)))
+        if speech_input is not None:
+            tasks.append(("speech", self.process_speech(speech_input)))
+        if text_input is not None:
+            tasks.append(("text", self.process_text(text_input)))
+
+        results_map: dict[str, EmotionObservation | None] = {
+            "facial": None,
+            "speech": None,
+            "text": None,
+        }
+        if tasks:
+            resolved = await asyncio.gather(*(coro for _, coro in tasks))
+            for (name, _), obs in zip(tasks, resolved):
+                results_map[name] = obs
+
+        face_obs = results_map["facial"]
+        speech_obs = results_map["speech"]
+        text_obs = results_map["text"]
 
         if self._fusion_pipeline is None:
             self._fusion_pipeline = MultimodalFusionPipeline(self.config)
 
-        fused = self._fusion_pipeline.fuse(face_obs, speech_obs)
+        fused = self._fusion_pipeline.fuse(
+            face_obs,
+            speech_obs,
+            text_obs=text_obs,
+            session_id=session_id,
+        )
 
         # Apply temporal smoothing to fused distribution, preserving unvalidated isolation
         smoothed_probs = self.tracker.record_observation(session_id, fused)
@@ -416,32 +536,17 @@ class ERSEngine:
         else:
             smoothed_dominant = max(smoothed_probs.items(), key=lambda it: it[1])[0]
 
-        final_fused = FusionResult(
-            result_id=fused.result_id,
-            timestamp=fused.timestamp,
-            facial_observation=fused.facial_observation,
-            speech_observation=fused.speech_observation,
-            fused_probabilities=smoothed_probs,
-            dominant_estimate=smoothed_dominant,
-            modality_weights=fused.modality_weights,
-            confidence=fused.confidence,
-            uncertainty=fused.uncertainty,
-            conflicting_evidence=fused.conflicting_evidence,
-            conflict_metric=fused.conflict_metric,
-            missing_modalities=fused.missing_modalities,
-            quality_summary=fused.quality_summary,
-            limitations=fused.limitations,
-            contributing_model_states=fused.contributing_model_states,
-            classification_eligible_modalities=fused.classification_eligible_modalities,
-            diagnostic_modalities=fused.diagnostic_modalities,
-            fusion_status=fused.fusion_status,
-            contributing_artifact_hashes=fused.contributing_artifact_hashes,
-            contributing_validation_records=fused.contributing_validation_records,
-            is_validated=fused.is_validated,
-            is_definitive_claim=False,
+        total_latency_ms = (time.perf_counter() - start_time) * 1000.0
+        final_fused = fused.model_copy(
+            update={
+                "session_id": session_id,
+                "fused_probabilities": smoothed_probs,
+                "dominant_estimate": smoothed_dominant,
+                "processing_latency_ms": round(total_latency_ms, 2),
+                "is_definitive_claim": False,
+            }
         )
 
-        total_latency_ms = (time.perf_counter() - start_time) * 1000.0
         self.metrics.record_process(
             total_latency_ms=total_latency_ms,
             modality="multimodal",

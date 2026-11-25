@@ -59,3 +59,39 @@ class ObservationAligner:
                     valid_face = None
 
         return valid_face, valid_speech, caveats
+
+    def align_many(
+        self,
+        observations: dict[str, EmotionObservation | None],
+        current_time: float | None = None,
+    ) -> tuple[dict[str, EmotionObservation | None], list[str]]:
+        """Align 2 or 3 modality streams within staleness and temporal divergence windows."""
+        now = current_time or time.time()
+        caveats: list[str] = []
+        valid: dict[str, EmotionObservation | None] = dict(observations)
+
+        for name, obs in list(valid.items()):
+            if obs is None:
+                continue
+            age = now - obs.timestamp
+            if age > self.max_staleness_seconds or age < -1.0:
+                caveats.append(
+                    f"{name.capitalize()} observation is stale (age: {age:.2f}s > {self.max_staleness_seconds}s)"
+                )
+                valid[name] = None
+
+        active = [(k, v) for k, v in valid.items() if v is not None]
+        if len(active) >= 2:
+            newest_name, newest_obs = max(active, key=lambda kv: kv[1].timestamp)
+            for name, obs in active:
+                if name == newest_name:
+                    continue
+                dt = abs(newest_obs.timestamp - obs.timestamp)
+                if dt > self.max_divergence_seconds:
+                    caveats.append(
+                        f"Temporal divergence between {newest_name} and {name} exceeds window "
+                        f"({dt:.3f}s > {self.max_divergence_seconds}s). Discarding older {name} observation."
+                    )
+                    valid[name] = None
+
+        return valid, caveats

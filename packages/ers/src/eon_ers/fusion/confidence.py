@@ -31,3 +31,17 @@ class DivergenceCalculator:
         max_jsd = np.log(2.0)
         norm_jsd = float(np.clip(jsd / max_jsd, 0.0, 1.0))
         return norm_jsd
+
+    @classmethod
+    def multi_stream_divergence(cls, distributions: dict[str, dict[str, float]]) -> float:
+        """Compute maximum normalized pairwise JSD across all active probability distributions."""
+        keys = list(distributions.keys())
+        if len(keys) < 2:
+            return 0.0
+        max_div = 0.0
+        for i in range(len(keys)):
+            for j in range(i + 1, len(keys)):
+                div = cls.jensen_shannon_divergence(distributions[keys[i]], distributions[keys[j]])
+                if div > max_div:
+                    max_div = div
+        return max_div

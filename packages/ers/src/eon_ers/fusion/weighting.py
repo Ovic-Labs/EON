@@ -54,3 +54,25 @@ class ReliabilityWeighter:
             weights[Modality.SPEECH.value] = 1.0
 
         return weights
+
+    def compute_n_weights(
+        self, observations: dict[str, EmotionObservation | None]
+    ) -> dict[str, float]:
+        """Compute normalized quality- and uncertainty-attenuated reliability weights for N streams."""
+        raw_scores: dict[str, float] = {}
+        for name, obs in observations.items():
+            if obs is None:
+                raw_scores[name] = 0.0
+            else:
+                raw_scores[name] = float(
+                    obs.quality_score * (1.0 - obs.uncertainty) * max(0.05, obs.confidence)
+                )
+
+        active_names = [k for k, v in observations.items() if v is not None]
+        total_r = sum(raw_scores.values())
+        if total_r > 1e-9:
+            return {k: round(raw_scores[k] / total_r, 4) for k in observations}
+        if active_names:
+            uniform = round(1.0 / len(active_names), 4)
+            return {k: (uniform if k in active_names else 0.0) for k in observations}
+        return {k: 0.0 for k in observations}
