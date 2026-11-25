@@ -104,8 +104,25 @@ class AcousticFeatureExtractor:
         return mfccs
 
     def extract_features(self, signal: np.ndarray, sample_rate: int) -> dict[str, float]:
-        """Extract complete numerical prosody and spectral descriptor dictionary."""
-        frames, windowed_frames = self.preprocessor.frame_signal(signal, sample_rate)
+        """Extract complete numerical prosody and spectral descriptor dictionary safely."""
+        if signal.size == 0 or sample_rate <= 0:
+            return {
+                "f0_mean_hz": 0.0,
+                "f0_std_hz": 0.0,
+                "f0_range_hz": 0.0,
+                "energy_rms_mean": 0.0,
+                "energy_std": 0.0,
+                "energy_max": 0.0,
+                "zero_crossing_rate": 0.0,
+                "spectral_centroid_hz": 0.0,
+                "voice_activity_ratio": 0.0,
+                "mfcc_0": 0.0,
+                "mfcc_1": 0.0,
+                "mfcc_2": 0.0,
+            }
+
+        clean_sig = np.nan_to_num(signal.astype(np.float32), nan=0.0, posinf=1.0, neginf=-1.0)
+        frames, windowed_frames = self.preprocessor.frame_signal(clean_sig, sample_rate)
         num_frames, frame_len = frames.shape
 
         # 1. Energy contour & RMS

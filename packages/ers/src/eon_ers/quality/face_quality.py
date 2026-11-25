@@ -16,8 +16,11 @@ from eon_ers.types import Modality, QualityGrade
 LAPLACIAN_KERNEL = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]], dtype=np.float32)
 
 
+SUPPORTED_IMAGE_FORMATS: frozenset[str] = frozenset({"JPEG", "PNG", "WEBP", "BMP", "TIFF", "GIF"})
+
+
 class FaceQualityEvaluator:
-    """Evaluates resolution, lighting, sharpness, and integrity of facial image inputs."""
+    """Evaluates format, size, resolution, lighting, sharpness, and integrity of facial image inputs."""
 
     def __init__(
         self,
@@ -26,12 +29,14 @@ class FaceQualityEvaluator:
         blur_threshold: float = 30.0,
         min_brightness: float = 15.0,
         max_brightness: float = 245.0,
+        max_payload_bytes: int = 10 * 1024 * 1024,
     ) -> None:
         self.min_resolution = min_resolution
         self.max_dimension = max_dimension
         self.blur_threshold = blur_threshold
         self.min_brightness = min_brightness
         self.max_brightness = max_brightness
+        self.max_payload_bytes = max_payload_bytes
 
     def evaluate(self, image_bytes: bytes) -> tuple[QualityAssessment, Image.Image | None]:
         """Assess image data and return quality report along with decoded PIL Image if valid."""
@@ -51,8 +56,26 @@ class FaceQualityEvaluator:
                 None,
             )
 
+        if len(image_bytes) > self.max_payload_bytes:
+            return (
+                QualityAssessment(
+                    modality=Modality.FACIAL,
+                    grade=QualityGrade.UNUSABLE,
+                    score=0.0,
+                    metrics={"size_bytes": float(len(image_bytes))},
+                    is_acceptable=False,
+                    reasons=[
+                        f"Image payload ({len(image_bytes)} bytes) exceeds max allowed {self.max_payload_bytes} bytes"
+                    ],
+                ),
+                None,
+            )
+
         try:
             pil_img = Image.open(io.BytesIO(image_bytes))
+            img_format = (pil_img.format or "").upper()
+            if img_format and img_format not in SUPPORTED_IMAGE_FORMATS:
+                raise ValueError(f"Unsupported image format: {img_format}")
             pil_img.load()
         except Exception as exc:
             return (

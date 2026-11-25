@@ -15,6 +15,7 @@ from eon_ers.speech.adapters import (
     ONNXSpeechModelAdapter,
 )
 from eon_ers.speech.features import AcousticFeatureExtractor
+from eon_ers.speech.voice_activity import VoiceActivityDetector
 from eon_ers.types import (
     EmotionCategory,
     InputQualityStatus,
@@ -41,6 +42,7 @@ class SpeechPipeline:
             min_snr_db=config.min_audio_snr_db,
             silence_threshold_db=config.silence_threshold_db,
         )
+        self.vad = VoiceActivityDetector(silence_threshold_db=config.silence_threshold_db)
         self.feature_extractor = AcousticFeatureExtractor(sample_rate=config.audio_sample_rate)
 
         if model_adapter is not None:
@@ -124,15 +126,20 @@ class SpeechPipeline:
         if not quality.is_acceptable:
             limitations.extend(quality.reasons)
 
-        # 3. Silence / low energy handling
-        if any("silence" in r for r in quality.reasons):
+        # 3. Silence / Voice Activity Detection
+        vad_result = self.vad.detect(samples, sample_rate)
+        if any("silence" in r for r in quality.reasons) or not vad_result.has_voice:
             latency_ms = (time.perf_counter() - start_time) * 1000.0
             inp.scrub_media_payload()
             return EmotionObservation(
                 observation_id=inp.observation_id,
                 timestamp=inp.timestamp,
                 modality=Modality.SPEECH,
-                expression_observations=quality.metrics,
+                expression_observations={
+                    **quality.metrics,
+                    "voice_activity": vad_result.has_voice,
+                    "speech_ratio": vad_result.speech_ratio,
+                },
                 emotion_probabilities={EmotionCategory.INSUFFICIENT_EVIDENCE.value: 1.0},
                 dominant_estimate=EmotionCategory.INSUFFICIENT_EVIDENCE.value,
                 confidence=0.0,
@@ -142,17 +149,22 @@ class SpeechPipeline:
                 model_version=self.model_adapter.model_version,
                 processing_latency_ms=latency_ms,
                 limitations=limitations
-                + ["Audio frame classified as silence or background noise."],
+                + ["Audio frame classified as silence or insufficient voice activity."],
                 status=ObservationStatus.INSUFFICIENT_EVIDENCE,
                 input_quality=input_quality,
                 model_state=self.model_adapter.model_state,
                 is_validated=False,
+                voice_activity=vad_result.has_voice,
+                speech_ratio=vad_result.speech_ratio,
+                insufficient_evidence_reason="Audio frame classified as silence or insufficient voice activity.",
                 is_definitive_claim=False,
             )
 
         # 4. Feature extraction
         acoustic_features = self.feature_extractor.extract_features(samples, sample_rate)
         acoustic_features.update(quality.metrics)
+        acoustic_features["voice_activity"] = float(vad_result.has_voice)
+        acoustic_features["vad_speech_ratio"] = vad_result.speech_ratio
 
         # Check adapter experimental status
         if self.model_adapter.is_experimental:
@@ -254,11 +266,15 @@ class SpeechPipeline:
         # Deterministic Status Precedence Policy:
         # Precedence: FAILED > MODEL_UNAVAILABLE > MODEL_UNVALIDATED > INSUFFICIENT_EVIDENCE > DEGRADED > OK
         # Crucial: Unvalidated model state is NEVER overwritten by degraded input quality!
+        insufficient_reason: str | None = None
         if is_unvalidated or is_experimental:
             status = ObservationStatus.MODEL_UNVALIDATED
             dominant_cat = EmotionCategory.UNKNOWN.value
             confidence = 0.0
             uncertainty = 1.0
+            insufficient_reason = (
+                "Model is unvalidated; discrete emotion categorization suppressed."
+            )
             limitations.append(
                 "Model is unvalidated; discrete emotion categorization suppressed to prevent fabricated predictions."
             )
@@ -267,6 +283,7 @@ class SpeechPipeline:
             dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
             confidence = 0.0
             uncertainty = 1.0
+            insufficient_reason = "Unusable acoustic signal quality."
             limitations.append(
                 "Unusable acoustic signal quality; insufficient evidence for emotion classification."
             )
@@ -275,6 +292,7 @@ class SpeechPipeline:
             dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
             confidence = 0.0
             uncertainty = 1.0
+            insufficient_reason = "Uniform probability distribution across categories."
             limitations.append(
                 "Uniform probability distribution across categories; insufficient evidence for classification."
             )
@@ -284,12 +302,13 @@ class SpeechPipeline:
         ):
             status = ObservationStatus.INSUFFICIENT_EVIDENCE
             dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
-            confidence = 0.0
-            uncertainty = 1.0
-            limitations.append(
+            insufficient_reason = (
                 f"Low confidence ({confidence:.2f} < {self.config.confidence_threshold}) "
                 f"or high uncertainty ({uncertainty:.2f} > {self.config.uncertainty_threshold})."
             )
+            limitations.append(insufficient_reason)
+            confidence = 0.0
+            uncertainty = 1.0
         elif input_quality == InputQualityStatus.DEGRADED:
             status = ObservationStatus.DEGRADED
             dominant_cat = raw_dominant
@@ -322,5 +341,8 @@ class SpeechPipeline:
             is_validated=self.model_adapter.is_validated,
             is_calibrated=False,
             raw_confidence=round(raw_confidence, 4),
+            voice_activity=vad_result.has_voice,
+            speech_ratio=vad_result.speech_ratio,
+            insufficient_evidence_reason=insufficient_reason,
             is_definitive_claim=False,
         )

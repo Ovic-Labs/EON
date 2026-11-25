@@ -48,6 +48,7 @@ class FacialPipeline:
             max_dimension=config.max_image_dimension,
             blur_threshold=config.blur_threshold,
             min_brightness=config.min_brightness,
+            max_payload_bytes=config.max_image_bytes,
         )
         self.face_detector = face_detector or HeuristicFaceDetector()
         self.landmark_detector = landmark_detector or HeuristicLandmarkDetector()
@@ -168,6 +169,8 @@ class FacialPipeline:
             limitations.append("Multiple faces detected in sensory frame; primary face selected.")
 
         primary_box = detect_res.primary_face
+        if primary_box is not None and primary_box.is_partial_boundary:
+            limitations.append("Primary face lies near frame boundary (partial/clipped region).")
 
         # 4. Landmark detection
         landmark_res = None
@@ -177,6 +180,7 @@ class FacialPipeline:
         # 5. Feature extraction
         evidence_features = self.feature_extractor.extract_features(pil_img)
         evidence_features.update(quality.metrics)
+        evidence_features["face_count"] = float(len(detect_res.faces))
         if primary_box is not None:
             evidence_features["face_box_confidence"] = primary_box.confidence
             evidence_features["face_box_area"] = round(primary_box.area, 4)
@@ -211,11 +215,36 @@ class FacialPipeline:
                 input_quality=input_quality,
                 model_state=self.model_adapter.model_state,
                 is_validated=False,
+                face_id=primary_box.face_id if primary_box else None,
+                face_bbox=primary_box.model_dump(
+                    include={"x_min", "y_min", "x_max", "y_max", "confidence"}
+                )
+                if primary_box
+                else None,
+                face_count=len(detect_res.faces),
+                insufficient_evidence_reason="Configured model adapter weights are unavailable.",
                 is_definitive_claim=False,
             )
 
-        # 6. Model inference
-        tensor = self.preprocessor.preprocess(pil_img)
+        # 6. Model inference (cropped & aligned around detected primary face)
+        pixel_box = (
+            primary_box.to_pixel_box(pil_img.size[0], pil_img.size[1])
+            if primary_box is not None
+            else None
+        )
+        left_eye = (
+            (landmark_res.landmarks[0].x, landmark_res.landmarks[0].y)
+            if landmark_res and len(landmark_res.landmarks) >= 2
+            else None
+        )
+        right_eye = (
+            (landmark_res.landmarks[1].x, landmark_res.landmarks[1].y)
+            if landmark_res and len(landmark_res.landmarks) >= 2
+            else None
+        )
+        tensor = self.preprocessor.preprocess(
+            pil_img, face_bbox=pixel_box, left_eye=left_eye, right_eye=right_eye
+        )
         try:
             probabilities = self.model_adapter.predict(tensor, evidence_features)
         except Exception as exc:
@@ -284,11 +313,15 @@ class FacialPipeline:
         # Deterministic Status Precedence Policy:
         # Precedence: FAILED > MODEL_UNAVAILABLE > MODEL_UNVALIDATED > INSUFFICIENT_EVIDENCE > DEGRADED > OK
         # Crucial: Unvalidated model state is NEVER overwritten by degraded input quality!
+        insufficient_reason: str | None = None
         if is_unvalidated or is_experimental:
             status = ObservationStatus.MODEL_UNVALIDATED
             dominant_cat = EmotionCategory.UNKNOWN.value
             confidence = 0.0
             uncertainty = 1.0
+            insufficient_reason = (
+                "Model is unvalidated; discrete emotion categorization suppressed."
+            )
             limitations.append(
                 "Model is unvalidated; discrete emotion categorization suppressed to prevent fabricated predictions."
             )
@@ -297,6 +330,7 @@ class FacialPipeline:
             dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
             confidence = 0.0
             uncertainty = 1.0
+            insufficient_reason = "Unusable sensory input quality."
             limitations.append(
                 "Unusable sensory input quality; insufficient evidence for emotion classification."
             )
@@ -305,6 +339,7 @@ class FacialPipeline:
             dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
             confidence = 0.0
             uncertainty = 1.0
+            insufficient_reason = "Uniform probability distribution across categories."
             limitations.append(
                 "Uniform probability distribution across categories; insufficient evidence for classification."
             )
@@ -314,12 +349,13 @@ class FacialPipeline:
         ):
             status = ObservationStatus.INSUFFICIENT_EVIDENCE
             dominant_cat = EmotionCategory.INSUFFICIENT_EVIDENCE.value
-            confidence = 0.0
-            uncertainty = 1.0
-            limitations.append(
+            insufficient_reason = (
                 f"Low confidence ({confidence:.2f} < {self.config.confidence_threshold}) "
                 f"or high uncertainty ({uncertainty:.2f} > {self.config.uncertainty_threshold})."
             )
+            limitations.append(insufficient_reason)
+            confidence = 0.0
+            uncertainty = 1.0
         elif input_quality == InputQualityStatus.DEGRADED:
             status = ObservationStatus.DEGRADED
             dominant_cat = raw_dominant
@@ -352,5 +388,13 @@ class FacialPipeline:
             is_validated=self.model_adapter.is_validated,
             is_calibrated=False,
             raw_confidence=round(raw_confidence, 4),
+            face_id=primary_box.face_id if primary_box else None,
+            face_bbox=primary_box.model_dump(
+                include={"x_min", "y_min", "x_max", "y_max", "confidence"}
+            )
+            if primary_box
+            else None,
+            face_count=len(detect_res.faces),
+            insufficient_evidence_reason=insufficient_reason,
             is_definitive_claim=False,
         )
