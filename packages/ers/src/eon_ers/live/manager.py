@@ -1,31 +1,34 @@
-"""Live stream session manager for real-time ERS sensory processing.
-
-Coordinates live webcam frames, microphone audio chunks, consent validation,
-and ERS engine pipeline execution with strict zero-disk retention.
-"""
+"""Live stream session manager for real-time ERS sensory processing."""
 
 from __future__ import annotations
 
-import base64
 import logging
+import threading
 import time
+import uuid
 from typing import Any
 
 from eon_ers.config import ERSConfig
 from eon_ers.contracts import ERSInput
 from eon_ers.engine import ERSEngine
 from eon_ers.exceptions import ERSError, ERSPrivacyConsentError
+from eon_ers.live.session import TERMINAL_LIVE_STATES, LiveSessionRecord, LiveSessionState
 from eon_ers.types import Modality
+from eon_ers.utils.validation import decode_bounded_base64
+from eon_ers.video.pipeline import VideoAnalysisJobResult
 
 logger = logging.getLogger("eon.ers.live.manager")
 
 
 class LiveSessionManager:
-    """Manages active streaming sessions, consent state, and engine execution."""
+    """Manages active streaming sessions, FSM transitions, consent state, and engine execution."""
 
     def __init__(self, engine: ERSEngine | None = None) -> None:
         self.engine = engine or ERSEngine(ERSConfig())
         self._active_sessions: dict[str, dict[str, Any]] = {}
+        self._sessions: dict[str, LiveSessionRecord] = {}
+        self._video_jobs: dict[str, VideoAnalysisJobResult] = {}
+        self._video_cancel_events: dict[str, threading.Event] = {}
 
     async def initialize(self) -> None:
         """Ensure the underlying ERS engine is initialized and running."""
@@ -34,29 +37,111 @@ class LiveSessionManager:
             await self.engine.start()
 
     async def shutdown(self) -> None:
-        """Stop engine and clean up active session resources."""
+        """Stop engine, cancel video jobs, and clean up active session resources."""
+        for evt in self._video_cancel_events.values():
+            evt.set()
+        for rec in self._sessions.values():
+            if rec.state not in TERMINAL_LIVE_STATES:
+                rec.transition_to(LiveSessionState.CLOSED)
         if self.engine.is_running:
             await self.engine.stop()
         self._active_sessions.clear()
 
-    def register_session_consent(self, session_id: str, consent_reference: str) -> None:
-        """Register active user consent for a live session without caching plaintext secrets."""
+    def create_live_session(
+        self,
+        *,
+        session_id: str | None = None,
+        owner_id: str = "anonymous",
+        consent_reference: str | None = None,
+        consent_scope: list[str] | None = None,
+        history_opt_in: bool = False,
+        ttl_seconds: float | None = 3600.0,
+    ) -> LiveSessionRecord:
+        """Create a managed live session following the explicit lifecycle FSM."""
+        sid = (session_id or f"live-{uuid.uuid4().hex[:12]}").strip()
+        rec = LiveSessionRecord(
+            session_id=sid,
+            owner_id=owner_id,
+            state=LiveSessionState.CREATED,
+            expires_at=(time.time() + ttl_seconds) if ttl_seconds else None,
+            consent_scope=consent_scope or ["facial", "speech", "text"],
+            history_opt_in=bool(history_opt_in and self.engine.config.enable_session_history),
+        )
+        rec.transition_to(LiveSessionState.CONSENT_PENDING)
+        self._sessions[sid] = rec
+        if consent_reference:
+            self.register_session_consent(sid, consent_reference, owner_id=owner_id)
+        return rec
+
+    def get_live_session(self, session_id: str) -> LiveSessionRecord | None:
+        rec = self._sessions.get(session_id.strip())
+        if rec is not None:
+            rec.check_expired()
+        return rec
+
+    def list_live_sessions(self, owner_id: str | None = None) -> list[LiveSessionRecord]:
+        res: list[LiveSessionRecord] = []
+        for rec in self._sessions.values():
+            rec.check_expired()
+            if owner_id is None or rec.owner_id == owner_id:
+                res.append(rec)
+        return res
+
+    def register_session_consent(
+        self, session_id: str, consent_reference: str, *, owner_id: str = "anonymous"
+    ) -> None:
+        """Register active user consent without caching plaintext secrets."""
         self.engine.register_consent(session_id, consent_reference)
         clean_session = session_id.strip()
         self._active_sessions[clean_session] = {
             "created_at": time.time(),
+            "owner_id": owner_id,
             "frame_count": 0,
             "audio_count": 0,
         }
+        rec = self._sessions.get(clean_session)
+        if rec is None:
+            rec = LiveSessionRecord(
+                session_id=clean_session,
+                owner_id=owner_id,
+                state=LiveSessionState.READY,
+                history_opt_in=self.engine.config.enable_session_history,
+            )
+            self._sessions[clean_session] = rec
+        elif rec.state in (
+            LiveSessionState.CREATED,
+            LiveSessionState.AUTHENTICATING,
+            LiveSessionState.CONSENT_PENDING,
+        ):
+            rec.transition_to(LiveSessionState.READY)
         logger.info("Live session '%s' registered with consent.", clean_session)
 
     def revoke_session_consent(self, session_id: str) -> None:
-        """Immediately revoke consent for a session and invalidate its state."""
+        """Immediately revoke consent for a session and terminate active streaming."""
         self.engine.revoke_consent(session_id)
         clean_session = session_id.strip()
         if clean_session in self._active_sessions:
             del self._active_sessions[clean_session]
+        rec = self._sessions.get(clean_session)
+        if rec is not None and rec.state not in TERMINAL_LIVE_STATES:
+            rec.transition_to(LiveSessionState.REVOKED)
         logger.info("Live session '%s' consent revoked and state removed.", clean_session)
+
+    def delete_live_session(self, session_id: str) -> bool:
+        """Close session, revoke consent, and purge session history."""
+        clean_session = session_id.strip()
+        existed = clean_session in self._sessions or clean_session in self._active_sessions
+        self.engine.reset_session(clean_session)
+        if self.has_active_consent(clean_session):
+            self.engine.revoke_consent(clean_session)
+        self._active_sessions.pop(clean_session, None)
+        rec = self._sessions.get(clean_session)
+        if rec is not None:
+            if rec.state not in TERMINAL_LIVE_STATES:
+                rec.transition_to(LiveSessionState.STOPPING)
+                rec.transition_to(LiveSessionState.CLOSED)
+            rec.history.clear()
+        return existed
 
     def has_active_consent(self, session_id: str) -> bool:
         """Check whether a session has active registered consent."""
@@ -82,22 +167,28 @@ class LiveSessionManager:
             "engine_health": h,
         }
 
+    def _mark_streaming_activity(
+        self, session_id: str, *, camera: bool = False, mic: bool = False
+    ) -> None:
+        rec = self._sessions.get(session_id.strip())
+        if rec is not None and rec.state == LiveSessionState.READY:
+            rec.transition_to(LiveSessionState.STREAMING)
+        if rec is not None:
+            if camera:
+                rec.camera_active = True
+                rec.frame_count += 1
+            if mic:
+                rec.microphone_active = True
+                rec.audio_count += 1
+
     async def process_frame(
         self, session_id: str, image_base64: str, consent_reference: str | None = None
     ) -> dict[str, Any]:
-        """Ingest and process a single visual webcam frame.
-
-        Requires caller-supplied consent_reference; never substitutes cached secrets.
-        Enforces zero disk retention and scrubs media buffers on all paths.
-        """
+        """Ingest and process a single visual webcam frame with bounded memory."""
         start_time = time.perf_counter()
 
         try:
-            if "," in image_base64:
-                image_base64 = image_base64.split(",", 1)[1]
-            raw_bytes = base64.b64decode(image_base64, validate=True)
-            if len(raw_bytes) == 0:
-                raise ValueError("Decoded image payload is empty.")
+            raw_bytes = decode_bounded_base64(image_base64, self.engine.config.max_image_bytes)
         except Exception as exc:
             return {
                 "status": "error",
@@ -116,6 +207,16 @@ class LiveSessionManager:
                 "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
             }
 
+        rec = self.get_live_session(session_id)
+        if rec is not None and rec.state in (LiveSessionState.EXPIRED, LiveSessionState.CLOSED):
+            return {
+                "status": "consent_rejected",
+                "session_id": session_id,
+                "modality": Modality.FACIAL.value,
+                "error": f"Live session is {rec.state.value}.",
+                "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
+            }
+
         inp = ERSInput(
             session_id=session_id,
             modality=Modality.FACIAL,
@@ -127,9 +228,10 @@ class LiveSessionManager:
             obs = await self.engine.process_facial(inp)
             if session_id in self._active_sessions:
                 self._active_sessions[session_id]["frame_count"] += 1
+            self._mark_streaming_activity(session_id, camera=True)
 
             latency_ms = (time.perf_counter() - start_time) * 1000.0
-            return {
+            payload = {
                 "status": obs.status.value,
                 "session_id": session_id,
                 "modality": Modality.FACIAL.value,
@@ -143,10 +245,23 @@ class LiveSessionManager:
                 "model_state": obs.model_state.value,
                 "is_validated": obs.is_validated,
                 "is_definitive_claim": obs.is_definitive_claim,
+                "face_id": obs.face_id,
+                "face_bbox": obs.face_bbox,
+                "face_count": obs.face_count,
                 "expression_observations": obs.expression_observations,
                 "limitations": obs.limitations,
                 "latency_ms": round(latency_ms, 2),
             }
+            if rec is not None:
+                rec.record_history_summary(
+                    {
+                        "timestamp": obs.timestamp,
+                        "modality": "facial",
+                        "dominant_estimate": obs.dominant_estimate,
+                        "confidence": obs.confidence,
+                    }
+                )
+            return payload
         except ERSPrivacyConsentError as exc:
             return {
                 "status": "consent_rejected",
@@ -177,11 +292,7 @@ class LiveSessionManager:
         start_time = time.perf_counter()
 
         try:
-            if "," in audio_base64:
-                audio_base64 = audio_base64.split(",", 1)[1]
-            raw_bytes = base64.b64decode(audio_base64, validate=True)
-            if len(raw_bytes) == 0:
-                raise ValueError("Decoded audio payload is empty.")
+            raw_bytes = decode_bounded_base64(audio_base64, self.engine.config.max_audio_bytes)
         except Exception as exc:
             return {
                 "status": "error",
@@ -212,6 +323,7 @@ class LiveSessionManager:
             obs = await self.engine.process_speech(inp)
             if session_id in self._active_sessions:
                 self._active_sessions[session_id]["audio_count"] += 1
+            self._mark_streaming_activity(session_id, mic=True)
 
             latency_ms = (time.perf_counter() - start_time) * 1000.0
             return {
@@ -228,6 +340,8 @@ class LiveSessionManager:
                 "model_state": obs.model_state.value,
                 "is_validated": obs.is_validated,
                 "is_definitive_claim": obs.is_definitive_claim,
+                "voice_activity": obs.voice_activity,
+                "speech_ratio": obs.speech_ratio,
                 "expression_observations": obs.expression_observations,
                 "limitations": obs.limitations,
                 "latency_ms": round(latency_ms, 2),
@@ -251,6 +365,62 @@ class LiveSessionManager:
         finally:
             inp.scrub_media_payload()
 
+    async def process_text(
+        self,
+        session_id: str,
+        text: str,
+        consent_reference: str | None = None,
+    ) -> dict[str, Any]:
+        """Process UTF-8 text affect observation with consent enforcement."""
+        start_time = time.perf_counter()
+        if not consent_reference or not consent_reference.strip():
+            return {
+                "status": "consent_rejected",
+                "session_id": session_id,
+                "modality": Modality.TEXT.value,
+                "error": "Missing or empty consent_reference; explicit caller consent is required.",
+                "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
+            }
+        inp = ERSInput(
+            session_id=session_id,
+            modality=Modality.TEXT,
+            consent_reference=consent_reference,
+            text_payload=text,
+        )
+        try:
+            obs = await self.engine.process_text(inp)
+            rec = self._sessions.get(session_id.strip())
+            if rec is not None:
+                rec.text_count += 1
+            return {
+                "status": obs.status.value,
+                "session_id": session_id,
+                "modality": Modality.TEXT.value,
+                "dominant_estimate": obs.dominant_estimate,
+                "emotion_probabilities": obs.emotion_probabilities,
+                "confidence": obs.confidence,
+                "uncertainty": obs.uncertainty,
+                "quality_score": obs.quality_score,
+                "model_id": obs.model_id,
+                "model_version": obs.model_version,
+                "model_state": obs.model_state.value,
+                "is_validated": obs.is_validated,
+                "is_definitive_claim": obs.is_definitive_claim,
+                "expression_observations": obs.expression_observations,
+                "limitations": obs.limitations,
+                "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
+            }
+        except ERSPrivacyConsentError as exc:
+            return {
+                "status": "consent_rejected",
+                "session_id": session_id,
+                "modality": Modality.TEXT.value,
+                "error": str(exc),
+                "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
+            }
+        finally:
+            inp.scrub_media_payload()
+
     async def process_multimodal_live(
         self,
         session_id: str,
@@ -258,8 +428,9 @@ class LiveSessionManager:
         audio_base64: str | None = None,
         sample_rate: int = 16000,
         consent_reference: str | None = None,
+        text: str | None = None,
     ) -> dict[str, Any]:
-        """Ingest and fuse concurrent facial and speech observations with caller-supplied consent."""
+        """Ingest and fuse concurrent facial, vocal, and optional text streams."""
         start_time = time.perf_counter()
 
         if not consent_reference or not consent_reference.strip():
@@ -273,11 +444,7 @@ class LiveSessionManager:
         face_inp = None
         if image_base64 is not None:
             try:
-                if "," in image_base64:
-                    image_base64 = image_base64.split(",", 1)[1]
-                face_bytes = base64.b64decode(image_base64, validate=True)
-                if len(face_bytes) == 0:
-                    raise ValueError("Decoded multimodal face payload is empty.")
+                face_bytes = decode_bounded_base64(image_base64, self.engine.config.max_image_bytes)
                 face_inp = ERSInput(
                     session_id=session_id,
                     modality=Modality.FACIAL,
@@ -294,11 +461,9 @@ class LiveSessionManager:
         speech_inp = None
         if audio_base64 is not None:
             try:
-                if "," in audio_base64:
-                    audio_base64 = audio_base64.split(",", 1)[1]
-                speech_bytes = base64.b64decode(audio_base64, validate=True)
-                if len(speech_bytes) == 0:
-                    raise ValueError("Decoded multimodal speech payload is empty.")
+                speech_bytes = decode_bounded_base64(
+                    audio_base64, self.engine.config.max_audio_bytes
+                )
                 speech_inp = ERSInput(
                     session_id=session_id,
                     modality=Modality.SPEECH,
@@ -315,10 +480,20 @@ class LiveSessionManager:
                     "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
                 }
 
+        text_inp = None
+        if text is not None:
+            text_inp = ERSInput(
+                session_id=session_id,
+                modality=Modality.TEXT,
+                consent_reference=consent_reference,
+                text_payload=text,
+            )
+
         try:
-            fused = await self.engine.process_multimodal(face_inp, speech_inp)
+            fused = await self.engine.process_multimodal(face_inp, speech_inp, text_input=text_inp)
             latency_ms = (time.perf_counter() - start_time) * 1000.0
             return {
+                "schema_version": fused.schema_version,
                 "status": "ok"
                 if fused.is_validated
                 and fused.confidence >= self.engine.config.confidence_threshold
@@ -335,6 +510,11 @@ class LiveSessionManager:
                 "missing_modalities": [m.value for m in fused.missing_modalities],
                 "quality_summary": fused.quality_summary,
                 "contributing_model_states": fused.contributing_model_states,
+                "classification_eligible_modalities": fused.classification_eligible_modalities,
+                "diagnostic_modalities": fused.diagnostic_modalities,
+                "excluded_modalities": fused.excluded_modalities,
+                "fusion_algorithm": fused.fusion_algorithm,
+                "fusion_status": fused.fusion_status,
                 "is_validated": fused.is_validated,
                 "limitations": fused.limitations,
                 "is_definitive_claim": fused.is_definitive_claim,
@@ -359,3 +539,36 @@ class LiveSessionManager:
                 face_inp.scrub_media_payload()
             if speech_inp is not None:
                 speech_inp.scrub_media_payload()
+            if text_inp is not None:
+                text_inp.scrub_media_payload()
+
+    async def submit_video_job(
+        self,
+        session_id: str,
+        video_base64: str,
+        consent_reference: str,
+    ) -> VideoAnalysisJobResult:
+        """Decode bounded video payload and execute bounded analysis job."""
+        job_id = f"vjob-{uuid.uuid4().hex[:10]}"
+        cancel_evt = threading.Event()
+        self._video_cancel_events[job_id] = cancel_evt
+        raw_bytes = decode_bounded_base64(video_base64, self.engine.config.video_max_bytes)
+        inp = ERSInput(
+            session_id=session_id,
+            modality=Modality.VIDEO,
+            consent_reference=consent_reference,
+            video_payload=raw_bytes,
+        )
+        res = await self.engine.process_video(job_id, inp, cancel_event=cancel_evt)
+        self._video_jobs[job_id] = res
+        return res
+
+    def get_video_job(self, job_id: str) -> VideoAnalysisJobResult | None:
+        return self._video_jobs.get(job_id)
+
+    def cancel_video_job(self, job_id: str) -> bool:
+        evt = self._video_cancel_events.get(job_id)
+        if evt is not None:
+            evt.set()
+            return True
+        return False

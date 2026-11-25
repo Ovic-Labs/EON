@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, AsyncGenerator
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
+from eon_ers.api.authentication import APIKeyAuthManager
+from eon_ers.api.rate_limits import SlidingWindowRateLimiter
+from eon_ers.api.routes import build_v1_router
 from eon_ers.api.schemas import (
     ConsentRegisterRequest,
     ConsentRevokeRequest,
@@ -29,9 +32,11 @@ from eon_ers.api.schemas import (
 from eon_ers.config import ERSConfig
 from eon_ers.contracts import EmotionObservation
 from eon_ers.engine import ERSEngine
-from eon_ers.exceptions import ERSPrivacyConsentError
+from eon_ers.exceptions import ERSError, ERSPrivacyConsentError
 from eon_ers.live.dashboard import get_dashboard_html
 from eon_ers.live.manager import LiveSessionManager
+from eon_ers.live.websocket import handle_live_websocket
+from eon_ers.models.registry import ModelRegistry
 from eon_ers.types import Modality, ModelState
 
 logger = logging.getLogger("eon.ers.live.server")
@@ -40,6 +45,9 @@ logger = logging.getLogger("eon.ers.live.server")
 def create_live_app(
     engine: ERSEngine | None = None,
     session_manager: LiveSessionManager | None = None,
+    *,
+    auth_manager: APIKeyAuthManager | None = None,
+    model_registry: ModelRegistry | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI live streaming application."""
     ers_engine = engine or ERSEngine(
@@ -49,6 +57,14 @@ def create_live_app(
         )
     )
     manager = session_manager or LiveSessionManager(ers_engine)
+    auth = auth_manager or APIKeyAuthManager(require_auth=ers_engine.config.require_api_auth)
+    limiter = SlidingWindowRateLimiter(
+        max_requests_per_minute=ers_engine.config.rate_limit_requests_per_minute
+    )
+    registry = model_registry or ModelRegistry()
+    default_models_dir = Path("packages/ers/models")
+    if model_registry is None and default_models_dir.is_dir():
+        registry.discover_directory(default_models_dir)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -58,10 +74,17 @@ def create_live_app(
 
     app = FastAPI(
         title="OVIC EON ERS Live Stream Server",
-        description="Real-time sensory webcam and microphone affective processing server.",
-        version="0.1.0",
+        description="Real-time sensory webcam, microphone, text, and video affective observation server.",
+        version="0.2.0",
         lifespan=lifespan,
     )
+    app.state.ers_auth = auth
+    app.state.ers_registry = registry
+    app.state.ers_manager = manager
+
+    @app.exception_handler(ERSError)
+    async def ers_exception_handler(request: Request, exc: ERSError) -> JSONResponse:
+        return JSONResponse(status_code=400, content=exc.to_error_payload())
 
     # Secure local CORS policy (disallowing insecure wildcard credentials)
     allowed_origins = [
@@ -76,7 +99,7 @@ def create_live_app(
         CORSMiddleware,
         allow_origins=allowed_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
 
@@ -344,190 +367,31 @@ def create_live_app(
         ers_engine.tracker.reset_session(req.session_id)
         return {"status": "reset", "session_id": req.session_id}
 
-    MAX_WS_PAYLOAD_BYTES = 5 * 1024 * 1024  # 5 MB bounds protection
-    ALLOWED_MESSAGE_TYPES = {"init", "frame", "audio", "multimodal", "revoke", "stop"}
-
     @app.websocket("/ws/live/{session_id}")
     @app.websocket("/ws/stream/{session_id}")
     @app.websocket("/ws/stream")
     async def websocket_live_stream(
         websocket: WebSocket, session_id: str = "default-session"
     ) -> None:
-        """Bi-directional WebSocket for streaming live webcam and microphone inputs."""
-        await websocket.accept()
-        latest_face_res: dict[str, Any] | None = None
-        latest_speech_res: dict[str, Any] | None = None
+        """Bi-directional WebSocket for streaming live webcam, microphone, and text inputs."""
+        await handle_live_websocket(
+            websocket,
+            session_id,
+            manager,
+            _synthesize_live_fusion,
+            auth_manager=auth,
+        )
 
-        try:
-            while True:
-                data_text = await websocket.receive_text()
-                if len(data_text.encode("utf-8")) > MAX_WS_PAYLOAD_BYTES:
-                    await websocket.send_text(
-                        json.dumps(
-                            {
-                                "type": "error",
-                                "error": f"Payload exceeds maximum allowed size of {MAX_WS_PAYLOAD_BYTES} bytes.",
-                            }
-                        )
-                    )
-                    continue
-
-                try:
-                    payload = json.loads(data_text)
-                except Exception:
-                    await websocket.send_text(
-                        json.dumps({"type": "error", "error": "Invalid JSON format."})
-                    )
-                    continue
-
-                msg_type = payload.get("type")
-                if msg_type not in ALLOWED_MESSAGE_TYPES:
-                    await websocket.send_text(
-                        json.dumps(
-                            {
-                                "type": "error",
-                                "error": f"Unsupported message type '{msg_type}'. Expected one of: {sorted(ALLOWED_MESSAGE_TYPES)}.",
-                            }
-                        )
-                    )
-                    continue
-
-                ref = payload.get("consent_reference")
-
-                if msg_type == "init":
-                    if ref:
-                        manager.register_session_consent(session_id, ref)
-                    await websocket.send_text(
-                        json.dumps(
-                            {
-                                "type": "status",
-                                "status": "session_initialized",
-                                "session_id": session_id,
-                            }
-                        )
-                    )
-
-                elif msg_type == "frame":
-                    img_b64 = payload.get("image_base64")
-                    if not img_b64:
-                        continue
-                    res = await manager.process_frame(session_id, img_b64, ref)
-                    latest_face_res = res
-                    await websocket.send_text(
-                        json.dumps(
-                            {
-                                "type": "observation",
-                                "session_id": session_id,
-                                "timestamp": time.time(),
-                                "modality": "facial",
-                                "data": res,
-                                "latency_ms": res.get("latency_ms", 0.0),
-                            }
-                        )
-                    )
-
-                    # Trigger multimodal update if we have observations
-                    if latest_face_res and latest_face_res.get("status") not in (
-                        "error",
-                        "consent_rejected",
-                    ):
-                        fused_update = _synthesize_live_fusion(latest_face_res, latest_speech_res)
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "fusion",
-                                    "session_id": session_id,
-                                    "timestamp": time.time(),
-                                    "data": fused_update,
-                                    "latency_ms": res.get("latency_ms", 0.0),
-                                }
-                            )
-                        )
-
-                elif msg_type == "audio":
-                    aud_b64 = payload.get("audio_base64")
-                    sr = payload.get("sample_rate", 16000)
-                    if not aud_b64:
-                        continue
-                    res = await manager.process_audio(session_id, aud_b64, sr, ref)
-                    latest_speech_res = res
-                    await websocket.send_text(
-                        json.dumps(
-                            {
-                                "type": "observation",
-                                "session_id": session_id,
-                                "timestamp": time.time(),
-                                "modality": "speech",
-                                "data": res,
-                                "latency_ms": res.get("latency_ms", 0.0),
-                            }
-                        )
-                    )
-
-                    if latest_speech_res and latest_speech_res.get("status") not in (
-                        "error",
-                        "consent_rejected",
-                    ):
-                        fused_update = _synthesize_live_fusion(latest_face_res, latest_speech_res)
-                        await websocket.send_text(
-                            json.dumps(
-                                {
-                                    "type": "fusion",
-                                    "session_id": session_id,
-                                    "timestamp": time.time(),
-                                    "data": fused_update,
-                                    "latency_ms": res.get("latency_ms", 0.0),
-                                }
-                            )
-                        )
-
-                elif msg_type == "multimodal":
-                    img_b64 = payload.get("image_base64")
-                    aud_b64 = payload.get("audio_base64")
-                    sr = payload.get("sample_rate", 16000)
-                    fused = await manager.process_multimodal_live(
-                        session_id=session_id,
-                        image_base64=img_b64,
-                        audio_base64=aud_b64,
-                        sample_rate=sr,
-                        consent_reference=ref,
-                    )
-                    await websocket.send_text(
-                        json.dumps(
-                            {
-                                "type": "fusion",
-                                "session_id": session_id,
-                                "timestamp": time.time(),
-                                "data": fused,
-                                "latency_ms": fused.get("latency_ms", 0.0),
-                            }
-                        )
-                    )
-
-                elif msg_type == "revoke":
-                    manager.revoke_session_consent(session_id)
-                    await websocket.send_text(
-                        json.dumps(
-                            {
-                                "type": "status",
-                                "status": "consent_revoked",
-                                "session_id": session_id,
-                            }
-                        )
-                    )
-
-                elif msg_type == "stop":
-                    await websocket.send_text(
-                        json.dumps(
-                            {"type": "status", "status": "stopped", "session_id": session_id}
-                        )
-                    )
-                    break
-
-        except WebSocketDisconnect:
-            logger.info("WebSocket disconnected for session '%s'.", session_id)
-        except Exception as exc:
-            logger.error("WebSocket exception on session '%s': %s", session_id, exc, exc_info=True)
+    app.include_router(
+        build_v1_router(
+            ers_engine,
+            manager,
+            registry,
+            auth,
+            limiter,
+            _synthesize_live_fusion,
+        )
+    )
 
     return app
 

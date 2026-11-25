@@ -615,3 +615,24 @@ CREMA_D_METADATA = DatasetMetadata(
     download_url="https://github.com/CheyneyComputerScience/CREMA-D",
     subject_ids=[f"Actor_{1000 + i}" for i in range(1, 92)],
 )
+
+FER2013_METADATA = DatasetMetadata(
+    name="FER2013",
+    source="Goodfellow, I. J., et al. (ICML Challenges in Representation Learning, 2013)",
+    version="1.0",
+    license="Challenge Research Only (verify competition / license terms prior to any use)",
+    commercial_allowed=False,
+    redistribution_allowed=False,
+    partition_strategy="subject_independent_best_effort",
+    checksum="",
+    download_url="https://www.kaggle.com/competitions/challenges-in-representation-learning-facial-expression-recognition-challenge",
+    subject_ids=[],
+)
+
+KNOWN_DATASET_PROVENANCE: dict[str, DatasetMetadata] = {
+    "affectnet": AFFECTNET_METADATA,
+    "raf_db": RAF_DB_METADATA,
+    "fer2013": FER2013_METADATA,
+    "ravdess": RAVDESS_METADATA,
+    "crema_d": CREMA_D_METADATA,
+}

@@ -188,3 +188,49 @@ class LiveStreamOutboundMessage(BaseModel):
     data: dict[str, Any] = Field(default_factory=dict)
     latency_ms: float = Field(default=0.0)
     error: str | None = Field(default=None)
+
+
+class TextAnalyzeRequest(BaseModel):
+    """Request schema for UTF-8 textual sentiment and affect analysis."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(..., min_length=1)
+    consent_reference: str = Field(..., min_length=1)
+    text: str = Field(..., min_length=1, max_length=100000)
+
+
+class VideoAnalyzeRequest(BaseModel):
+    """Request schema for bounded base64-encoded video analysis."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(..., min_length=1)
+    consent_reference: str = Field(..., min_length=1)
+    video_base64: str = Field(..., min_length=1)
+    sample_fps: float | None = Field(default=None, gt=0.05, le=60.0)
+
+
+class MultimodalAnalyzeRequest(BaseModel):
+    """Three-modality analysis request (any combination of facial, audio, and text)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(..., min_length=1)
+    consent_reference: str = Field(..., min_length=1)
+    image_base64: str | None = Field(default=None)
+    audio_base64: str | None = Field(default=None)
+    sample_rate: int = Field(default=16000, ge=8000, le=192000)
+    text: str | None = Field(default=None, max_length=100000)
+
+
+class CreateLiveSessionRequest(BaseModel):
+    """Request to initialize an isolated live ERS session."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str | None = Field(default=None, min_length=1)
+    consent_reference: str | None = Field(default=None, min_length=1)
+    consent_scope: list[str] = Field(default_factory=lambda: ["facial", "speech", "text"])
+    history_opt_in: bool = Field(default=False)
+    ttl_seconds: float | None = Field(default=3600.0, gt=10.0, le=86400.0)

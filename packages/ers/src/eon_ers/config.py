@@ -139,6 +139,12 @@ class ERSConfig(BaseModel):
         default=False,
         description="Enforce API key authentication and RBAC authorization across REST and WS endpoints.",
     )
+    rate_limit_requests_per_minute: int = Field(
+        default=600,
+        ge=10,
+        le=100000,
+        description="Sliding-window API rate limit per client principal or IP per minute.",
+    )
     enable_session_history: bool = Field(
         default=False,
         description="Whether opted-in session observation summaries are retained in volatile memory.",
