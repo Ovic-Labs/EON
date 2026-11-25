@@ -25,7 +25,12 @@ from eon_ers.evaluation.dataset import (
     DatasetMetadata,
     EvaluationSample,
 )
-from eon_ers.evaluation.evaluator import EvaluationExecutionProof, ModelEvaluator
+from eon_ers.evaluation.evaluator import (
+    EvaluationExecutionProof,
+    ModelEvaluator,
+    SigningKeyPair,
+    TrustedKeyRegistry,
+)
 from eon_ers.models.manifest import ModelManifest
 from eon_ers.training.calibration import TemperatureCalibrator
 from eon_ers.training.export import ONNXModelExporter
@@ -417,8 +422,12 @@ def test_evaluator_rejects_qualification_without_execution_proof(tmp_path: Path)
         "lacks verifiable execution proof" in n.lower() for n in record_no_proof.validation_notes
     )
 
-    # Evaluate WITH valid execution proof
+    # Evaluate WITH valid Ed25519 execution proof and trusted public-key registry
     archive_sha = hashlib.sha256(b"archive bytes").hexdigest().lower()
+    signing_key = SigningKeyPair.generate(key_id="ovic-eval-key-316")
+    registry = TrustedKeyRegistry()
+    registry.register_keypair(signing_key)
+
     proof = EvaluationExecutionProof.generate_proof(
         model_id=manifest.model_id,
         artifact_sha256=model_sha,
@@ -427,6 +436,7 @@ def test_evaluator_rejects_qualification_without_execution_proof(tmp_path: Path)
         dataset_provenance="Academic MIT",
         subject_count=5,
         sample_count=len(y_true),
+        signing_key=signing_key,
     )
     record_with_proof, _ = evaluator.evaluate_predictions(
         y_true=y_true,
@@ -436,11 +446,15 @@ def test_evaluator_rejects_qualification_without_execution_proof(tmp_path: Path)
         dataset_split="test",
         dataset_license="Academic MIT",
         execution_proof=proof,
+        key_registry=registry,
+        expected_dataset_archive_sha256=archive_sha,
     )
-    # With valid proof, verified provenance, artifact integrity, and accuracy >= 0.40 -> VALIDATED!
+    # With valid Ed25519 proof, verified provenance, artifact integrity, and accuracy >= 0.40 -> VALIDATED!
     assert record_with_proof.is_validated is True
     assert record_with_proof.dataset_archive_sha256 == archive_sha
-    assert len(record_with_proof.execution_proof_signature) == 64
+    assert record_with_proof.execution_proof_key_id == "ovic-eval-key-316"
+    assert record_with_proof.execution_proof_algorithm == "Ed25519"
+    assert len(record_with_proof.execution_proof_signature) == 128
 
 
 # -----------------------------------------------------------------------------

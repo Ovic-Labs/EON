@@ -2,6 +2,31 @@
 
 from enum import Enum
 
+EMPTY_BYTES_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+KNOWN_PLACEHOLDER_CHECKSUMS: frozenset[str] = frozenset(
+    {
+        EMPTY_BYTES_SHA256,
+        "0" * 64,
+        "f" * 64,
+        "a" * 64,
+        "1" * 64,
+    }
+)
+
+
+def is_valid_sha256_digest(digest: str) -> bool:
+    """Validate that a string is a 64-character hex SHA-256 digest and not a known placeholder."""
+    if not isinstance(digest, str) or not digest:
+        return False
+    c = digest.strip().lower()
+    if len(c) != 64:
+        return False
+    if not all(ch in "0123456789abcdef" for ch in c):
+        return False
+    if c in KNOWN_PLACEHOLDER_CHECKSUMS:
+        return False
+    return True
+
 
 class Modality(str, Enum):
     """Supported input sensory modalities."""

@@ -2,23 +2,63 @@
 
 Computes accuracy, balanced accuracy, macro precision/recall/F1, per-class metrics,
 confusion matrix, Brier score, Expected Calibration Error (ECE), and abstention rates.
+Rejects empty datasets, mismatched sample counts, unsupported labels, and non-finite inputs.
 """
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
+
+from eon_ers.types import EmotionCategory
+
+ABSTENTION_LABELS: frozenset[str] = frozenset(
+    {
+        EmotionCategory.UNKNOWN.value,
+        EmotionCategory.INSUFFICIENT_EVIDENCE.value,
+    }
+)
+
+
+def _validate_labels_list(labels: list[str]) -> dict[str, int]:
+    if not labels:
+        raise ValueError("Evaluation label list cannot be empty.")
+    seen: dict[str, int] = {}
+    for idx, lbl in enumerate(labels):
+        if not isinstance(lbl, str) or not lbl.strip():
+            raise ValueError(f"Evaluation label at index {idx} must be a non-empty string.")
+        if lbl in seen:
+            raise ValueError(f"Duplicate label '{lbl}' found in evaluation label list.")
+        seen[lbl] = idx
+    return seen
 
 
 def compute_confusion_matrix(
     y_true: list[str], y_pred: list[str], labels: list[str]
 ) -> list[list[int]]:
-    """Compute 2D confusion matrix with fixed class ordering."""
-    label_to_idx = {lbl: i for i, lbl in enumerate(labels)}
+    """Compute 2D confusion matrix with fixed class ordering and strict length/label checks."""
+    label_to_idx = _validate_labels_list(labels)
+    if len(y_true) == 0:
+        raise ValueError("y_true cannot be empty.")
+    if len(y_true) != len(y_pred):
+        raise ValueError(
+            f"Mismatched sample counts: len(y_true)={len(y_true)} != len(y_pred)={len(y_pred)}."
+        )
+
     k = len(labels)
     cm = [[0 for _ in range(k)] for _ in range(k)]
 
-    for t, p in zip(y_true, y_pred):
-        if t in label_to_idx and p in label_to_idx:
+    for idx, (t, p) in enumerate(zip(y_true, y_pred, strict=True)):
+        if t not in label_to_idx:
+            raise ValueError(
+                f"Unsupported ground-truth label '{t}' at index {idx}; expected one of {labels}."
+            )
+        if p not in label_to_idx and p not in ABSTENTION_LABELS:
+            raise ValueError(
+                f"Unsupported predicted label '{p}' at index {idx}; expected one of {labels} or abstention."
+            )
+        if p in label_to_idx:
             cm[label_to_idx[t]][label_to_idx[p]] += 1
 
     return cm
@@ -85,34 +125,55 @@ def compute_calibration_metrics(
     labels: list[str],
     n_bins: int = 10,
 ) -> dict[str, float]:
-    """Compute Expected Calibration Error (ECE) and Brier Score.
+    """Compute Expected Calibration Error (ECE) and Brier Score with strict validation."""
+    label_to_idx = _validate_labels_list(labels)
+    if len(y_true) == 0:
+        raise ValueError("Cannot compute calibration metrics on an empty dataset.")
+    if len(y_true) != len(predicted_probs):
+        raise ValueError(
+            f"Mismatched sample counts: len(y_true)={len(y_true)} != len(predicted_probs)={len(predicted_probs)}."
+        )
+    if n_bins < 1:
+        raise ValueError(f"n_bins must be >= 1, got {n_bins}.")
 
-    ECE measures the absolute divergence between confidence and empirical accuracy.
-    Brier Score measures the mean squared error of predicted probability distributions.
-    """
-    if not y_true or not predicted_probs:
-        return {"ece": 0.0, "brier_score": 0.0}
-
-    label_to_idx = {lbl: i for i, lbl in enumerate(labels)}
     k = len(labels)
     n = len(y_true)
 
-    # 1. Brier Score: (1/N) * sum_i sum_k (p_ik - y_ik)^2
     brier_sum = 0.0
     confidences: list[float] = []
     correct_flags: list[bool] = []
 
-    for t, p_dict in zip(y_true, predicted_probs):
-        p_vec = np.array([p_dict.get(lbl, 0.0) for lbl in labels], dtype=np.float64)
-        # Normalize in case probabilities don't sum to 1.0
-        p_sum = np.sum(p_vec)
-        if p_sum > 0:
-            p_vec = p_vec / p_sum
+    for idx, (t, p_dict) in enumerate(zip(y_true, predicted_probs, strict=True)):
+        if t not in label_to_idx:
+            raise ValueError(
+                f"Unsupported ground-truth label '{t}' at index {idx}; expected one of {labels}."
+            )
+        if not isinstance(p_dict, dict) or not p_dict:
+            raise ValueError(f"Invalid empty or non-dict probability map at index {idx}.")
 
-        t_idx = label_to_idx.get(t, -1)
+        for key, val in p_dict.items():
+            if key not in label_to_idx:
+                raise ValueError(
+                    f"Unsupported emotion key '{key}' in prediction at index {idx}; expected subset of {labels}."
+                )
+            if isinstance(val, bool) or not isinstance(val, (int, float)) or not math.isfinite(val):
+                raise ValueError(
+                    f"Non-finite or invalid probability value {val!r} for '{key}' at index {idx}."
+                )
+            if val < 0.0 or val > 1.0:
+                raise ValueError(
+                    f"Probability out of bounds [0, 1] for '{key}' at index {idx}: {val}."
+                )
+
+        p_vec = np.array([float(p_dict.get(lbl, 0.0)) for lbl in labels], dtype=np.float64)
+        p_sum = float(np.sum(p_vec))
+        if p_sum <= 0.0:
+            raise ValueError(f"Probability distribution sums to non-positive value at index {idx}.")
+        p_vec = p_vec / p_sum
+
+        t_idx = label_to_idx[t]
         y_vec = np.zeros(k, dtype=np.float64)
-        if t_idx >= 0:
-            y_vec[t_idx] = 1.0
+        y_vec[t_idx] = 1.0
 
         brier_sum += float(np.sum((p_vec - y_vec) ** 2))
 
@@ -123,7 +184,6 @@ def compute_calibration_metrics(
 
     brier_score = float(brier_sum / n)
 
-    # 2. Expected Calibration Error (ECE)
     bins = np.linspace(0.0, 1.0, n_bins + 1)
     ece = 0.0
 
@@ -157,9 +217,19 @@ def compute_confidence_distribution(
 ) -> dict[str, float]:
     """Calculate descriptive distribution percentiles for model confidence."""
     if not predicted_probs:
-        return {"p25": 0.0, "p50": 0.0, "p75": 0.0, "p95": 0.0, "mean": 0.0}
+        raise ValueError("Cannot compute confidence distribution on empty predictions.")
 
-    confs = [max(p.values()) if p else 0.0 for p in predicted_probs]
+    confs: list[float] = []
+    for idx, p in enumerate(predicted_probs):
+        if not isinstance(p, dict) or not p:
+            raise ValueError(f"Prediction at index {idx} is empty or invalid.")
+        for key, val in p.items():
+            if isinstance(val, bool) or not isinstance(val, (int, float)) or not math.isfinite(val):
+                raise ValueError(f"Non-finite confidence value {val!r} for '{key}' at index {idx}.")
+            if val < 0.0 or val > 1.0:
+                raise ValueError(f"Out-of-bounds confidence {val} for '{key}' at index {idx}.")
+        confs.append(float(max(p.values())))
+
     arr = np.array(confs, dtype=np.float64)
 
     return {

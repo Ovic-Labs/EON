@@ -3,100 +3,33 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import os
 import time
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
-
 from eon_ers.evaluation.dataset import KNOWN_PLACEHOLDER_CHECKSUMS
 from eon_ers.evaluation.metrics import (
+    _validate_labels_list,
     compute_calibration_metrics,
     compute_classification_metrics,
     compute_confidence_distribution,
+)
+from eon_ers.evaluation.proof import (
+    EvaluationExecutionProof,
+    SigningKeyPair,
+    TrustedKeyRegistry,
 )
 from eon_ers.models.manifest import ModelManifest
 from eon_ers.models.validation_record import ModelValidationRecord
 from eon_ers.types import EmotionCategory
 
-
-class EvaluationExecutionProof(BaseModel):
-    """Cryptographic, tamper-evident proof linking empirical execution to evaluation results."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    model_id: str = Field(..., description="Target model identifier.")
-    artifact_sha256: str = Field(
-        ..., min_length=64, max_length=64, description="Model artifact SHA-256."
-    )
-    dataset_archive_sha256: str = Field(
-        ..., description="Verified empirical dataset archive SHA-256."
-    )
-    dataset_name: str = Field(..., description="Dataset name.")
-    dataset_provenance: str = Field(..., description="Verified dataset provenance / license.")
-    subject_count: int = Field(
-        ..., ge=1, description="Distinct subject count in evaluation partition."
-    )
-    sample_count: int = Field(..., ge=1, description="Sample count in evaluation partition.")
-    evaluation_script_version: str = Field(
-        default="1.0.0", description="Evaluation script version."
-    )
-    execution_timestamp: str = Field(..., description="ISO 8601 execution timestamp.")
-    inference_hardware: str = Field(
-        default="Intel Core Ultra 5 225U (CPU)", description="Execution hardware environment."
-    )
-    proof_signature: str = Field(
-        ..., min_length=64, max_length=64, description="Cryptographic SHA-256 proof signature."
-    )
-
-    @classmethod
-    def generate_proof(
-        cls,
-        model_id: str,
-        artifact_sha256: str,
-        dataset_archive_sha256: str,
-        dataset_name: str,
-        dataset_provenance: str,
-        subject_count: int,
-        sample_count: int,
-        evaluation_script_version: str = "1.0.0",
-        inference_hardware: str = "Intel Core Ultra 5 225U (CPU)",
-    ) -> EvaluationExecutionProof:
-        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        sig_data = (
-            f"{model_id}:{artifact_sha256}:{dataset_archive_sha256}:{dataset_name}:"
-            f"{subject_count}:{sample_count}:{evaluation_script_version}:{timestamp}"
-        )
-        sig = hashlib.sha256(sig_data.encode()).hexdigest().lower()
-        return cls(
-            model_id=model_id,
-            artifact_sha256=artifact_sha256.lower(),
-            dataset_archive_sha256=dataset_archive_sha256.lower(),
-            dataset_name=dataset_name,
-            dataset_provenance=dataset_provenance,
-            subject_count=subject_count,
-            sample_count=sample_count,
-            evaluation_script_version=evaluation_script_version,
-            execution_timestamp=timestamp,
-            inference_hardware=inference_hardware,
-            proof_signature=sig,
-        )
-
-    def verify(self, expected_artifact_sha256: str) -> bool:
-        """Verify the integrity of this proof against expected model artifact digest."""
-        if not self.proof_signature or len(self.proof_signature) != 64:
-            return False
-        if self.artifact_sha256.lower() != expected_artifact_sha256.lower():
-            return False
-        if (
-            not self.dataset_archive_sha256
-            or self.dataset_archive_sha256 in KNOWN_PLACEHOLDER_CHECKSUMS
-            or len(self.dataset_archive_sha256) != 64
-        ):
-            return False
-        if self.sample_count < 10 or self.subject_count < 2:
-            return False
-        return True
+__all__ = [
+    "EvaluationExecutionProof",
+    "ModelEvaluator",
+    "SigningKeyPair",
+    "TrustedKeyRegistry",
+]
 
 
 class ModelEvaluator:
@@ -108,17 +41,116 @@ class ModelEvaluator:
         confidence_threshold: float = 0.40,
         uncertainty_threshold: float = 0.60,
     ) -> None:
-        self.labels = labels or [
-            EmotionCategory.NEUTRAL.value,
-            EmotionCategory.HAPPINESS.value,
-            EmotionCategory.SADNESS.value,
-            EmotionCategory.ANGER.value,
-            EmotionCategory.FEAR.value,
-            EmotionCategory.SURPRISE.value,
-            EmotionCategory.DISGUST.value,
-        ]
+        self.labels = (
+            list(labels)
+            if labels is not None
+            else [
+                EmotionCategory.NEUTRAL.value,
+                EmotionCategory.HAPPINESS.value,
+                EmotionCategory.SADNESS.value,
+                EmotionCategory.ANGER.value,
+                EmotionCategory.FEAR.value,
+                EmotionCategory.SURPRISE.value,
+                EmotionCategory.DISGUST.value,
+            ]
+        )
+        _validate_labels_list(self.labels)
+        if not (0.0 <= confidence_threshold <= 1.0):
+            raise ValueError(
+                f"confidence_threshold must be in [0.0, 1.0], got {confidence_threshold}."
+            )
+        if not (0.0 <= uncertainty_threshold <= 1.0):
+            raise ValueError(
+                f"uncertainty_threshold must be in [0.0, 1.0], got {uncertainty_threshold}."
+            )
         self.confidence_threshold = confidence_threshold
         self.uncertainty_threshold = uncertainty_threshold
+
+    def _validate_evaluation_inputs(
+        self,
+        y_true: list[str],
+        predicted_probs: list[dict[str, float]],
+        model_manifest: ModelManifest,
+    ) -> None:
+        """Strictly validate sample counts, labels, probability distributions, and manifest dimensions."""
+        if not isinstance(y_true, list) or not isinstance(predicted_probs, list):
+            raise ValueError("y_true and predicted_probs must be lists.")
+
+        total_samples = len(y_true)
+        if total_samples == 0:
+            raise ValueError("Evaluation dataset cannot be empty.")
+
+        if total_samples != len(predicted_probs):
+            raise ValueError(
+                f"Mismatched sample counts: len(y_true)={total_samples} != "
+                f"len(predicted_probs)={len(predicted_probs)}."
+            )
+
+        expected_label_set = set(self.labels)
+        for idx, lbl in enumerate(y_true):
+            if not isinstance(lbl, str) or lbl not in expected_label_set:
+                raise ValueError(
+                    f"Unsupported ground-truth label {lbl!r} at index {idx}; "
+                    f"expected one of {self.labels}."
+                )
+
+        # Validate output manifest dimensions if specified
+        out_spec = model_manifest.output_specification
+        out_shape = out_spec.get("shape")
+        if out_shape is not None:
+            if (
+                not isinstance(out_shape, list)
+                or len(out_shape) == 0
+                or not isinstance(out_shape[-1], int)
+                or out_shape[-1] != len(self.labels)
+            ):
+                raise ValueError(
+                    f"Manifest output dimension mismatch: output_specification.shape={out_shape} "
+                    f"incompatible with {len(self.labels)} evaluation labels."
+                )
+
+        manifest_classes = out_spec.get("classes")
+        if manifest_classes is not None and list(manifest_classes) != self.labels:
+            raise ValueError(
+                f"Manifest output class mismatch: {manifest_classes} != {self.labels}."
+            )
+
+        for idx, p_dict in enumerate(predicted_probs):
+            if not isinstance(p_dict, dict) or not p_dict:
+                raise ValueError(
+                    f"Prediction probability map at index {idx} cannot be empty or non-dict."
+                )
+
+            keys = set(p_dict.keys())
+            missing = expected_label_set - keys
+            extra = keys - expected_label_set
+            if missing or extra:
+                raise ValueError(
+                    f"Invalid probability keys at index {idx}: "
+                    f"missing={sorted(missing)}, unsupported={sorted(extra)}."
+                )
+
+            prob_sum = 0.0
+            for k, val in p_dict.items():
+                if (
+                    isinstance(val, bool)
+                    or not isinstance(val, (int, float))
+                    or not math.isfinite(val)
+                ):
+                    raise ValueError(
+                        f"Non-finite or invalid probability {val!r} for class '{k}' at index {idx}."
+                    )
+                if val < 0.0 or val > 1.0:
+                    raise ValueError(
+                        f"Probability out of bounds [0.0, 1.0] for class '{k}' at index {idx}: {val}."
+                    )
+                prob_sum += float(val)
+
+            if abs(prob_sum - 1.0) > 0.02:
+                raise ValueError(
+                    f"Probability distribution at index {idx} sums to {prob_sum:.6f}, "
+                    f"expected 1.0 within +/-0.02 tolerance."
+                )
 
     def evaluate_predictions(
         self,
@@ -133,26 +165,22 @@ class ModelEvaluator:
         commercial_restrictions: list[str] | None = None,
         evaluation_notes: list[str] | None = None,
         execution_proof: EvaluationExecutionProof | None = None,
+        key_registry: TrustedKeyRegistry | None = None,
+        expected_dataset_archive_sha256: str | None = None,
+        pipeline_stages_ok: bool = True,
     ) -> tuple[ModelValidationRecord, dict[str, Any]]:
         """Evaluate raw model predictions and generate a cryptographic validation record."""
+        self._validate_evaluation_inputs(y_true, predicted_probs, model_manifest)
         total_samples = len(y_true)
-        if total_samples == 0:
-            raise ValueError("Evaluation dataset cannot be empty.")
 
-        # Determine discrete predictions and abstentions
+        # Determine discrete predictions and abstentions using strict paired iteration
         y_pred: list[str] = []
         abstained_count = 0
 
-        for p_dict in predicted_probs:
-            if not p_dict:
-                y_pred.append(EmotionCategory.UNKNOWN.value)
-                abstained_count += 1
-                continue
-
+        for _yt, p_dict in zip(y_true, predicted_probs, strict=True):
             top_cat = max(p_dict, key=p_dict.get)  # type: ignore[arg-type]
             top_conf = p_dict[top_cat]
 
-            # Check for uniform/uninformative baseline (e.g., all probs equal 1/K)
             k = len(self.labels)
             uniform_val = round(1.0 / k, 4)
             is_uniform = all(abs(val - uniform_val) < 0.01 for val in p_dict.values())
@@ -178,7 +206,7 @@ class ModelEvaluator:
 
         # Compute artifact SHA-256
         artifact_path = model_manifest.artifact_path
-        artifact_sha256 = model_manifest.sha256_checksum
+        artifact_sha256 = model_manifest.sha256_checksum.strip().lower()
         if os.path.isfile(artifact_path):
             hasher = hashlib.sha256()
             with open(artifact_path, "rb") as f:
@@ -186,21 +214,17 @@ class ModelEvaluator:
                     hasher.update(chunk)
             artifact_sha256 = hasher.hexdigest().lower()
 
-        # Scientific qualification threshold criteria:
-        # A model is ONLY qualified as is_validated = True if:
-        # 1. Macro-F1 >= 0.40, Balanced accuracy >= 0.40, and Accuracy >= 0.40
-        # 2. Evaluation was conducted on empirical, non-synthetic datasets with sufficient samples (>= 10)
-        # 3. Model weights and dataset provenance are strictly verified
-        # 4. Actual inference was conducted (mock/uniform predictions rejected)
-        # 5. Model artifact exists and SHA-256 integrity check passes with non-placeholder hash
-        # 6. Evaluation has verified, tamper-evident execution proof from a trusted pipeline
-        is_empirical_dataset = "synthetic" not in dataset_name.lower() and total_samples >= 10
+        # Scientific qualification criteria:
+        is_empirical_dataset = (
+            "synthetic" not in dataset_name.lower()
+            and "synthetic" not in model_manifest.training_dataset_provenance.lower()
+            and total_samples >= 10
+        )
 
-        # Detect uniform/mock predictions
         k_classes = len(self.labels)
         uniform_target = round(1.0 / k_classes, 4)
-        is_mock_evaluation = total_samples > 0 and all(
-            bool(p_dict) and all(abs(val - uniform_target) < 0.01 for val in p_dict.values())
+        is_mock_evaluation = all(
+            all(abs(val - uniform_target) < 0.01 for val in p_dict.values())
             for p_dict in predicted_probs
         )
         actual_inference_conducted = not is_mock_evaluation and abstention_rate < 1.0
@@ -212,7 +236,7 @@ class ModelEvaluator:
         )
 
         has_valid_manifest_checksum = (
-            model_manifest.sha256_checksum.lower() not in KNOWN_PLACEHOLDER_CHECKSUMS
+            model_manifest.sha256_checksum.strip().lower() not in KNOWN_PLACEHOLDER_CHECKSUMS
         )
         artifact_integrity_passed = (
             has_valid_manifest_checksum and model_manifest.verify_integrity()
@@ -224,12 +248,23 @@ class ModelEvaluator:
             and macro_summary.get("accuracy", 0.0) >= 0.40
         )
 
-        has_valid_execution_proof = execution_proof is not None and execution_proof.verify(
-            artifact_sha256
-        )
+        proof_reason = ""
+        if execution_proof is None:
+            has_valid_execution_proof = False
+            proof_reason = (
+                "Evaluation lacks verifiable execution proof from a trusted pipeline; "
+                "scientific qualification denied."
+            )
+        else:
+            has_valid_execution_proof, proof_reason = execution_proof.verify_detailed(
+                expected_artifact_sha256=artifact_sha256,
+                key_registry=key_registry,
+                expected_dataset_archive_sha256=expected_dataset_archive_sha256,
+            )
 
         is_validated = bool(
-            is_empirical_dataset
+            pipeline_stages_ok
+            and is_empirical_dataset
             and actual_inference_conducted
             and has_provenance
             and artifact_integrity_passed
@@ -238,6 +273,10 @@ class ModelEvaluator:
         )
 
         notes = list(evaluation_notes) if evaluation_notes else []
+        if not pipeline_stages_ok:
+            notes.append(
+                "One or more upstream training/verification pipeline stages failed; model cannot be qualified."
+            )
         if not is_empirical_dataset:
             notes.append(
                 "Evaluation used synthetic validation fixtures or insufficient sample size; not empirical accuracy qualification."
@@ -260,9 +299,7 @@ class ModelEvaluator:
                 "Classifications must be suppressed as INSUFFICIENT_EVIDENCE."
             )
         if not has_valid_execution_proof:
-            notes.append(
-                "Evaluation lacks verifiable execution proof from a trusted pipeline; scientific qualification denied."
-            )
+            notes.append(proof_reason)
 
         record_id = f"VAL-{model_manifest.model_id}-{int(time.time())}"
         val_record = ModelValidationRecord(
@@ -291,10 +328,14 @@ class ModelEvaluator:
             evaluator=evaluator_name,
             validation_timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             validation_notes=notes,
-            dataset_archive_sha256=execution_proof.dataset_archive_sha256
-            if execution_proof
-            else "",
-            execution_proof_signature=execution_proof.proof_signature if execution_proof else "",
+            dataset_archive_sha256=(
+                execution_proof.dataset_archive_sha256 if execution_proof else ""
+            ),
+            execution_proof_key_id=(execution_proof.key_id if execution_proof else ""),
+            execution_proof_algorithm=(
+                execution_proof.signature_algorithm if execution_proof else ""
+            ),
+            execution_proof_signature=(execution_proof.proof_signature if execution_proof else ""),
         )
 
         full_report: dict[str, Any] = {

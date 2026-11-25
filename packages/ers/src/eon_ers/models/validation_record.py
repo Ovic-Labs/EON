@@ -82,8 +82,14 @@ class ModelValidationRecord(BaseModel):
     dataset_archive_sha256: str = Field(
         default="", description="Verified SHA-256 digest of empirical dataset archive."
     )
+    execution_proof_key_id: str = Field(
+        default="", description="Explicit key identifier used to sign the execution proof."
+    )
+    execution_proof_algorithm: str = Field(
+        default="", description="Authenticated signature algorithm for the execution proof."
+    )
     execution_proof_signature: str = Field(
-        default="", description="Tamper-evident SHA-256 signature of trusted pipeline execution."
+        default="", description="Authenticated signature of trusted pipeline execution."
     )
 
     def verify_artifact_binding(self, artifact_path: str) -> bool:
