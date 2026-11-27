@@ -25,6 +25,14 @@
 
 ---
 
+## EON ERS for robotics and AI teams
+
+OVIC Labs offers EON ERS for integration evaluation in human-facing robotics.
+The on-device SDK and desktop viewer expose affective observations, face boxes,
+signal quality, and abstention status. See the
+[enterprise product brief and 1,000-case qualification report](docs/ers/ENTERPRISE_PRODUCT_BRIEF.md)
+for current evaluation results and production acceptance criteria.
+
 ## Physical AI SDK (Phase 1)
 
 ERS is the first module in the `ovic-eon` Python SDK. Build the distribution
