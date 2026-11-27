@@ -112,7 +112,7 @@ class BaseFaceDetector(abc.ABC):
 
 
 class OpenCVFaceDetector(BaseFaceDetector):
-    """CPU frontal-face localizer using OpenCV's bundled cascade."""
+    """CPU frontal-face localizer with a profile fallback."""
 
     def __init__(self) -> None:
         try:
@@ -130,20 +130,32 @@ class OpenCVFaceDetector(BaseFaceDetector):
         self._cascade = cv2.CascadeClassifier(str(cascade_path))
         if self._cascade.empty():
             raise ERSConfigurationError("OpenCV's frontal-face cascade could not be loaded.")
+        self._profile = cv2.CascadeClassifier(
+            str(cascade_path.with_name("haarcascade_profileface.xml"))
+        )
+        if self._profile.empty():
+            raise ERSConfigurationError("OpenCV's profile-face cascade could not be loaded.")
         self._lock = threading.Lock()
 
     @property
     def name(self) -> str:
-        return "opencv_haar_frontalface"
+        return "opencv_haar_frontal_profile"
 
     def detect(self, image: Image.Image) -> FaceDetectionResult:
         gray = image.convert("L")
         gray.thumbnail((640, 640))
         width, height = gray.size
+        pixels = np.asarray(gray)
+        options = {"scaleFactor": 1.1, "minNeighbors": 5, "minSize": (24, 24)}
+        # Require stronger support for profile detections on face-free textures.
+        profile_options = {**options, "minNeighbors": 12}
         with self._lock:
-            rectangles = self._cascade.detectMultiScale(
-                np.asarray(gray), scaleFactor=1.1, minNeighbors=5, minSize=(24, 24)
-            )
+            rectangles = self._cascade.detectMultiScale(pixels, **options)
+            if len(rectangles) == 0:
+                rectangles = self._profile.detectMultiScale(pixels, **profile_options)
+            if len(rectangles) == 0:
+                mirrored = self._profile.detectMultiScale(pixels[:, ::-1], **profile_options)
+                rectangles = [(width - x - w, y, w, h) for x, y, w, h in mirrored]
         candidates = sorted(
             rectangles, key=lambda rect: (-int(rect[2]) * int(rect[3]), int(rect[0]), int(rect[1]))
         )

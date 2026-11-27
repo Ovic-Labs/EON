@@ -109,3 +109,67 @@ or physical webcam performance.
 
 To reproduce the OpenCV run, install with `python -m pip install ".[studio]"`
 and add `--detector opencv` to the command above.
+
+## Independent holdout and target camera
+
+Run these commands from the SDK checkout after installing `.[studio]`.
+
+```bash
+python packages/ers/benchmarks/qualify_heldout_ers.py /path/to/heldout.json
+python packages/ers/benchmarks/qualify_studio_camera.py --camera 0 --frames 100 --consent-confirmed
+```
+
+The image runner reads a JSON manifest with a dataset ID, a usage-rights
+reference, training and validation subject IDs, and test samples. Relative
+image paths resolve from the manifest folder. Use pseudonymous subject IDs
+and keep the manifest and photos local.
+
+```json
+{
+  "dataset_id": "site-a-heldout-v1",
+  "usage_reference": "OVIC Labs approval record ID",
+  "training_subjects": ["train-01"],
+  "validation_subjects": ["val-01"],
+  "samples": [
+    {"image": "portrait.jpg", "box": [0.25, 0.20, 0.70, 0.80], "subject": "test-01", "expression": "neutral"},
+    {"image": "empty-scene.jpg", "box": null}
+  ]
+}
+```
+
+The sample illustrates the manifest format. A qualification dataset needs
+independently sourced participants and scenes for the intended deployment.
+Provide the complete training and validation subject IDs to check split
+overlap. The runner also rejects duplicate image contents. A label is
+optional for face localization. Use an independently annotated visible
+expression label for accuracy testing.
+
+With an approved local runtime and model, pass `--facial-model /path/to/model.onnx`.
+The runner scores the SDK's actual output, counts abstentions and
+localization failures against accuracy, and leaves accuracy unreported
+when the SDK classifies no examples. It does not certify the source data,
+activate a model, or create a signed validation record. The older
+`evaluate_models.py` runs synthetic fixtures and rejects explicit empirical
+mode before inference.
+
+The camera command measures time from starting a camera read through return
+of the SDK result, separately from SDK processing time. It excludes display
+rendering time. Use the production camera and target host, record their
+configuration with the output, and confirm consent for anyone in view.
+
+### Profile fallback verification
+
+A diagnostic smoke run used two additional scikit-image portraits and three
+face-free photos, with hand-annotated face boxes. The frontal detector
+localized one portrait. The stricter profile fallback localized both
+(IoU ≥ 0.50) and returned no boxes on the three controls. These five
+examples are development evidence. The profile settings have seen this
+smoke set, so independent production qualification still requires unseen
+participants, poses, and scenes.
+
+The previous 1,000 image variants retained 500/500 portrait matches and
+42/500 false face boxes. Median/p95 SDK processing rose to 28.66/65.94 ms
+on the current x86-64 test host. All 1,000 emotion estimates were withheld.
+Neither run used ONNX Runtime. The physical camera runner reported the
+camera as unavailable in this environment, so target-device latency
+remains unmeasured.
