@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import sys
 import threading
-import time
 import webbrowser
 
 import uvicorn
@@ -50,14 +49,12 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--facial-model",
         type=str,
-        default="packages/ers/models/facial_emotion_model.onnx",
-        help="Path to the ONNX facial emotion model",
+        help="Optional path to a facial ONNX model (requires the ml extra)",
     )
     parser.add_argument(
         "--speech-model",
         type=str,
-        default="packages/ers/models/speech_emotion_model.onnx",
-        help="Path to the ONNX speech emotion model",
+        help="Optional path to a speech ONNX model (requires the ml extra)",
     )
     return parser.parse_args(args)
 
@@ -89,29 +86,31 @@ def main(args: list[str] | None = None) -> int:
     print("Privacy Guarantee: Epistemic modesty invariants active. Zero media retention.")
     print("=" * 70)
 
+    server = uvicorn.Server(
+        uvicorn.Config(app, host=parsed.host, port=parsed.port, log_level=parsed.log_level)
+    )
+    stopped = threading.Event()
     if parsed.open_browser:
 
         def _open() -> None:
-            time.sleep(1.0)
-            webbrowser.open(url)
+            while not stopped.wait(0.1):
+                if server.started:
+                    webbrowser.open(url)
+                    return
 
-        thread = threading.Thread(target=_open, daemon=True)
-        thread.start()
+        threading.Thread(target=_open, daemon=True).start()
 
     try:
-        uvicorn.run(
-            app,
-            host=parsed.host,
-            port=parsed.port,
-            log_level=parsed.log_level,
-        )
-        return 0
+        server.run()
+        return 0 if server.started else 1
     except KeyboardInterrupt:
         print("\n[INFO] Demonstration server stopped cleanly by user.")
         return 0
     except Exception as exc:
         print(f"\n[ERROR] Server failed: {exc}", file=sys.stderr)
         return 1
+    finally:
+        stopped.set()
 
 
 if __name__ == "__main__":

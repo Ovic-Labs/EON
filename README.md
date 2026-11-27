@@ -120,25 +120,26 @@ ONNX model, install `".[studio,ml]"` and pass
 `eon-ers-studio --facial-model path/to/model.onnx`.
 Models remain subject to the SDK's qualification checks.
 
-## Repository Quickstart
+## Run the browser dashboard locally
 
-### 1. Local CPU Installation (Python 3.11–3.12)
-
-```bash
-git clone https://github.com/Ovic-Labs/EON.git
-cd EON
-python -m pip install --upgrade pip "setuptools>=84.1.0"
-pip install -e "packages/ers[ml,live,dev]"
-```
-
-### 2. Run Quickstart or Launch the Enterprise Console
+Install the browser dashboard extra from the SDK checkout, then start the server
+in a terminal on the same computer as your browser.
 
 ```bash
-python packages/ers/examples/quickstart.py
-eon-ers-live --host 127.0.0.1 --port 8000
+python -m pip install ".[live]"
+eon-ers-live --host 127.0.0.1 --port 8000 --open-browser
 ```
 
-Open `http://127.0.0.1:8000/` for the 15-view live dashboard, or `/docs` for OpenAPI Swagger.
+Leave the terminal running and open `http://127.0.0.1:8000/`. The launcher
+can start without ONNX weights and will report unvalidated observations.
+To load a local model, install `".[live,ml]"` and pass
+`--facial-model /path/to/model.onnx` or `--speech-model /path/to/model.onnx`.
+
+If the connection is refused, check the first error in the terminal and
+make sure the browser uses the same port printed by the launcher. If port
+8000 is occupied, use `--port 8001` and open `http://127.0.0.1:8001/`.
+Loopback addresses refer to the computer running the browser. For the
+desktop SDK viewer, use `eon-ers-studio` to open its own window.
 
 ---
 
