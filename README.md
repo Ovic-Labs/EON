@@ -73,6 +73,26 @@ required for a commercial recognition deployment. The existing standalone
 install it. Choose one distribution per environment because both provide
 the `eon_ers` implementation.
 
+## Run ERS Studio on your desktop
+
+```bash
+python -m pip install ".[studio]"
+eon-ers-studio
+```
+
+Use **Start camera** for live observations or **Open image** to test a local
+photo. The desktop app calls the SDK within its own process. It needs no web
+server, account, API key, or password. **Stop** releases the camera. The
+viewer displays the SDK's detected face box, evidence status, confidence,
+and processing time. With an unvalidated model, the viewer withholds the
+emotion estimate.
+
+Use a desktop Python installation with Tkinter. On some Linux distributions
+Tkinter is installed separately as `python3-tk`. For an authorized local
+ONNX model, install `".[studio,ml]"` and pass
+`eon-ers-studio --facial-model path/to/model.onnx`.
+Models remain subject to the SDK's qualification checks.
+
 ## Repository Quickstart
 
 ### 1. Local CPU Installation (Python 3.11–3.12)
