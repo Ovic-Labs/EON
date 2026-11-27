@@ -95,6 +95,39 @@ class ERSClient:
         resp.raise_for_status()
         return dict(resp.json())
 
+    async def analyze_audio(
+        self,
+        session_id: str,
+        consent_reference: str,
+        audio_bytes: bytes,
+        *,
+        sample_rate: int = 16000,
+    ) -> EmotionObservation | dict[str, Any]:
+        """Analyze a mono signed 16-bit little-endian PCM chunk."""
+        if self._engine is not None:
+            return await self._engine.process_speech(
+                ERSInput(
+                    session_id=session_id,
+                    modality=Modality.SPEECH,
+                    consent_reference=consent_reference,
+                    audio_payload=audio_bytes,
+                    sample_rate=sample_rate,
+                )
+            )
+        assert self._http is not None
+        resp = await self._http.post(
+            "/api/v1/analyze/audio",
+            json={
+                "session_id": session_id,
+                "consent_reference": consent_reference,
+                "modality": Modality.SPEECH.value,
+                "audio_base64": base64.b64encode(audio_bytes).decode("ascii"),
+                "sample_rate": sample_rate,
+            },
+        )
+        resp.raise_for_status()
+        return dict(resp.json())
+
     async def analyze_text(
         self, session_id: str, consent_reference: str, text: str
     ) -> EmotionObservation | dict[str, Any]:

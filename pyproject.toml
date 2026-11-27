@@ -18,9 +18,20 @@ dependencies = [
     "scipy>=1.10.0",
     "pillow>=9.5.0",
     "cryptography>=42.0.0",
+    "httpx>=0.25.0",
 ]
 
 [project.optional-dependencies]
+ml = [
+    "onnxruntime>=1.23.0",
+    "onnx>=1.14.0",
+]
+live = [
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.23.0",
+    "websockets>=11.0",
+    "python-multipart>=0.0.6",
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
@@ -31,10 +42,19 @@ dev = [
     "onnx>=1.14.0",
 ]
 
+[project.scripts]
+eon-ers-live = "eon_ers.live.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ovic_eon", "packages/ers/src/eon_ers"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src/ovic_eon", "/packages/ers/src/eon_ers", "/README.md", "/LICENSE", "/pyproject.toml"]
+
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["packages/ers/tests"]
-pythonpath = ["packages/ers/src"]
+pythonpath = ["src", "packages/ers/src"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 

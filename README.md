@@ -25,7 +25,55 @@
 
 ---
 
-## Quickstart
+## Physical AI SDK (Phase 1)
+
+ERS is the first module in the `ovic-eon` Python SDK. Build the distribution
+from a checkout with Python 3.11 or 3.12.
+
+```bash
+python -m pip install build
+python -m build
+python -m pip install dist/ovic_eon-0.1.0-py3-none-any.whl
+```
+
+```python
+import asyncio
+
+from ovic_eon.ers import ERSClient
+
+
+async def main():
+    async with ERSClient() as ers:
+        # Example consent. Collect explicit participant consent before sending real data.
+        await ers.register_consent("pilot-session", "example-consent")
+        try:
+            observation = await ers.analyze_text(
+                "pilot-session", "example-consent", "I'm glad that worked."
+            )
+            print(observation.status.value, observation.is_validated)
+        finally:
+            await ers.revoke_consent("pilot-session")
+
+
+asyncio.run(main())
+```
+
+Use `ERSClient(base_url="https://your-ers-server", api_key=...)` for the HTTP
+API. The client supports image, mono PCM16 audio, text, and multimodal
+analysis. Local calls return Python observation objects. Remote calls
+return API response dictionaries. Treat abstention and unvalidated status as
+unavailable affect evidence in downstream applications.
+
+Install the wheel with `[live]` for the server or `[ml]` for ONNX support.
+Use approved model artifacts supplied by your deployment. SDK distributions
+exclude the repository's synthetic baseline weights. Empirical validation,
+model redistribution rights, and hardware acceptance testing remain
+required for a commercial recognition deployment. The existing standalone
+`eon-ers` distribution remains available for integrations that already
+install it. Choose one distribution per environment because both provide
+the `eon_ers` implementation.
+
+## Repository Quickstart
 
 ### 1. Local CPU Installation (Python 3.11–3.12)
 
