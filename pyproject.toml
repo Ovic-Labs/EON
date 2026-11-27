@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-studio = ["opencv-python-headless>=4.8"]
+studio = ["opencv-python-headless>=4.8,<5"]
 ml = [
     "onnxruntime>=1.23.0",
     "onnx>=1.14.0",

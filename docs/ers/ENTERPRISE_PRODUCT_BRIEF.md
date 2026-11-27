@@ -87,3 +87,25 @@ python packages/ers/benchmarks/qualify_desktop_sdk.py \
 | --- | --- |
 | `grace_hopper.jpg` | `a8ca6d734765703b09728ab47fe59f473d93ae3967fc24c7c0288c3c7adb7130` |
 | `flower.jpg` | `a77f6ec41e353afdf8bdff2ea981b2955535d8d83294f8cfa49cf4e423dd5638` |
+
+## OpenCV detector retest
+
+Studio now uses the OpenCV 4 frontal-face cascade. SDK callers can select it
+with `ERSConfig(face_detector="opencv")` after installing the `studio` extra.
+The detector returns a face box only when the cascade finds a candidate.
+
+| Check on the same 1,000 image variants | Legacy heuristic | OpenCV 4.14.0 |
+| --- | ---: | ---: |
+| Correct primary box on portrait variants (IoU ≥ 0.50) | 0 / 500 | 500 / 500 |
+| False boxes on face-free variants | 500 / 500 | 42 / 500 |
+| Emotion abstentions | 1,000 / 1,000 | 1,000 / 1,000 |
+| SDK processing latency, median / p95 | 8.49 ms / 10.27 ms | 20.42 ms / 25.92 ms |
+
+The observed false-positive rate for the flower variants was 8.4%. Before
+customer deployment, validate detection on independent people, varied head
+poses, and diverse face-free scenes. The run used the same two fixtures and
+an environment without ONNX Runtime. It does not establish emotion accuracy
+or physical webcam performance.
+
+To reproduce the OpenCV run, install with `python -m pip install ".[studio]"`
+and add `--detector opencv` to the command above.

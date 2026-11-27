@@ -164,6 +164,7 @@ def main(argv: list[str] | None = None) -> int:
 
     config = ERSConfig(
         facial_model_path=args.facial_model,
+        face_detector="opencv",
         enable_speech=False,
         enable_text=False,
         enable_video=False,

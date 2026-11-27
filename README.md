@@ -33,53 +33,72 @@ signal quality, and abstention status. See the
 [enterprise product brief and 1,000-case qualification report](docs/ers/ENTERPRISE_PRODUCT_BRIEF.md)
 for current evaluation results and production acceptance criteria.
 
-## Physical AI SDK (Phase 1)
+## Physical AI SDK
 
-ERS is the first module in the `ovic-eon` Python SDK. Build the distribution
-from a checkout with Python 3.11 or 3.12.
+Install the Python SDK from a checkout. The `studio` extra includes the
+OpenCV frontal-face detector and camera support.
 
 ```bash
-python -m pip install build
-python -m build
-python -m pip install dist/ovic_eon-0.1.0-py3-none-any.whl
+python -m pip install ".[studio]"
 ```
+
+### Analyze a photo and a transcript locally
+
+Save this as `example.py` and run `python example.py portrait.jpg`.
+The consent registration represents consent already collected from the
+participant. Generate a new session for each independent sample.
 
 ```python
 import asyncio
+import sys
+from pathlib import Path
+from uuid import uuid4
 
-from ovic_eon.ers import ERSClient
+from ovic_eon.ers import ERSClient, ERSConfig
 
 
-async def main():
-    async with ERSClient() as ers:
-        # Example consent. Collect explicit participant consent before sending real data.
-        await ers.register_consent("pilot-session", "example-consent")
+async def main() -> None:
+    session_id, consent_reference = uuid4().hex, uuid4().hex
+    async with ERSClient(config=ERSConfig(face_detector="opencv")) as ers:
+        await ers.register_consent(session_id, consent_reference)
         try:
-            observation = await ers.analyze_text(
-                "pilot-session", "example-consent", "I'm glad that worked."
+            image_bytes = Path(sys.argv[1]).read_bytes()
+            face = await ers.analyze_image(session_id, consent_reference, image_bytes)
+            print("Face box:", face.face_bbox)
+            print("Facial status:", face.status.value)
+            print("Validated:", face.is_validated)
+            utterance = await ers.analyze_text(
+                session_id, consent_reference, "I'm glad that worked."
             )
-            print(observation.status.value, observation.is_validated)
+            print("Text status:", utterance.status.value)
         finally:
-            await ers.revoke_consent("pilot-session")
+            await ers.revoke_consent(session_id)
 
 
 asyncio.run(main())
 ```
 
-Use `ERSClient(base_url="https://your-ers-server", api_key=...)` for the HTTP
-API. The client supports image, mono PCM16 audio, text, and multimodal
-analysis. Local calls return Python observation objects. Remote calls
-return API response dictionaries. Treat abstention and unvalidated status as
-unavailable affect evidence in downstream applications.
+### Analyze microphone PCM
 
-Install the wheel with `[live]` for the server or `[ml]` for ONNX support.
-Use approved model artifacts supplied by your deployment. SDK distributions
-exclude the repository's synthetic baseline weights. Empirical validation,
-model redistribution rights, and hardware acceptance testing remain
-required for a commercial recognition deployment. The existing standalone
-`eon-ers` distribution remains available for integrations that already
-install it. Choose one distribution per environment because both provide
-the `eon_ers` implementation.
+Inside a registered local SDK session, pass mono signed 16-bit
+little-endian PCM bytes and the capture sample rate.
+
+```python
+audio = await ers.analyze_audio(session_id, consent_reference, pcm_bytes, sample_rate=16000)
+print(audio.status.value, audio.is_validated)
+```
+
+An integration can consume abstention, quality, and model status when
+deciding how to respond. The same client also supports remote deployments
+through `ERSClient(base_url="https://your-ers-server", api_key=...)`.
+Local calls return Python observation objects. Remote calls return response
+dictionaries. The base SDK retains the heuristic detector for compatibility.
+Select `ERSConfig(face_detector="opencv")` to enable the OpenCV detector
+explicitly. ERS Studio selects it for you.
+
+SDK distributions exclude the synthetic baseline weights. The existing
+standalone `eon-ers` distribution remains available. Choose one distribution
+per environment because both provide the `eon_ers` implementation.
 
 ## Run ERS Studio on your desktop
 

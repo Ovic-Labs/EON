@@ -13,6 +13,7 @@ from collections.abc import Iterator
 from itertools import product
 from pathlib import Path
 from statistics import median, quantiles
+from typing import Literal
 
 import numpy as np
 from PIL import Image, ImageEnhance, ImageOps
@@ -69,8 +70,11 @@ def load_rgb(path: Path) -> Image.Image:
         return ImageOps.exif_transpose(image).convert("RGB")
 
 
-async def qualify(portrait: Path, face_box: Box, background: Path) -> dict[str, object]:
+async def qualify(
+    portrait: Path, face_box: Box, background: Path, detector: Literal["heuristic", "opencv"]
+) -> dict[str, object]:
     config = ERSConfig(
+        face_detector=detector,
         enable_speech=False,
         enable_text=False,
         enable_video=False,
@@ -125,6 +129,7 @@ async def qualify(portrait: Path, face_box: Box, background: Path) -> dict[str, 
             for path in (portrait, background)
         },
         "environment": {"python": platform.python_version(), "machine": platform.machine()},
+        "detector": detector,
         "cases": sum(statuses.values()),
         "unique_images": len(hashes),
         "counts": {
@@ -158,11 +163,12 @@ def main() -> None:
         "--face-box", nargs=4, type=float, required=True, help="Normalized x1 y1 x2 y2"
     )
     parser.add_argument("--background", type=Path, required=True, help="A face-free photo")
+    parser.add_argument("--detector", choices=("heuristic", "opencv"), default="heuristic")
     args = parser.parse_args()
     x1, y1, x2, y2 = args.face_box
     if not (0 <= x1 < x2 <= 1 and 0 <= y1 < y2 <= 1):
         parser.error("The face box must contain ordered coordinates within 0–1.")
-    result = asyncio.run(qualify(args.portrait, (x1, y1, x2, y2), args.background))
+    result = asyncio.run(qualify(args.portrait, (x1, y1, x2, y2), args.background, args.detector))
     print(json.dumps(result, indent=2))
 
 
