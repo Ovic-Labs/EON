@@ -241,9 +241,11 @@ class ModelTrainingPipeline:
             )  # type: ignore[misc]
             manifest_ok = True
             manifest_msg = ""
-            if archive_ok and manifest_path is not None:
+            if archive_ok and (
+                manifest_path is not None or self.dataset_metadata.manifest_checksum
+            ):
                 manifest_ok, manifest_msg, manifest_audit = self.dataset_metadata.verify_manifest(
-                    manifest_path
+                    manifest_path, samples=raw_samples
                 )
                 if manifest_ok:
                     archive_audit["manifest_audit"] = manifest_audit
