@@ -100,6 +100,39 @@ SDK distributions exclude the synthetic baseline weights. The existing
 standalone `eon-ers` distribution remains available. Choose one distribution
 per environment because both provide the `eon_ers` implementation.
 
+## Phase 2 · Emotional Memory System
+
+EMS stores application-selected interaction summaries and user-confirmed preferences
+in a local SQLite file. It runs offline through the same Python SDK.
+
+```python
+from ovic_eon.ems import EmotionalMemory
+
+memory = EmotionalMemory("eon-memory.sqlite3", user_id="operator-42")
+memory.remember_interaction("The operator asked to resume the calibration checklist.")
+memory.confirm_preference("reply_style", "One short step at a time.", confirmed=True)
+
+for item in memory.recall("calibration checklist", limit=3):
+    print(item.kind, item.text)
+
+preference = memory.get_preference("reply_style")
+if preference is not None:
+    print(preference.text)
+    # Use memory.forget(preference.id) if the user asks to remove it.
+```
+
+Use a stable user ID assigned by the host application. Authorize access to that
+ID before opening EMS. Only pass summaries that the user has agreed to retain
+and set `confirmed=True` after the user confirms the preference. ERS observations
+are transient unless the host explicitly saves text. The SQLite file contains
+readable text, so keep it in the application's private data directory and apply
+your deployment's filesystem encryption and backup policy.
+
+Recall ranks whole-word overlap before recency. Call `recall()` for recent
+memories, use `kind="preference"` to filter, and use `clear()` when the user
+requests deletion of their saved memories. Deletion applies to the current
+database file. Manage external backups separately.
+
 ## Run ERS Studio on your desktop
 
 ```bash
