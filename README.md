@@ -4,6 +4,40 @@
 
 EON gives a robot application one local interface for understanding an explicit request, retrieving approved preferences, choosing a response style and managing the robot’s next conversational turn. Integrators supply the platform’s camera, microphone, transcript or display adapter. The host owns consent, speech playback, interruption and motion control.
 
+## Interaction console
+
+The browser console runs two synthetic operator requests against the installed SDK. Select an example to execute a fresh turn and inspect the result from each engine. The preview uses text input and a temporary memory store. It requires no camera, microphone, credentials or model download.
+
+![Cloud browser capture of the EON setup example showing the reply and all seven engine outcomes](docs/interaction-console.svg)
+
+| Operator transcript | Observed robot behavior |
+| --- | --- |
+| “I feel frustrated. Explain the setup.” | “I hear that this is difficult. Open the setup screen.” The robot acknowledges an explicit self-report. ERS returns `model_unvalidated`. |
+| “Please stop talking.” | SIE pauses the session. ERG produces no text. The console displays “No spoken response.” |
+
+```mermaid
+flowchart TD
+    A["HBU · Interpret request"] --> B["Host confirms interpretation"]
+    B --> C["ERE · Select strategy"]
+    M["EMS · Approved preferences"] -. optional .-> C
+    E["ERS · Qualified observation"] -. optional .-> C
+    C --> P["PSE · Style delivery"]
+    P --> S{"SIE · Authorize turn"}
+    S -->|Respond| G["ERG · Render approved text"]
+    S -->|Pause| Q["Withhold speech"]
+```
+
+### Run the live visualization
+
+From the repository root with Python 3.11 or 3.12:
+
+```bash
+python -m pip install ".[live]"
+python -m uvicorn interaction_preview:app --app-dir examples --host 127.0.0.1 --port 8080
+```
+
+Open `http://127.0.0.1:8080/` on the machine running the command. Select **Explain setup** or **Request space**. Each selection executes Python locally. The diagram above documents the decision path. [Example source](examples/interaction_preview.py)
+
 ## Evaluate the installed SDK
 
 From the repository root, run:

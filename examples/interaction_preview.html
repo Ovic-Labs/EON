@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EON Interaction Console · OVIC Labs</title>
+<style>
+:root{color-scheme:light;--ink:#162c38;--line:#ccd7d9;--teal:#00665f}
+*{box-sizing:border-box}body{margin:0;background:#f2f6f6;color:var(--ink);font:16px/1.5 Inter,Arial,sans-serif}
+header{background:#142e38;color:white}header>div,main{max-width:1160px;margin:auto;padding:0 clamp(18px,4vw,52px)}
+header>div{height:65px;display:flex;align-items:center;gap:18px}header b{letter-spacing:.12em;font-size:22px}header span{border-left:1px solid #729093;padding-left:18px}
+main{padding-top:40px;padding-bottom:40px}h1{font-size:clamp(32px,5vw,55px);line-height:1.05;letter-spacing:-.055em;margin:0 0 12px}p{margin:0}nav{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0}
+a{color:var(--teal);font-weight:650}nav a{padding:9px 17px;border:1px solid #91aaad;border-radius:6px;text-decoration:none}
+nav a[aria-current]{background:var(--teal);color:white;border-color:var(--teal)}a:focus-visible{outline:3px solid #cd702c;outline-offset:3px}
+.grid{display:grid;grid-template-columns:1fr 1.25fr;gap:18px;align-items:start}article,section{background:white;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+h2{font-size:19px;margin:0;padding:18px 21px;border-bottom:1px solid var(--line)}.block{padding:18px 21px}.reply{background:#e4f3ef}
+h3{font-size:13px;letter-spacing:.09em;text-transform:uppercase;margin:0 0 9px;color:#3a6464}.quote{font-size:22px;line-height:1.36;letter-spacing:-.02em}
+.note{font-size:15px;color:#415762}table{width:100%;border-collapse:collapse;font-size:15px}td,th{text-align:left;padding:11px 12px;border-bottom:1px solid #e5ebeb}th:first-child{padding-left:21px}tr:last-child>*{border-bottom:0}thead{color:#536772;background:#f7fafa}code{color:#00574f;overflow-wrap:anywhere}
+@media(max-width:780px){.grid{grid-template-columns:1fr}main{padding-top:26px}td,th{padding:9px 6px}th:first-child{padding-left:12px}}
+</style>
+</head>
+<body><header><div><b>EON</b><span>OVIC Labs</span></div></header>
+<main><h1>Interaction console</h1><p>Run a synthetic transcript through the local SDK and inspect the robot’s response.</p>
+<nav aria-label="Run an example"><a href="?example=explain" $explain_current>Explain setup</a><a href="?example=pause" $pause_current>Request space</a></nav>
+<div class="grid"><article><h2>Conversation</h2><div class="block"><h3>Operator transcript</h3><p class="quote">$transcript</p></div>
+<div class="block reply"><h3>Robot output</h3><p class="quote">$reply</p></div><div class="block note">$note</div></article>
+<section><h2>Engine results</h2><table><thead><tr><th>Engine</th><th>Function</th><th>Outcome</th></tr></thead><tbody>$rows</tbody></table></section></div></main></body></html>
