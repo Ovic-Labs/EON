@@ -160,7 +160,7 @@ class ONNXFacialModelAdapter(BaseFacialModelAdapter):
         if val_file.is_file():
             try:
                 record = ModelValidationRecord.load_from_file(val_file)
-                return record.is_validated and record.verify_artifact_binding(self._model_path)
+                return record.is_approved_for(self._manifest)
             except Exception:
                 return False
         return False
