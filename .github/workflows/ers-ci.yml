@@ -68,6 +68,14 @@ jobs:
         if: matrix.python-version == '3.11'
         run: python -m build packages/ers --outdir dist/
 
+      - name: Verify installed unified SDK away from the checkout
+        run: |
+          python -m build --outdir "$RUNNER_TEMP/eon-dist"
+          python -m venv "$RUNNER_TEMP/eon-installed"
+          "$RUNNER_TEMP/eon-installed/bin/pip" install "$RUNNER_TEMP"/eon-dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/eon-installed/bin/eon-sdk-check"
+
   browser-automation:
     name: Playwright Browser Qualification (Simulated Media)
     runs-on: ubuntu-latest

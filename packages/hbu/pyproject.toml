@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "eon-hbu"
-version = "0.1.0"
+version = "0.1.1"
 description = "Human Behavior Understanding for OVIC EON."
 license = "Apache-2.0"
 requires-python = ">=3.11,<3.13"
-authors = [{ name = "OVIC Labs", email = "engineering@oviclabs.com" }]
+authors = [{ name = "OVIC Labs" }]
 dependencies = [
     "eon-ere>=0.1.0,<0.2",
     "pydantic>=2.0.0",

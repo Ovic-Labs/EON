@@ -10,7 +10,6 @@ simulated media streams and must NEVER be reported as physical hardware verifica
 
 from __future__ import annotations
 
-import os
 import pathlib
 import socket
 import threading
@@ -61,7 +60,7 @@ def _launch_chromium(p: Any, *, fake_media: bool = False) -> Any:
         )
     chrome_exe = _system_chrome_path()
     try:
-        if chrome_exe and os.name == "nt":
+        if chrome_exe:
             return p.chromium.launch(executable_path=chrome_exe, headless=True, args=args)
     except Exception:
         pass

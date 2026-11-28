@@ -170,7 +170,7 @@ def main(argv: list[str] | None = None) -> int:
         enable_video=False,
         enable_multimodal_fusion=False,
     )
-    root.title("EON ERS Studio")
+    root.title("OVIC Labs | EON Observation Studio")
     root.geometry("1100x730")
     root.minsize(850, 600)
     root.configure(bg=BG)
@@ -185,8 +185,8 @@ def main(argv: list[str] | None = None) -> int:
 
     header = tk.Frame(root, bg=BG)
     header.pack(fill="x", padx=28, pady=(22, 16))
-    label(header, "EON ERS Studio", 24).pack(side="left")
-    label(header, "ON-DEVICE", 10, ACCENT).pack(side="right")
+    label(header, "EON   /   Observation Studio", 24).pack(side="left")
+    label(header, "OVIC LABS   ·   LOCAL SESSION", 10, ACCENT).pack(side="right")
 
     stage = tk.Frame(root, bg=BG)
     stage.pack(fill="both", expand=True, padx=28)
@@ -241,12 +241,20 @@ def main(argv: list[str] | None = None) -> int:
             metrics.configure(text="")
             limitation.configure(text="")
         else:
-            name = obs.dominant_estimate if obs.is_validated else "Estimate withheld"
+            eligible = (
+                obs.status.value == "ok"
+                and obs.input_quality.value == "acceptable"
+                and obs.model_state.value == "MODEL_LOADED_VALIDATED"
+                and obs.is_calibrated
+                and obs.is_validated
+            )
+            name = obs.dominant_estimate if eligible else "Estimate withheld"
+            confidence = f"{obs.confidence:.0%}" if eligible else "Unavailable"
             estimate.configure(text=name.replace("_", " ").capitalize())
             metrics.configure(
                 text=f"Status  {obs.status.value.replace('_', ' ')}\n"
                 f"Model  {'Validated' if obs.is_validated else 'Unvalidated'}\n"
-                f"Confidence  {obs.confidence:.0%}\n"
+                f"Confidence  {confidence}\n"
                 f"Signal quality  {obs.quality_score:.0%}\n"
                 f"Processing  {obs.processing_latency_ms:.1f} ms"
             )

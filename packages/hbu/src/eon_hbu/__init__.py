@@ -31,6 +31,8 @@ class BehaviorProposal(BaseModel):
 
     def to_empathy_request(self, *, user_id: str, confirmed: bool) -> EmpathyRequest:
         """Convert reviewed context into an ERE request, with enrichment off by default."""
+        if self.status != ProposalStatus.RECOGNIZED:
+            raise ValueError("Clarify the proposal before converting it to a request.")
         if confirmed is not True:
             raise ValueError("The host must confirm the interpretation before use.")
         return EmpathyRequest(user_id=user_id, goal=self.goal, reported_need=self.reported_need)
@@ -88,7 +90,8 @@ class HumanBehaviorEngine:
             )
 
         segments = re.split(
-            r"[.!?;\n]+|\bbut\b|\band (?:please )?(?=explain|listen|help|pause)", text
+            r"[.!?;\n]+|\bbut\b|\band (?:please )?(?=explain|listen|help|pause|stop|give me space|leave me alone)",
+            text,
         )
         goals: set[InteractionGoal] = set()
         needs: set[ReportedNeed] = set()

@@ -1,37 +1,23 @@
-# OVIC EON — Emotional Intelligence Infrastructure for Robotics
+# EON | Physical AI Interaction SDK
 
-[![ERS CI](https://github.com/Ovic-Labs/EON/actions/workflows/ers-ci.yml/badge.svg)](https://github.com/Ovic-Labs/EON/actions/workflows/ers-ci.yml)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Architecture: Edge-First CPU](https://img.shields.io/badge/hardware-CPU--first%20Edge-green.svg)]()
+**OVIC Labs** · Python 3.11–3.12 · On-device processing
 
-**OVIC EON** is an open, modular, CPU-first emotional intelligence infrastructure engineered for social robotics and human-robot interaction (HRI). Its first engine, **ERS (Emotion Recognition System)**, delivers real-time facial, vocal, textual, video, and multimodal affective observation pipelines with explicit model qualification tracking, strict privacy controls, and robot actuator safety interlocks.
+EON gives a robot application one local interface for understanding an explicit request, retrieving approved preferences, choosing a response style and managing the robot’s next conversational turn. Integrators supply the platform’s camera, microphone, transcript or display adapter. The host owns consent, speech playback, interruption and motion control.
 
-> **Scientific Qualification & Production Status Notice:**  
-> All ERS software pipelines, REST/WebSocket APIs, enterprise dashboard, RBAC auth, cryptographic proof verification, ONNX parity export, and non-root Docker deployment pass automated engineering verification. However, **empirical human affective benchmark qualification (`AffectNet`, `RAF-DB`, `FER2013`, `RAVDESS`, `CREMA-D`) remains `BLOCKED`** because external licensed datasets are unacquired in this repository. Shipped baseline ONNX models remain marked **`MODEL_UNVALIDATED`** (`MODEL_LOADED_UNVALIDATED`), suppressing discrete affective classifications.
+## Evaluate the installed SDK
 
----
+From the repository root, run:
 
-## Core Capabilities (Phase 3.2)
+```bash
+python -m pip install .
+eon-sdk-check
+```
 
-- **Facial Expression Engine (`eon_ers.facial`):** Pure-CPU multi-candidate face detection (`0`, `1`, `N` faces), boundary validation, 5-point landmark eye alignment, quality gating, and `ONNXFacialModelAdapter`.
-- **Vocal Affect & Audio Engine (`eon_ers.audio`, `eon_ers.speech`):** RIFF WAV (8/16/24/32-bit PCM) & raw PCM decoding, CPU polyphase resampling, adaptive `VoiceActivityDetector` separating speech from silence, acoustic prosody/MFCC extraction, and `ONNXSpeechModelAdapter`.
-- **Text Affect Engine (`eon_ers.text`):** UTF-8/Unicode NFC normalization, zero-plaintext PII feature retention, distinct `TextSentiment` classification (`ExperimentalTextAffectAdapter` / `ONNXTextModelAdapter`).
-- **Bounded Video Pipeline (`eon_ers.video`):** Streaming RIFF AVI (MJPEG) & animated GIF/WEBP decoding, configurable FPS & duplicate-frame sampling, corrupted-frame recovery, ephemeral IoU `SessionFaceTracker`, cancellation, and async job endpoints.
-- **Quality-Aware 3-Modality Fusion (`eon_ers.fusion`):** Temporal alignment, 1-, 2-, and 3-modality Bayesian fusion, Jensen-Shannon conflict detection, correlated-agreement confidence dampening, and strict unvalidated diagnostic isolation.
-- **Live Server, WebSocket & 15-View Console (`eon_ers.live`, `eon_ers.api`):** Full FastAPI `/api/v1/*` + legacy `/api/*`, versioned WebSocket protocol with bounded queue backpressure & heartbeats, PBKDF2 `APIKeyAuthManager` (RBAC + cross-user session isolation), `SlidingWindowRateLimiter`, and a responsive 15-view dark/light dashboard (`/`).
-- **Training, Registry, Privacy & SDK (`eon_ers.training`, `eon_ers.models`, `eon_ers.privacy`, `eon_ers.sdk`):** `ModelRegistry` activation guard, `CheckpointManager`, Ed25519 `EvaluationExecutionProof`, `ConsentManager`, `assert_no_actuator_commands`, and `ERSClient` SDK.
-- **CPU-First Deployment:** Hardened non-root `Dockerfile`, `docker-compose.yml`, and Nginx TLS proxy (`deploy/nginx.conf`).
+The check sends a synthetic transcript through the local ERS client, reads a confirmed preference from a temporary EMS database, and completes a turn through HBU, ERE, PSE, SIE and ERG. A successful run prints seven results and exits with status zero. It requires no account, server, camera or API key.
 
----
+**Interpreting an emotion result.** A face box indicates a detection. An ERS emotion estimate requires a qualified model and sufficient evidence. The shipped baseline withholds the label. If someone says “I feel frustrated,” HBU can record that statement in its transient proposal for host review. The robot can acknowledge the statement even when ERS has no estimate.
 
-## EON ERS for robotics and AI teams
-
-OVIC Labs offers EON ERS for integration evaluation in human-facing robotics.
-The on-device SDK and desktop viewer expose affective observations, face boxes,
-signal quality, and abstention status. See the
-[enterprise product brief and 1,000-case qualification report](docs/ers/ENTERPRISE_PRODUCT_BRIEF.md)
-for current evaluation results and production acceptance criteria.
+**OEM evaluation scope.** The SDK exposes Python interfaces independent of a robot brand. Hardware qualification requires running the buyer’s sensor, timing, interruption and privacy acceptance tests on the target platform. The current evaluation evidence and model limitations are in the [ERS product brief](docs/ers/ENTERPRISE_PRODUCT_BRIEF.md).
 
 ## EON module boundaries
 
@@ -363,39 +349,31 @@ English command grammar. Unsupported phrasing and conflicting requests
 return an abstention status. The host reviews the proposal before converting
 it to an ERE request. HBU returns no raw utterance and writes nothing to EMS.
 
-### Run the complete interaction pipeline
+### Connect a robot application
+
+Bind a `RobotInteraction` to each host-authorized user session. Review HBU’s proposal before confirming it. Supply `memory=` at construction for authorized EMS access, and pass a current, consented ERS observation to `respond` when available.
 
 ```python
-from ovic_eon.ere import EmpathyEngine
-from ovic_eon.erg import EmotionalResponseGenerator, ResponseContent
+from ovic_eon.erg import ResponseContent
 from ovic_eon.hbu import HumanBehaviorEngine, ProposalStatus
-from ovic_eon.pse import PersonalityEngine
-from ovic_eon.sie import SocialInteractionEngine
+from ovic_eon.interaction import RobotInteraction
 
-proposal = HumanBehaviorEngine().interpret("I feel frustrated. Help me restart this.")
-assert proposal.status == ProposalStatus.RECOGNIZED
-
-# The host has checked the interpretation and authorized this user and session.
-request = proposal.to_empathy_request(user_id="operator-42", confirmed=True)
-response = EmpathyEngine().reason(request)
-delivery = PersonalityEngine().style(response, profile_id="friendly")
-session = SocialInteractionEngine(session_id="robot-session-42")
-turn = session.submit(response, delivery)
-rendered = EmotionalResponseGenerator().render(
-    session,
-    turn,
-    content=ResponseContent(clauses=("Open the settings menu",)),
-)
-if rendered is not None:
-    print(rendered.text)
-    session.complete(rendered.turn_id)
+robot = RobotInteraction(user_id="operator-42", session_id="console-1")
+proposal = HumanBehaviorEngine().interpret("Please explain the setup.")
+if proposal.status == ProposalStatus.RECOGNIZED:
+    # In this example the operator reviewed and confirmed the interpretation.
+    result = robot.respond(
+        proposal,
+        confirmed=True,
+        content=ResponseContent(clauses=("Open the setup screen",)),
+    )
+    if result.reply and robot.session.authorizes(result.turn):
+        print(result.reply.text)
+        robot.session.complete(result.reply.turn_id)
+robot.session.close()
 ```
 
-The host can supply an authorized EMS store and a current ERS observation to
-ERE when the relevant opt-ins are set. Treat ERG output as plain text and
-coordinate delivery and cancellation by turn ID. The host owns identity,
-live media capture, playback, timers, and any robot action. The current
-ERS baseline continues to abstain without a qualified emotion model.
+For asynchronous speech, complete the turn after playback ends and stop playback for a cancelled turn ID. The installed `eon-sdk-check` exercises the same interface with both EMS and ERS enabled.
 
 ## Run ERS Studio on your desktop
 

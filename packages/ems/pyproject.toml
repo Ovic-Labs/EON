@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Emotional Memory System for OVIC EON."
 license = "Apache-2.0"
 requires-python = ">=3.11,<3.13"
-authors = [{ name = "OVIC Labs", email = "engineering@oviclabs.com" }]
+authors = [{ name = "OVIC Labs" }]
 dependencies = [
     "cryptography>=42.0.0",
 ]

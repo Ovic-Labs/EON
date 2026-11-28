@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Empathy Reasoning Engine for OVIC EON."
 license = "Apache-2.0"
 requires-python = ">=3.11,<3.13"
-authors = [{ name = "OVIC Labs", email = "engineering@oviclabs.com" }]
+authors = [{ name = "OVIC Labs" }]
 dependencies = [
     "eon-ems>=0.1.0,<0.2",
     "eon-ers>=0.1.0,<0.2",
