@@ -17,6 +17,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from eon_ers.models.manifest import ModelManifest
 from eon_ers.types import is_valid_sha256_digest
 
 
@@ -94,6 +95,24 @@ class ModelValidationRecord(BaseModel):
     execution_proof_signature: str = Field(
         default="", description="Authenticated signature of trusted pipeline execution."
     )
+
+    def qualification_digest(self) -> str:
+        """Digest of the canonical record for a deployment-controlled approval pin."""
+        payload = json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    def is_approved_for(self, manifest: ModelManifest | None) -> bool:
+        if manifest is None or not self.is_validated:
+            return False
+        pin = os.getenv(f"EON_ERS_{manifest.modality.value.upper()}_VALIDATION_SHA256", "")
+        return (
+            is_valid_sha256_digest(pin)
+            and hmac.compare_digest(pin, self.qualification_digest())
+            and self.model_id == manifest.model_id
+            and self.model_version == manifest.version
+            and self.artifact_sha256 == manifest.sha256_checksum
+            and self.verify_artifact_binding(manifest.artifact_path)
+        )
 
     def verify_artifact_binding(self, artifact_path: str) -> bool:
         """Cryptographically verify that this validation record binds to the target artifact."""

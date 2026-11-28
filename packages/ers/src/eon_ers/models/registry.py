@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import threading
 from dataclasses import dataclass, field
@@ -25,6 +26,7 @@ class RegisteredModelEntry:
     manifest_path: Path | None = None
     validation_record: ModelValidationRecord | None = None
     qualification_state: ModelQualificationState = ModelQualificationState.MODEL_DISCOVERED
+    execution_proof: EvaluationExecutionProof | None = None
     activated: bool = False
     revocation_reason: str | None = None
     rejection_reasons: list[str] = field(default_factory=list)
@@ -88,26 +90,28 @@ class ModelRegistry:
                     "Validation record SHA-256 artifact binding verification failed."
                 )
             elif validation_record.is_validated:
-                if proof is not None and self.key_registry is not None:
+                if proof is None or self.key_registry is None:
+                    state = ModelQualificationState.MODEL_LOADED_UNVALIDATED
+                    rejection_reasons.append("Trusted evaluation proof required.")
+                elif (
+                    not validation_record.is_approved_for(manifest)
+                    or proof.model_id != manifest.model_id
+                    or validation_record.execution_proof_key_id != proof.key_id
+                    or validation_record.execution_proof_signature != proof.proof_signature
+                ):
+                    state = ModelQualificationState.MODEL_REJECTED
+                    rejection_reasons.append("Evaluation proof or deployment approval mismatch.")
+                else:
                     verified, proof_msg = proof.verify_detailed(
                         expected_artifact_sha256=validation_record.artifact_sha256,
                         key_registry=self.key_registry,
-                        expected_dataset_archive_sha256=(
-                            validation_record.dataset_archive_sha256 or None
-                        ),
+                        expected_dataset_archive_sha256=validation_record.dataset_archive_sha256,
                     )
                     if verified:
                         state = ModelQualificationState.MODEL_VALIDATED
                     else:
                         state = ModelQualificationState.MODEL_REJECTED
                         rejection_reasons.append(f"Ed25519 proof verification failed: {proof_msg}")
-                elif validation_record.execution_proof_signature and self.key_registry is None:
-                    state = ModelQualificationState.MODEL_LOADED_UNVALIDATED
-                    rejection_reasons.append(
-                        "No TrustedKeyRegistry configured to verify signed proof."
-                    )
-                else:
-                    state = ModelQualificationState.MODEL_VALIDATED
             else:
                 state = ModelQualificationState.MODEL_LOADED_UNVALIDATED
         else:
@@ -118,12 +122,16 @@ class ModelRegistry:
             manifest_path=manifest_path,
             validation_record=validation_record,
             qualification_state=state,
+            execution_proof=proof,
             activated=False,
             rejection_reasons=rejection_reasons,
         )
         with self._lock:
-            self._manifests[manifest.model_id] = manifest
-            self._entries[manifest.model_id] = entry
+            existing = self._entries.get(manifest.model_id)
+            if existing and existing.qualification_state == ModelQualificationState.MODEL_REVOKED:
+                return copy.deepcopy(existing)
+            self._manifests[manifest.model_id] = manifest.model_copy(deep=True)
+            self._entries[manifest.model_id] = copy.deepcopy(entry)
         return entry
 
     def discover_directory(self, models_dir: str | Path) -> list[RegisteredModelEntry]:
@@ -161,7 +169,7 @@ class ModelRegistry:
     def get_entry(self, model_id: str) -> RegisteredModelEntry | None:
         """Retrieve full qualification entry by identifier."""
         with self._lock:
-            return self._entries.get(model_id)
+            return copy.deepcopy(self._entries.get(model_id))
 
     def list_models(self, modality: Modality | None = None) -> list[ModelManifest]:
         """List registered model manifests, optionally filtered by modality."""
@@ -173,7 +181,7 @@ class ModelRegistry:
     def list_entries(self, modality: Modality | None = None) -> list[RegisteredModelEntry]:
         """List full registry entries, optionally filtered by modality."""
         with self._lock:
-            entries = list(self._entries.values())
+            entries = copy.deepcopy(list(self._entries.values()))
             if modality is None:
                 return entries
             return [e for e in entries if e.manifest.modality == modality]
@@ -185,9 +193,26 @@ class ModelRegistry:
             if entry is None:
                 raise ERSModelIntegrityError(f"Unknown model '{model_id}' in registry.")
             is_val = entry.qualification_state == ModelQualificationState.MODEL_VALIDATED
+            if is_val:
+                record, proof = entry.validation_record, entry.execution_proof
+                is_val = bool(
+                    record
+                    and proof
+                    and self.key_registry
+                    and record.is_approved_for(entry.manifest)
+                    and proof.verify_detailed(
+                        expected_artifact_sha256=record.artifact_sha256,
+                        expected_dataset_archive_sha256=record.dataset_archive_sha256,
+                        key_registry=self.key_registry,
+                    )[0]
+                )
+                if not is_val:
+                    entry.activated = False
+                    entry.qualification_state = ModelQualificationState.MODEL_REJECTED
+                    entry.rejection_reasons.append("Deployment approval or trusted proof expired.")
             ensure_model_activation_allowed(model_id, entry.qualification_state, is_val)
             entry.activated = True
-            return entry
+            return copy.deepcopy(entry)
 
     def revoke_model(self, model_id: str, reason: str) -> RegisteredModelEntry:
         """Revoke a model immediately and disable activation."""
@@ -198,4 +223,4 @@ class ModelRegistry:
             entry.qualification_state = ModelQualificationState.MODEL_REVOKED
             entry.activated = False
             entry.revocation_reason = reason.strip() or "Revoked by administrator."
-            return entry
+            return copy.deepcopy(entry)
