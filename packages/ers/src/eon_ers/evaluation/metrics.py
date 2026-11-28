@@ -8,6 +8,7 @@ Rejects empty datasets, mismatched sample counts, unsupported labels, and non-fi
 from __future__ import annotations
 
 import math
+from collections import Counter
 
 import numpy as np
 
@@ -82,11 +83,12 @@ def compute_classification_metrics(
     precisions: list[float] = []
     f1s: list[float] = []
 
+    supports = Counter(y_true)
     for i, label in enumerate(labels):
         tp = float(cm_arr[i, i])
         fp = float(np.sum(cm_arr[:, i]) - tp)
-        fn = float(np.sum(cm_arr[i, :]) - tp)
-        support = int(np.sum(cm_arr[i, :]))
+        support = supports[label]
+        fn = support - tp
 
         prec = float(tp / (tp + fp)) if (tp + fp) > 0 else 0.0
         rec = float(tp / (tp + fn)) if (tp + fn) > 0 else 0.0

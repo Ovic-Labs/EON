@@ -10,12 +10,14 @@ from __future__ import annotations
 import csv
 import hashlib
 import hmac
+import io
 import json
 import random
 import shutil
 import tarfile
 import time
 import zipfile
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -156,7 +158,11 @@ class DatasetMetadata(BaseModel):
         return (True, msg, audit_record) if return_audit else (True, msg)
 
     def verify_manifest(
-        self, manifest_path: str | Path | None, expected_sha256: str | None = None
+        self,
+        manifest_path: str | Path | None,
+        expected_sha256: str | None = None,
+        *,
+        samples: list[EvaluationSample] | None = None,
     ) -> tuple[bool, str, dict[str, Any]]:
         """Verify the integrity and non-emptiness of a dataset manifest against a trusted digest."""
         empty_audit: dict[str, Any] = {}
@@ -183,77 +189,72 @@ class DatasetMetadata(BaseModel):
         if size == 0:
             return False, f"Dataset manifest file is empty (0 bytes): {path}", empty_audit
 
-        hasher = hashlib.sha256()
-        with open(path, "rb") as f:
-            while chunk := f.read(65536):
-                hasher.update(chunk)
-        computed = hasher.hexdigest().lower()
-
-        if not hmac.compare_digest(computed, target_expected):
-            return (
-                False,
-                f"Manifest checksum mismatch: expected {target_expected}, got {computed}.",
-                empty_audit,
-            )
-
-        # Structured manifest format validation (JSON / CSV)
-        suffix = path.suffix.lower()
+        required = ("sample_id", "subject_id", "label")
         try:
-            if suffix == ".json":
-                parsed = json.loads(path.read_text(encoding="utf-8"))
-                if not isinstance(parsed, (dict, list)):
-                    return (
-                        False,
-                        "JSON dataset manifest must decode to an object or array.",
-                        empty_audit,
-                    )
+            payload = path.read_bytes()
+            computed = hashlib.sha256(payload).hexdigest()
+            if not hmac.compare_digest(computed, target_expected):
+                return False, "Manifest checksum mismatch.", empty_audit
+            source = payload.decode("utf-8-sig")
+            suffix = path.suffix.lower()
+            records: Iterator[Any]
+            if suffix == ".csv":
+                rows = csv.DictReader(io.StringIO(source, newline=""), strict=True)
+                fields = rows.fieldnames or []
+                if len(fields) != len(set(fields)) or not set(required).issubset(fields):
+                    raise ValueError("Missing or duplicate CSV column names")
+                records = iter(rows)
+            elif suffix == ".json":
+                parsed = json.loads(source)
+                items = parsed.get("samples") if isinstance(parsed, dict) else parsed
+                if not isinstance(items, list):
+                    raise ValueError("Expected a sample array")
+                records = iter(items)
+            else:
+                raise ValueError("Expected a JSON or CSV sample manifest")
+            inventory: dict[str, tuple[str, str]] = {}
+            recording_fields: dict[str, dict[str, str]] = {}
+            for row in records:
                 if (
-                    isinstance(parsed, dict)
-                    and "samples" in parsed
-                    and isinstance(parsed["samples"], list)
+                    not isinstance(row, dict)
+                    or None in row
+                    or any(
+                        not isinstance(row.get(key), str) or not row[key].strip()
+                        for key in required
+                    )
                 ):
-                    seen_ids: set[str] = set()
-                    for item in parsed["samples"]:
-                        if isinstance(item, dict) and "sample_id" in item:
-                            sid = str(item["sample_id"]).strip()
-                            if not sid or sid in seen_ids:
-                                return (
-                                    False,
-                                    f"Duplicate or blank sample_id '{sid}' in JSON manifest.",
-                                    empty_audit,
-                                )
-                            seen_ids.add(sid)
-            elif suffix == ".csv":
-                with open(path, encoding="utf-8", newline="") as cf:
-                    reader = csv.DictReader(cf)
-                    fieldnames = set(reader.fieldnames or [])
-                    required_cols = {"sample_id", "subject_id", "label"}
-                    if not required_cols.issubset(fieldnames):
-                        return (
-                            False,
-                            f"CSV manifest missing required columns: {sorted(required_cols - fieldnames)}.",
-                            empty_audit,
-                        )
-                    seen_csv_ids: set[str] = set()
-                    for row in reader:
-                        sid = str(row.get("sample_id", "")).strip()
-                        subj = str(row.get("subject_id", "")).strip()
-                        lbl = str(row.get("label", "")).strip()
-                        if not sid or not subj or not lbl:
-                            return (
-                                False,
-                                "CSV manifest contains blank sample_id, subject_id, or label.",
-                                empty_audit,
-                            )
-                        if sid in seen_csv_ids:
-                            return (
-                                False,
-                                f"Duplicate sample_id '{sid}' detected in CSV manifest.",
-                                empty_audit,
-                            )
-                        seen_csv_ids.add(sid)
-        except Exception as exc:
-            return False, f"Malformed dataset manifest ({suffix}): {exc}", empty_audit
+                    raise ValueError("Missing or invalid sample_id, subject_id, or label")
+                sid, subject, label = (row[key].strip() for key in required)
+                if sid in inventory:
+                    raise ValueError("Duplicate sample_id")
+                inventory[sid] = (subject, label)
+                for key in ("session_id", "content_sha256"):
+                    if key in row:
+                        value = row[key]
+                        if not isinstance(value, str) or not value.strip():
+                            raise ValueError(f"Invalid inventory {key}")
+                        value = value.strip()
+                        if key == "content_sha256":
+                            value = value.lower()
+                            if not is_valid_sha256_digest(value):
+                                raise ValueError("Invalid inventory content_sha256")
+                        recording_fields.setdefault(sid, {})[key] = value
+            if not inventory:
+                raise ValueError("Manifest contains no samples")
+            if samples is not None:
+                validate_samples_collection(samples)
+                if inventory != {s.sample_id: (s.subject_id, s.label) for s in samples}:
+                    raise ValueError("Ingested samples differ from the verified manifest")
+                for sample in samples:
+                    for key, expected in recording_fields.get(sample.sample_id, {}).items():
+                        observed = sample.metadata.get(key)
+                        if not isinstance(observed, str):
+                            raise ValueError(f"Missing ingested {key}")
+                        observed = observed.strip()
+                        if (observed.lower() if key == "content_sha256" else observed) != expected:
+                            raise ValueError(f"Ingested {key} differs from verified inventory")
+        except (OSError, ValueError, csv.Error) as exc:
+            return False, f"Invalid dataset manifest: {exc}", empty_audit
 
         audit = {
             "dataset_name": self.name,
@@ -513,6 +514,29 @@ class EvaluationPartition:
                 f"Subject leakage detected between val and test partitions: subjects {sorted(val_test)}"
             )
 
+        # Optional acquisition metadata can identify the same recording under
+        # different sample or participant IDs. Session IDs must be corpus-global.
+        for key in ("session_id", "content_sha256"):
+            owners: dict[str, str] = {}
+            for name, rows in (
+                ("train", self.train_samples),
+                ("validation", self.val_samples),
+                ("test", self.test_samples),
+            ):
+                for row in rows:
+                    if key not in row.metadata:
+                        continue
+                    value = row.metadata[key]
+                    if not isinstance(value, str) or not value.strip():
+                        raise ValueError(f"Invalid {key} in dataset")
+                    value = value.strip()
+                    if key == "content_sha256":
+                        value = value.lower()
+                        if not is_valid_sha256_digest(value):
+                            raise ValueError("Invalid content_sha256 in dataset")
+                    if owners.setdefault(value, name) != name:
+                        raise ValueError(f"{key} leakage across partitions")
+
     @property
     def total_samples(self) -> int:
         return len(self.train_samples) + len(self.val_samples) + len(self.test_samples)
@@ -607,7 +631,7 @@ CREMA_D_METADATA = DatasetMetadata(
     name="CREMA-D",
     source="Cao, H., Cooper, D. G., Keutmann, M. K., et al. (IEEE TAC, 2014)",
     version="1.0",
-    license="Open Database License (ODbL) / Research",
+    license="ODbL 1.0 (database) and DbCL 1.0 (contents)",
     commercial_allowed=False,
     redistribution_allowed=True,
     partition_strategy="actor_independent_holdout",
