@@ -40,7 +40,7 @@ for current evaluation results and production acceptance criteria.
 | 1 | ERS · Emotion Recognition System | Produce qualified, uncertainty-aware observations | Supplies an optional observation to ERE | SDK available |
 | 2 | EMS · Emotional Memory System | Store user-approved summaries and confirmed preferences | Supplies scoped references and preferences to ERE | SDK available |
 | 3 | ERE · Empathy Reasoning Engine | Select a response strategy from explicit needs and permitted context | Produces a versioned plan for PSE, SIE and ERG | SDK available |
-| 4 | PSE · Personality Simulation Engine | Apply the agent's approved communication style | Uses the ERE plan's tone and reply style | Planned |
+| 4 | PSE · Personality Simulation Engine | Apply the agent's approved communication style | Produces a versioned delivery plan from ERE for SIE and ERG | SDK available |
 | 5 | SIE · Social Interaction Engine | Manage turn-taking and dialogue lifecycle | Applies the ERE strategy within the current turn | Planned |
 | 6 | ERG · Emotional Response Generation | Render a response from the plan and approved context | Uses ERE guidance, PSE style and SIE turn constraints | Planned |
 | 7 | HBU · Human Behavior Understanding | Interpret the user's goal and interaction context | Supplies proposed context that the host resolves for ERE | Planned |
@@ -233,6 +233,50 @@ print(plan.model_dump_json())
 - **Downstream handoff.** Pass the versioned `ResponsePlan` to the host's
   dialogue code. A plan describes response behavior. The host owns
   text generation, tool authorization, and robot control.
+
+## Phase 4 · Personality Simulation Engine
+
+PSE applies a host-approved communication profile to an ERE response plan.
+It runs locally and returns a versioned `DeliveryPlan` for the host's
+dialogue code. The plan controls formality, pace, warmth and a sentence
+limit. ERE continues to own the interaction strategy and the current
+concise or detailed request.
+
+```python
+from ovic_eon.ere import EmpathyEngine, EmpathyRequest, InteractionGoal, ReportedNeed
+from ovic_eon.pse import PersonalityEngine, PersonalityProfile
+
+response = EmpathyEngine().reason(
+    EmpathyRequest(
+        user_id="operator-42",
+        goal=InteractionGoal.SOLVE,
+        reported_need=ReportedNeed.FRUSTRATED,
+    )
+)
+profile = PersonalityProfile(
+    profile_id="operator-console",
+    revision=2,
+    pace="measured",
+    concise_sentence_limit=2,
+    detailed_sentence_limit=5,
+)
+engine = PersonalityEngine(profiles=(profile,), default_profile=profile.profile_id)
+delivery = engine.style(response)
+
+assert delivery.strategy == response.strategy
+assert delivery.sentence_limit == 2
+print(delivery.model_dump_json())
+```
+
+Built-in profiles are `professional`, `friendly`, and `formal`. Load any
+custom profiles from trusted deployment configuration. You can review the
+available profiles with `list_profiles()` and select one per turn with
+`style(response, profile_id="formal")`. Unknown and duplicate profile IDs
+raise an error. A neutral ERE tone caps warmth to reserved. A request to
+give space produces a pause with zero sentences and no check-in. SIE can
+use the delivery mode when scheduling turns, and ERG can use the style
+controls when rendering a response. The host enforces the output limits
+and retains responsibility for text generation, tools and hardware.
 
 ## Run ERS Studio on your desktop
 
