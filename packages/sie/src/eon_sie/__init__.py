@@ -97,20 +97,23 @@ class SocialInteractionEngine:
         self._session_id = session_id
         self._turn_timeout_seconds = turn_timeout_seconds
         self._state = SessionState.READY
-        self._active_turn_id: str | None = None
+        self._active_turn: TurnDecision | None = None
         self._deadline: float | None = None
         self._lock = Lock()
 
     def snapshot(self) -> SessionSnapshot:
         with self._lock:
             return SessionSnapshot(
-                session_id=self._session_id, state=self._state, active_turn_id=self._active_turn_id
+                session_id=self._session_id,
+                state=self._state,
+                active_turn_id=self._active_turn.turn_id if self._active_turn is not None else None,
             )
 
     def submit(self, response: ResponsePlan, delivery: DeliveryPlan) -> TurnDecision:
         """Accept one matching pair of plans or return the reason no turn was started."""
         if not isinstance(response, ResponsePlan) or not isinstance(delivery, DeliveryPlan):
             raise TypeError("Expected an ERE ResponsePlan and a PSE DeliveryPlan.")
+        delivery = DeliveryPlan.model_validate(delivery.model_dump())
         if not _plans_match(response, delivery):
             raise ValueError("PSE delivery does not match the ERE response plan.")
 
@@ -130,14 +133,25 @@ class SocialInteractionEngine:
                 return TurnDecision(session_id=self._session_id, action=TurnAction.BUSY)
 
             turn_id = uuid4().hex
-            self._active_turn_id = turn_id
-            self._deadline = time.monotonic() + self._turn_timeout_seconds
-            self._state = SessionState.ACTIVE
-            return TurnDecision(
+            decision = TurnDecision(
                 session_id=self._session_id,
                 action=TurnAction.RESPOND,
                 turn_id=turn_id,
                 delivery=delivery,
+            )
+            self._deadline = time.monotonic() + self._turn_timeout_seconds
+            self._active_turn = decision
+            self._state = SessionState.ACTIVE
+            return decision
+
+    def authorizes(self, turn: TurnDecision) -> bool:
+        """Check whether this exact, unexpired decision is still active."""
+        with self._lock:
+            return (
+                self._state == SessionState.ACTIVE
+                and self._active_turn == turn
+                and self._deadline is not None
+                and time.monotonic() < self._deadline
             )
 
     def complete(self, turn_id: str) -> bool:
@@ -149,8 +163,8 @@ class SocialInteractionEngine:
     def interrupt(self, *, turn_id: str | None = None) -> str | None:
         """Cancel the active turn, optionally requiring a matching ID."""
         with self._lock:
-            if self._active_turn_id is None or (
-                turn_id is not None and turn_id != self._active_turn_id
+            if self._active_turn is None or (
+                turn_id is not None and turn_id != self._active_turn.turn_id
             ):
                 return None
             return self._finish(SessionState.READY)
@@ -183,8 +197,8 @@ class SocialInteractionEngine:
             return self._finish(SessionState.READY)
 
     def _finish(self, state: SessionState) -> str | None:
-        turn_id = self._active_turn_id
-        self._active_turn_id = None
+        turn_id = self._active_turn.turn_id if self._active_turn is not None else None
+        self._active_turn = None
         self._deadline = None
         self._state = state
         return turn_id

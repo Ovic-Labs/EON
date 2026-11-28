@@ -42,8 +42,8 @@ for current evaluation results and production acceptance criteria.
 | 3 | ERE · Empathy Reasoning Engine | Select a response strategy from explicit needs and permitted context | Produces a versioned plan for PSE, SIE and ERG | SDK available |
 | 4 | PSE · Personality Simulation Engine | Apply the agent's approved communication style | Produces a versioned delivery plan from ERE for SIE and ERG | SDK available |
 | 5 | SIE · Social Interaction Engine | Manage turn-taking and dialogue lifecycle | Uses ERE and PSE plans to authorize delivery or pause for the current session | SDK available |
-| 6 | ERG · Emotional Response Generation | Render a response from the plan and approved context | Uses ERE guidance, PSE style and SIE turn constraints | Planned |
-| 7 | HBU · Human Behavior Understanding | Interpret the user's goal and interaction context | Supplies proposed context that the host resolves for ERE | Planned |
+| 6 | ERG · Emotional Response Generation | Render a response from the plan and approved context | Renders host-approved content only for a current SIE turn | SDK available |
+| 7 | HBU · Human Behavior Understanding | Interpret the user's goal and interaction context | Supplies explicit-request proposals for the host to review before ERE | SDK available |
 
 The host remains responsible for user identity, consent, and session binding.
 It decides which modules run per turn. For example, it can invoke ERE with
@@ -58,12 +58,14 @@ an explicit user goal while ERS and EMS are unavailable.
 | ERE | [packages/ere](packages/ere) | `eon-ere` | `eon_ere` |
 | PSE | [packages/pse](packages/pse) | `eon-pse` | `eon_pse` |
 | SIE | [packages/sie](packages/sie) | `eon-sie` | `eon_sie` |
+| ERG | [packages/erg](packages/erg) | `eon-erg` | `eon_erg` |
+| HBU | [packages/hbu](packages/hbu) | `eon-hbu` | `eon_hbu` |
 
-Build the five local distributions from an EON checkout:
+Build the seven local distributions from an EON checkout:
 
 ```bash
 python -m pip install build
-for engine in ers ems ere pse sie; do
+for engine in ers ems ere pse sie erg hbu; do
     python -m build "packages/$engine" --outdir dist
 done
 ```
@@ -72,12 +74,12 @@ For an EMS-only installation, run `python -m pip install ./packages/ems`.
 Install the full standalone chain from the checkout with:
 
 ```bash
-python -m pip install ./packages/ers ./packages/ems ./packages/ere ./packages/pse ./packages/sie
+python -m pip install ./packages/ers ./packages/ems ./packages/ere ./packages/pse ./packages/sie ./packages/erg ./packages/hbu
 ```
 
 The repository root still builds the unified `ovic-eon` wheel, including the
 same implementation and the `ovic_eon.ers`, `ovic_eon.ems`, `ovic_eon.ere`,
-`ovic_eon.pse`, and `ovic_eon.sie` imports. Use the unified wheel or install the standalone
+`ovic_eon.pse`, `ovic_eon.sie`, `ovic_eon.erg`, and `ovic_eon.hbu` imports. Use the unified wheel or install the standalone
 packages in a separate environment because these distributions share import
 names. The standalone packages are buildable from source. This change
 does not publish them to an external package registry.
@@ -343,8 +345,57 @@ assert session.complete(turn.turn_id)
   session and serialize delivery and cancellation in the host renderer.
   Use `snapshot()` to check the current turn before delivery. The host owns
   speech or display output, hardware controls, and timers. SIE uses
-  process-local state. ERG can consume the accepted delivery plan when
-  that phase is implemented.
+  process-local state. ERG checks that the accepted decision is still current
+  before rendering.
+
+## Phase 6 · Emotional Response Generation
+
+ERG renders bounded, plain-text responses from a current SIE decision.
+It applies the response strategy, personality, and sentence budget. A pause,
+cancellation, expired turn, or mismatched session yields no rendered response.
+For explanations and next steps, supply plain answer clauses approved by the
+host. ERG uses deterministic templates and does not call a language model.
+
+## Phase 7 · Human Behavior Understanding
+
+HBU proposes interaction goals and self-reported needs from a bounded
+English command grammar. Unsupported phrasing and conflicting requests
+return an abstention status. The host reviews the proposal before converting
+it to an ERE request. HBU returns no raw utterance and writes nothing to EMS.
+
+### Run the complete interaction pipeline
+
+```python
+from ovic_eon.ere import EmpathyEngine
+from ovic_eon.erg import EmotionalResponseGenerator, ResponseContent
+from ovic_eon.hbu import HumanBehaviorEngine, ProposalStatus
+from ovic_eon.pse import PersonalityEngine
+from ovic_eon.sie import SocialInteractionEngine
+
+proposal = HumanBehaviorEngine().interpret("I feel frustrated. Help me restart this.")
+assert proposal.status == ProposalStatus.RECOGNIZED
+
+# The host has checked the interpretation and authorized this user and session.
+request = proposal.to_empathy_request(user_id="operator-42", confirmed=True)
+response = EmpathyEngine().reason(request)
+delivery = PersonalityEngine().style(response, profile_id="friendly")
+session = SocialInteractionEngine(session_id="robot-session-42")
+turn = session.submit(response, delivery)
+rendered = EmotionalResponseGenerator().render(
+    session,
+    turn,
+    content=ResponseContent(clauses=("Open the settings menu",)),
+)
+if rendered is not None:
+    print(rendered.text)
+    session.complete(rendered.turn_id)
+```
+
+The host can supply an authorized EMS store and a current ERS observation to
+ERE when the relevant opt-ins are set. Treat ERG output as plain text and
+coordinate delivery and cancellation by turn ID. The host owns identity,
+live media capture, playback, timers, and any robot action. The current
+ERS baseline continues to abstain without a qualified emotion model.
 
 ## Run ERS Studio on your desktop
 
