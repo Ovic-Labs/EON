@@ -202,10 +202,8 @@ class ONNXTextModelAdapter(BaseTextModelAdapter):
             self._state = ModelState.MODEL_UNAVAILABLE
             return
 
-        if (
-            self._validation_record is not None
-            and self._validation_record.is_validated
-            and self._validation_record.verify_artifact_binding(str(self._model_path))
+        if self._validation_record is not None and self._validation_record.is_approved_for(
+            self._manifest
         ):
             self._state = ModelState.MODEL_LOADED_VALIDATED
         else:
