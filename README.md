@@ -25,73 +25,154 @@
 
 ---
 
-## Physical AI SDK (Phase 1)
+## EON ERS for robotics and AI teams
 
-ERS is the first module in the `ovic-eon` Python SDK. Build the distribution
-from a checkout with Python 3.11 or 3.12.
+OVIC Labs offers EON ERS for integration evaluation in human-facing robotics.
+The on-device SDK and desktop viewer expose affective observations, face boxes,
+signal quality, and abstention status. See the
+[enterprise product brief and 1,000-case qualification report](docs/ers/ENTERPRISE_PRODUCT_BRIEF.md)
+for current evaluation results and production acceptance criteria.
+
+## Physical AI SDK
+
+Install the Python SDK from a checkout. The `studio` extra includes the
+OpenCV frontal-face detector and camera support.
 
 ```bash
-python -m pip install build
-python -m build
-python -m pip install dist/ovic_eon-0.1.0-py3-none-any.whl
+python -m pip install ".[studio]"
 ```
+
+### Analyze a photo and a transcript locally
+
+Save this as `example.py` and run `python example.py portrait.jpg`.
+The consent registration represents consent already collected from the
+participant. Generate a new session for each independent sample.
 
 ```python
 import asyncio
+import sys
+from pathlib import Path
+from uuid import uuid4
 
-from ovic_eon.ers import ERSClient
+from ovic_eon.ers import ERSClient, ERSConfig
 
 
-async def main():
-    async with ERSClient() as ers:
-        # Example consent. Collect explicit participant consent before sending real data.
-        await ers.register_consent("pilot-session", "example-consent")
+async def main() -> None:
+    session_id, consent_reference = uuid4().hex, uuid4().hex
+    async with ERSClient(config=ERSConfig(face_detector="opencv")) as ers:
+        await ers.register_consent(session_id, consent_reference)
         try:
-            observation = await ers.analyze_text(
-                "pilot-session", "example-consent", "I'm glad that worked."
+            image_bytes = Path(sys.argv[1]).read_bytes()
+            face = await ers.analyze_image(session_id, consent_reference, image_bytes)
+            print("Face box:", face.face_bbox)
+            print("Facial status:", face.status.value)
+            print("Validated:", face.is_validated)
+            utterance = await ers.analyze_text(
+                session_id, consent_reference, "I'm glad that worked."
             )
-            print(observation.status.value, observation.is_validated)
+            print("Text status:", utterance.status.value)
         finally:
-            await ers.revoke_consent("pilot-session")
+            await ers.revoke_consent(session_id)
 
 
 asyncio.run(main())
 ```
 
-Use `ERSClient(base_url="https://your-ers-server", api_key=...)` for the HTTP
-API. The client supports image, mono PCM16 audio, text, and multimodal
-analysis. Local calls return Python observation objects. Remote calls
-return API response dictionaries. Treat abstention and unvalidated status as
-unavailable affect evidence in downstream applications.
+### Analyze microphone PCM
 
-Install the wheel with `[live]` for the server or `[ml]` for ONNX support.
-Use approved model artifacts supplied by your deployment. SDK distributions
-exclude the repository's synthetic baseline weights. Empirical validation,
-model redistribution rights, and hardware acceptance testing remain
-required for a commercial recognition deployment. The existing standalone
-`eon-ers` distribution remains available for integrations that already
-install it. Choose one distribution per environment because both provide
-the `eon_ers` implementation.
+Inside a registered local SDK session, pass mono signed 16-bit
+little-endian PCM bytes and the capture sample rate.
 
-## Repository Quickstart
-
-### 1. Local CPU Installation (Python 3.11–3.12)
-
-```bash
-git clone https://github.com/Ovic-Labs/EON.git
-cd EON
-python -m pip install --upgrade pip "setuptools>=84.1.0"
-pip install -e "packages/ers[ml,live,dev]"
+```python
+audio = await ers.analyze_audio(session_id, consent_reference, pcm_bytes, sample_rate=16000)
+print(audio.status.value, audio.is_validated)
 ```
 
-### 2. Run Quickstart or Launch the Enterprise Console
+An integration can consume abstention, quality, and model status when
+deciding how to respond. The same client also supports remote deployments
+through `ERSClient(base_url="https://your-ers-server", api_key=...)`.
+Local calls return Python observation objects. Remote calls return response
+dictionaries. The base SDK retains the heuristic detector for compatibility.
+Select `ERSConfig(face_detector="opencv")` to enable the OpenCV detector
+explicitly. ERS Studio selects it for you.
 
-```bash
-python packages/ers/examples/quickstart.py
-eon-ers-live --host 127.0.0.1 --port 8000
+SDK distributions exclude the synthetic baseline weights. The existing
+standalone `eon-ers` distribution remains available. Choose one distribution
+per environment because both provide the `eon_ers` implementation.
+
+## Phase 2 · Emotional Memory System
+
+EMS stores application-selected interaction summaries and user-confirmed preferences
+in a local SQLite file. It runs offline through the same Python SDK.
+
+```python
+from ovic_eon.ems import EmotionalMemory
+
+memory = EmotionalMemory("eon-memory.sqlite3", user_id="operator-42")
+memory.remember_interaction("The operator asked to resume the calibration checklist.")
+memory.confirm_preference("reply_style", "One short step at a time.", confirmed=True)
+
+for item in memory.recall("calibration checklist", limit=3):
+    print(item.kind, item.text)
+
+preference = memory.get_preference("reply_style")
+if preference is not None:
+    print(preference.text)
+    # Use memory.forget(preference.id) if the user asks to remove it.
 ```
 
-Open `http://127.0.0.1:8000/` for the 15-view live dashboard, or `/docs` for OpenAPI Swagger.
+Use a stable user ID assigned by the host application. Authorize access to that
+ID before opening EMS. Only pass summaries that the user has agreed to retain
+and set `confirmed=True` after the user confirms the preference. ERS observations
+are transient unless the host explicitly saves text. The SQLite file contains
+readable text, so keep it in the application's private data directory and apply
+your deployment's filesystem encryption and backup policy.
+
+Recall ranks whole-word overlap before recency. Call `recall()` for recent
+memories, use `kind="preference"` to filter, and use `clear()` when the user
+requests deletion of their saved memories. Deletion applies to the current
+database file. Manage external backups separately.
+
+## Run ERS Studio on your desktop
+
+```bash
+python -m pip install ".[studio]"
+eon-ers-studio
+```
+
+Use **Start camera** for live observations or **Open image** to test a local
+photo. The desktop app calls the SDK within its own process. It needs no web
+server, account, API key, or password. **Stop** releases the camera. The
+viewer displays the SDK's detected face box, evidence status, confidence,
+and processing time. With an unvalidated model, the viewer withholds the
+emotion estimate.
+
+Use a desktop Python installation with Tkinter. On some Linux distributions
+Tkinter is installed separately as `python3-tk`. For an authorized local
+ONNX model, install `".[studio,ml]"` and pass
+`eon-ers-studio --facial-model path/to/model.onnx`.
+Models remain subject to the SDK's qualification checks.
+
+## Run the browser dashboard locally
+
+Install the browser dashboard extra from the SDK checkout, then start the server
+in a terminal on the same computer as your browser.
+
+```bash
+python -m pip install ".[live]"
+eon-ers-live --host 127.0.0.1 --port 8000 --open-browser
+```
+
+Leave the terminal running and open `http://127.0.0.1:8000/`. The launcher
+can start without ONNX weights and will report unvalidated observations.
+To load a local model, install `".[live,ml]"` and pass
+`--facial-model /path/to/model.onnx` or `--speech-model /path/to/model.onnx`.
+
+If the connection is refused, check the first error in the terminal and
+make sure the browser uses the same port printed by the launcher. If port
+8000 is occupied, use `--port 8001` and open `http://127.0.0.1:8001/`.
+Loopback addresses refer to the computer running the browser. For the
+desktop SDK viewer, use `eon-ers-studio` to open its own window.
 
 ---
 

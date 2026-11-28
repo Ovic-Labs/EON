@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,6 +46,11 @@ class ERSConfig(BaseModel):
         ge=1,
         le=32,
         description="Worker thread count for ONNX runtime or CPU feature extraction.",
+    )
+
+    face_detector: Literal["heuristic", "opencv"] = Field(
+        default="heuristic",
+        description="Face localizer. The OpenCV option requires opencv-python-headless.",
     )
 
     # Model identifiers and optional custom file paths

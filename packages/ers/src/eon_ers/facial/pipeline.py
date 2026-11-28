@@ -17,6 +17,7 @@ from eon_ers.facial.detection import (
     BaseFaceDetector,
     FaceDetectionStatus,
     HeuristicFaceDetector,
+    OpenCVFaceDetector,
 )
 from eon_ers.facial.features import ExperimentalRegionalFeatureExtractor
 from eon_ers.facial.landmarks import BaseLandmarkDetector, HeuristicLandmarkDetector
@@ -50,7 +51,9 @@ class FacialPipeline:
             min_brightness=config.min_brightness,
             max_payload_bytes=config.max_image_bytes,
         )
-        self.face_detector = face_detector or HeuristicFaceDetector()
+        self.face_detector = face_detector or (
+            OpenCVFaceDetector() if config.face_detector == "opencv" else HeuristicFaceDetector()
+        )
         self.landmark_detector = landmark_detector or HeuristicLandmarkDetector()
         self.preprocessor = FacialPreprocessor(target_size=(64, 64))
         self.feature_extractor = ExperimentalRegionalFeatureExtractor()

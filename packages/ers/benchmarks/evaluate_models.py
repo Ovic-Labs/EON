@@ -90,6 +90,9 @@ def evaluate_facial_model(
 ) -> tuple[Path, Path]:
     """Evaluate ONNX facial model and persist validation record and report."""
     logger.info("Starting facial model evaluation...")
+    if dataset_mode == "empirical":
+        raise ValueError("This runner uses synthetic fixtures. Use a held-out evaluation protocol.")
+
     onnx_path = model_dir / "facial_emotion_model.onnx"
     manifest_path = model_dir / "facial_emotion_model.json"
 
@@ -99,22 +102,7 @@ def evaluate_facial_model(
     with open(manifest_path, encoding="utf-8") as f:
         manifest = ModelManifest.model_validate(json.load(f))
 
-    # Check for empirical affective datasets (e.g. data/affectnet or data/rafdb)
-    empirical_dirs = [Path("data/affectnet"), Path("data/rafdb"), model_dir / "data" / "affectnet"]
-    empirical_found = any(p.exists() and any(p.iterdir()) for p in empirical_dirs)
-
-    if dataset_mode in ("empirical", "auto") and not empirical_found:
-        logger.warning(
-            "Empirical dataset (AffectNet/RAF-DB) not found in local environment. "
-            "Marking real-world dataset evaluation as BLOCKED. "
-            "Running synthetic fixture suite for execution and contract testing only."
-        )
-
-    dataset_name = (
-        "AffectNet_Holdout_Evaluation"
-        if (empirical_found and dataset_mode != "synthetic")
-        else "SYNTHETIC_FACIAL_FIXTURE_SUITE (Execution Testing Only - Accuracy Qualification BLOCKED)"
-    )
+    dataset_name = "SYNTHETIC_FACIAL_FIXTURE_SUITE (Execution Testing Only)"
 
     adapter = ONNXFacialModelAdapter(model_path=str(onnx_path))
     y_true, tensors = generate_synthetic_facial_eval_dataset(samples_per_class=25)
@@ -138,18 +126,14 @@ def evaluate_facial_model(
         model_manifest=manifest,
         dataset_name=dataset_name,
         dataset_split="test",
-        dataset_license="OVIC Internal Testing License"
-        if not empirical_found
-        else "Academic / Research License",
+        dataset_license="OVIC Internal Testing License",
         evaluator_name="OVIC Labs Scientific Qualification Runner",
         commercial_allowed=False,
         commercial_restrictions=[
             "Research and pipeline testing only. Commercial deployment prohibited."
         ],
         evaluation_notes=[
-            "Evaluation conducted on synthetic test partitions."
-            if not empirical_found
-            else "Evaluated on empirical partitions.",
+            "Evaluation conducted on synthetic test partitions.",
             "Baseline ONNX weights contain unverified parameters.",
             "Accuracy qualification status: UNVALIDATED (qualification thresholds not met; scientific accuracy qualification BLOCKED).",
         ],
@@ -178,6 +162,9 @@ def evaluate_speech_model(
 ) -> tuple[Path, Path]:
     """Evaluate ONNX speech model and persist validation record and report."""
     logger.info("Starting speech model evaluation...")
+    if dataset_mode == "empirical":
+        raise ValueError("This runner uses synthetic fixtures. Use a held-out evaluation protocol.")
+
     onnx_path = model_dir / "speech_emotion_model.onnx"
     manifest_path = model_dir / "speech_emotion_model.json"
 
@@ -187,22 +174,7 @@ def evaluate_speech_model(
     with open(manifest_path, encoding="utf-8") as f:
         manifest = ModelManifest.model_validate(json.load(f))
 
-    # Check for empirical acoustic datasets (e.g. data/ravdess or data/crema_d)
-    empirical_dirs = [Path("data/ravdess"), Path("data/crema-d"), model_dir / "data" / "ravdess"]
-    empirical_found = any(p.exists() and any(p.iterdir()) for p in empirical_dirs)
-
-    if dataset_mode in ("empirical", "auto") and not empirical_found:
-        logger.warning(
-            "Empirical dataset (RAVDESS/CREMA-D) not found in local environment. "
-            "Marking real-world dataset evaluation as BLOCKED. "
-            "Running synthetic fixture suite for execution and contract testing only."
-        )
-
-    dataset_name = (
-        "RAVDESS_Holdout_Evaluation"
-        if (empirical_found and dataset_mode != "synthetic")
-        else "SYNTHETIC_SPEECH_FIXTURE_SUITE (Execution Testing Only - Accuracy Qualification BLOCKED)"
-    )
+    dataset_name = "SYNTHETIC_SPEECH_FIXTURE_SUITE (Execution Testing Only)"
 
     adapter = ONNXSpeechModelAdapter(model_path=str(onnx_path))
     y_true, feature_sets = generate_synthetic_speech_eval_dataset(samples_per_class=25)
@@ -226,18 +198,14 @@ def evaluate_speech_model(
         model_manifest=manifest,
         dataset_name=dataset_name,
         dataset_split="test",
-        dataset_license="OVIC Internal Testing License"
-        if not empirical_found
-        else "CC BY-NC-SA 4.0",
+        dataset_license="OVIC Internal Testing License",
         evaluator_name="OVIC Labs Scientific Qualification Runner",
         commercial_allowed=False,
         commercial_restrictions=[
             "Research and pipeline testing only. Commercial deployment prohibited."
         ],
         evaluation_notes=[
-            "Evaluation conducted on synthetic acoustic prosody feature suite."
-            if not empirical_found
-            else "Evaluated on empirical partitions.",
+            "Evaluation conducted on synthetic acoustic prosody feature suite.",
             "Baseline ONNX weights contain unverified parameters.",
             "Accuracy qualification status: UNVALIDATED (qualification thresholds not met; scientific accuracy qualification BLOCKED).",
         ],
@@ -278,7 +246,7 @@ def main() -> int:
         type=str,
         choices=["synthetic", "empirical", "auto"],
         default="auto",
-        help="Dataset evaluation mode ('synthetic', 'empirical', or 'auto').",
+        help="Auto and synthetic run fixtures. Empirical mode fails before inference.",
     )
     args = parser.parse_args()
 

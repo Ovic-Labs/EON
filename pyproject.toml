@@ -22,6 +22,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+studio = ["opencv-python-headless>=4.8,<5"]
 ml = [
     "onnxruntime>=1.23.0",
     "onnx>=1.14.0",
@@ -43,6 +44,7 @@ dev = [
 ]
 
 [project.scripts]
+eon-ers-studio = "ovic_eon.studio:main"
 eon-ers-live = "eon_ers.live.cli:main"
 
 [tool.hatch.build.targets.wheel]

@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import abc
+import threading
 from enum import Enum
+from pathlib import Path
 
 import numpy as np
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
 from scipy import ndimage
+
+from eon_ers.exceptions import ERSConfigurationError
 
 
 class FaceDetectionStatus(str, Enum):
@@ -105,6 +109,85 @@ class BaseFaceDetector(abc.ABC):
     @abc.abstractmethod
     def detect(self, image: Image.Image) -> FaceDetectionResult:
         """Detect zero, one, or multiple faces within the given PIL image."""
+
+
+class OpenCVFaceDetector(BaseFaceDetector):
+    """CPU frontal-face localizer with a profile fallback."""
+
+    def __init__(self) -> None:
+        try:
+            import cv2
+        except ImportError as exc:
+            raise ERSConfigurationError(
+                "The OpenCV detector requires opencv-python-headless. "
+                'Install ovic-eon with the "studio" extra.'
+            ) from exc
+        if not hasattr(cv2, "CascadeClassifier"):
+            raise ERSConfigurationError(
+                "This OpenCV build lacks CascadeClassifier. Install OpenCV 4 with the studio extra."
+            )
+        cascade_path = Path(cv2.data.haarcascades) / "haarcascade_frontalface_default.xml"
+        self._cascade = cv2.CascadeClassifier(str(cascade_path))
+        if self._cascade.empty():
+            raise ERSConfigurationError("OpenCV's frontal-face cascade could not be loaded.")
+        self._profile = cv2.CascadeClassifier(
+            str(cascade_path.with_name("haarcascade_profileface.xml"))
+        )
+        if self._profile.empty():
+            raise ERSConfigurationError("OpenCV's profile-face cascade could not be loaded.")
+        self._lock = threading.Lock()
+
+    @property
+    def name(self) -> str:
+        return "opencv_haar_frontal_profile"
+
+    def detect(self, image: Image.Image) -> FaceDetectionResult:
+        gray = image.convert("L")
+        gray.thumbnail((640, 640))
+        width, height = gray.size
+        pixels = np.asarray(gray)
+        options = {"scaleFactor": 1.1, "minNeighbors": 5, "minSize": (24, 24)}
+        # Require stronger support for profile detections on face-free textures.
+        profile_options = {**options, "minNeighbors": 12}
+        with self._lock:
+            rectangles = self._cascade.detectMultiScale(pixels, **options)
+            if len(rectangles) == 0:
+                rectangles = self._profile.detectMultiScale(pixels, **profile_options)
+            if len(rectangles) == 0:
+                mirrored = self._profile.detectMultiScale(pixels[:, ::-1], **profile_options)
+                rectangles = [(width - x - w, y, w, h) for x, y, w, h in mirrored]
+        candidates = sorted(
+            rectangles, key=lambda rect: (-int(rect[2]) * int(rect[3]), int(rect[0]), int(rect[1]))
+        )
+        faces = [
+            BoundingBox(
+                x_min=x / width,
+                y_min=y / height,
+                x_max=(x + w) / width,
+                y_max=(y + h) / height,
+                # The cascade does not supply a calibrated probability.
+                confidence=0.0,
+                face_id=f"face-{index}",
+                is_partial_boundary=bool(
+                    x <= 1 or y <= 1 or x + w >= width - 1 or y + h >= height - 1
+                ),
+            )
+            for index, (x, y, w, h) in enumerate(candidates)
+        ]
+        if not faces:
+            return FaceDetectionResult(
+                status=FaceDetectionStatus.NO_FACE_DETECTED, detector_name=self.name
+            )
+        return FaceDetectionResult(
+            status=(
+                FaceDetectionStatus.SINGLE_FACE_DETECTED
+                if len(faces) == 1
+                else FaceDetectionStatus.MULTIPLE_FACES_DETECTED
+            ),
+            faces=faces,
+            primary_face=faces[0],
+            detector_name=self.name,
+        )
 
 
 class HeuristicFaceDetector(BaseFaceDetector):
