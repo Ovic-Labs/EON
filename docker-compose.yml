@@ -11,6 +11,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - OMP_NUM_THREADS=4
+      - EON_ERS_BOOTSTRAP_API_KEYS
       - EON_ERS_API_AUTH=${EON_ERS_API_AUTH:-true}
     volumes:
       - ./packages/ers/models:/app/packages/ers/models:ro
