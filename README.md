@@ -33,6 +33,22 @@ signal quality, and abstention status. See the
 [enterprise product brief and 1,000-case qualification report](docs/ers/ENTERPRISE_PRODUCT_BRIEF.md)
 for current evaluation results and production acceptance criteria.
 
+## EON module boundaries
+
+| Phase | Module | Responsibility | Integration | Status |
+| --- | --- | --- | --- | --- |
+| 1 | ERS · Emotion Recognition System | Produce qualified, uncertainty-aware observations | Supplies an optional observation to ERE | SDK available |
+| 2 | EMS · Emotional Memory System | Store user-approved summaries and confirmed preferences | Supplies scoped references and preferences to ERE | SDK available |
+| 3 | ERE · Empathy Reasoning Engine | Select a response strategy from explicit needs and permitted context | Produces a versioned plan for PSE, SIE and ERG | SDK available |
+| 4 | PSE · Personality Simulation Engine | Apply the agent's approved communication style | Uses the ERE plan's tone and reply style | Planned |
+| 5 | SIE · Social Interaction Engine | Manage turn-taking and dialogue lifecycle | Applies the ERE strategy within the current turn | Planned |
+| 6 | ERG · Emotional Response Generation | Render a response from the plan and approved context | Uses ERE guidance, PSE style and SIE turn constraints | Planned |
+| 7 | HBU · Human Behavior Understanding | Interpret the user's goal and interaction context | Supplies proposed context that the host resolves for ERE | Planned |
+
+The host remains responsible for user identity, consent, and session binding.
+It decides which modules run per turn. For example, it can invoke ERE with
+an explicit user goal while ERS and EMS are unavailable.
+
 ## Physical AI SDK
 
 Install the Python SDK from a checkout. The `studio` extra includes the
@@ -169,6 +185,54 @@ contents unreadable. The numbers above are example deployment limits.
   re-save only records authorized for migration. Use SQLite's online backup
   API for live databases and verify restoration with the corresponding key.
   Deployments should retain the key separately from backups.
+
+## Phase 3 · Empathy Reasoning Engine
+
+ERE is a deterministic, offline policy module. It returns structured guidance
+for the host or a downstream dialogue module. A live request to give space
+bypasses both memory lookup and affect cues. An explicit request for concise
+or detailed replies takes precedence over a stored `reply_style` preference.
+
+```python
+from ovic_eon.ems import EmotionalMemory
+from ovic_eon.ere import EmpathyEngine, EmpathyRequest, InteractionGoal, ReportedNeed
+
+# Open the scope authorized by the application. In deployments, use the
+# encrypted EMS settings above.
+memory = EmotionalMemory("eon-memory.sqlite3", user_id="operator-42")
+memory.confirm_preference("reply_style", "concise", confirmed=True)
+
+plan = EmpathyEngine().reason(
+    EmpathyRequest(
+        user_id="operator-42",
+        goal=InteractionGoal.SOLVE,
+        reported_need=ReportedNeed.FRUSTRATED,
+        use_memory=True,
+        memory_query="calibration checklist",
+    ),
+    memory=memory,
+)
+
+assert plan.strategy.value == "offer_next_step"
+assert plan.acknowledge_reported_need
+print(plan.model_dump_json())
+```
+
+- **ERS handoff.** The host can pass its current, session-bound
+  `EmotionObservation` as `observation=observation` when the user has opted
+  into that input. Set `use_affect_cue=True` for that turn. A fresh, calibrated
+  and validated observation with sufficient signal quality may suggest a
+  gentle check-in. The plan carries no inferred emotion label and keeps the
+  requested action. The engine ignores the current unvalidated baseline.
+- **EMS handoff.** Set `use_memory=True` only for authorized retrieval.
+  Mismatched user scopes fail closed. Unavailable memory produces a usable
+  plan with `memory_status="unavailable"`. Relevant summaries appear as up
+  to three reference IDs. The host can resolve an authorized reference
+  with `memory.get_memory(id)` and treat the returned text as conversation
+  context. ERE performs no writes.
+- **Downstream handoff.** Pass the versioned `ResponsePlan` to the host's
+  dialogue code. A plan describes response behavior. The host owns
+  text generation, tool authorization, and robot control.
 
 ## Run ERS Studio on your desktop
 

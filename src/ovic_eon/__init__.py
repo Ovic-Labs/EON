@@ -1,5 +1,5 @@
 """Public Python SDK for OVIC EON."""
 
-from ovic_eon import ems, ers
+from ovic_eon import ems, ere, ers
 
-__all__ = ["ems", "ers"]
+__all__ = ["ems", "ere", "ers"]

@@ -144,6 +144,11 @@ class EmotionalMemory:
             os.close(descriptor)
         self._initialize(encryption_key)
 
+    @property
+    def user_id(self) -> str:
+        """The application-resolved user ID that scopes this memory store."""
+        return self._user_id
+
     def _initialize(self, key: bytes | None) -> None:
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -317,6 +322,18 @@ class EmotionalMemory:
                 (self._user_id, memory_id),
             ).fetchone()
             return self._read_memory(row)
+
+    def get_memory(self, memory_id: str) -> Memory | None:
+        """Resolve a reference for the current user if the memory is still available."""
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT * FROM ems_memories WHERE user_id = ? AND id = ?
+                AND (expires_at IS NULL OR expires_at > ?)
+                """,
+                (self._user_id, memory_id, _timestamp(datetime.now(UTC))),
+            ).fetchone()
+        return None if row is None else self._read_memory(row)
 
     def get_preference(self, key: str) -> Memory | None:
         """Fetch the current confirmed value for a preference key."""
