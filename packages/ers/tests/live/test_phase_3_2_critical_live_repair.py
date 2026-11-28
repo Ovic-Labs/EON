@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import subprocess
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
@@ -43,6 +43,25 @@ def test_revoked_consent_session_is_terminal_and_new_session_works() -> None:
     cm.validate_consent("sess-term-2", "tok-2")
 
 
+class _InlineScriptParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self._inside_inline_script = False
+        self.scripts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "script":
+            self._inside_inline_script = not any(name == "src" for name, _ in attrs)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "script":
+            self._inside_inline_script = False
+
+    def handle_data(self, data: str) -> None:
+        if self._inside_inline_script:
+            self.scripts.append(data)
+
+
 def test_dashboard_has_no_hardcoded_consent_and_valid_js_syntax(tmp_path: Path) -> None:
     html = get_dashboard_html()
     assert "explicit-user-consent-token" not in html
@@ -54,10 +73,12 @@ def test_dashboard_has_no_hardcoded_consent_and_valid_js_syntax(tmp_path: Path) 
     assert "apiRequest(" in html
 
     # Verify extracted client JavaScript parses cleanly with Node if installed
-    match = re.search(r"<script>([\s\S]*)</script>", html)
-    assert match is not None
+    parser = _InlineScriptParser()
+    parser.feed(html)
+    parser.close()
+    assert len(parser.scripts) == 1
     js_file = tmp_path / "dashboard_check.js"
-    js_file.write_text(match.group(1), encoding="utf-8")
+    js_file.write_text(parser.scripts[0], encoding="utf-8")
     node_bin = shutil.which("node")
     if node_bin:
         proc = subprocess.run([node_bin, "--check", str(js_file)], capture_output=True, text=True)

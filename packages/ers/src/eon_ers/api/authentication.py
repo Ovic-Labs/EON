@@ -1,7 +1,8 @@
-"""API authentication, SHA-256 hashed credentials, RBAC, and session isolation."""
+"""API authentication, salted credential hashing, RBAC, and session isolation."""
 
 from __future__ import annotations
 
+import hashlib
 import secrets
 import threading
 import time
@@ -9,7 +10,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from eon_ers.exceptions import ERSAuthenticationError, ERSAuthorizationError
-from eon_ers.utils.hashing import constant_time_compare, sha256_bytes
+from eon_ers.utils.hashing import constant_time_compare
 
 
 class Role(str, Enum):
@@ -88,6 +89,14 @@ class APIKeyAuthManager:
         self.require_auth = require_auth
         self._lock = threading.Lock()
         self._credentials: dict[str, _StoredCredential] = {}
+        # Credentials live only in this manager. A fresh salt prevents reusable
+        # hashes across managers while allowing one derivation per request.
+        self._credential_salt = secrets.token_bytes(32)
+
+    def _derive_secret_digest(self, secret: str) -> str:
+        return hashlib.pbkdf2_hmac(
+            "sha256", secret.encode("utf-8"), self._credential_salt, 600_000
+        ).hex()
 
     def issue_key(
         self,
@@ -97,7 +106,7 @@ class APIKeyAuthManager:
         raw_secret: str | None = None,
         ttl_seconds: float | None = None,
     ) -> tuple[str, str]:
-        """Issue and store a SHA-256 hashed API key, returning `(key_id, raw_secret)` once."""
+        """Issue and store a PBKDF2-derived API key, returning `(key_id, raw_secret)` once."""
         clean_principal = principal_id.strip()
         if not clean_principal:
             raise ValueError("principal_id must be non-empty.")
@@ -107,7 +116,7 @@ class APIKeyAuthManager:
             raise ValueError("API secret must be at least 8 characters.")
         key_id = f"key_{secrets.token_hex(6)}"
         expires_at = (time.time() + ttl_seconds) if ttl_seconds is not None else None
-        digest = sha256_bytes(secret.encode("utf-8"))
+        digest = self._derive_secret_digest(secret)
 
         with self._lock:
             self._credentials[key_id] = _StoredCredential(
@@ -133,7 +142,7 @@ class APIKeyAuthManager:
         api_key: str | None = None,
         authorization: str | None = None,
     ) -> AuthenticatedPrincipal:
-        """Verify presented `X-API-Key` or `Bearer` token against stored SHA-256 hashes."""
+        """Verify presented `X-API-Key` or `Bearer` token against stored PBKDF2 digests."""
         token = api_key
         if not token and authorization and authorization.lower().startswith("bearer "):
             token = authorization[7:].strip()
@@ -148,7 +157,7 @@ class APIKeyAuthManager:
                 )
             raise ERSAuthenticationError("Missing API key or Bearer token.")
 
-        presented_digest = sha256_bytes(token.encode("utf-8"))
+        presented_digest = self._derive_secret_digest(token)
         now = time.time()
         with self._lock:
             for cred in self._credentials.values():
