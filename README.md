@@ -41,7 +41,7 @@ for current evaluation results and production acceptance criteria.
 | 2 | EMS · Emotional Memory System | Store user-approved summaries and confirmed preferences | Supplies scoped references and preferences to ERE | SDK available |
 | 3 | ERE · Empathy Reasoning Engine | Select a response strategy from explicit needs and permitted context | Produces a versioned plan for PSE, SIE and ERG | SDK available |
 | 4 | PSE · Personality Simulation Engine | Apply the agent's approved communication style | Produces a versioned delivery plan from ERE for SIE and ERG | SDK available |
-| 5 | SIE · Social Interaction Engine | Manage turn-taking and dialogue lifecycle | Applies the ERE strategy within the current turn | Planned |
+| 5 | SIE · Social Interaction Engine | Manage turn-taking and dialogue lifecycle | Uses ERE and PSE plans to authorize delivery or pause for the current session | SDK available |
 | 6 | ERG · Emotional Response Generation | Render a response from the plan and approved context | Uses ERE guidance, PSE style and SIE turn constraints | Planned |
 | 7 | HBU · Human Behavior Understanding | Interpret the user's goal and interaction context | Supplies proposed context that the host resolves for ERE | Planned |
 
@@ -57,12 +57,13 @@ an explicit user goal while ERS and EMS are unavailable.
 | EMS | [packages/ems](packages/ems) | `eon-ems` | `eon_ems` |
 | ERE | [packages/ere](packages/ere) | `eon-ere` | `eon_ere` |
 | PSE | [packages/pse](packages/pse) | `eon-pse` | `eon_pse` |
+| SIE | [packages/sie](packages/sie) | `eon-sie` | `eon_sie` |
 
-Build the four local distributions from an EON checkout:
+Build the five local distributions from an EON checkout:
 
 ```bash
 python -m pip install build
-for engine in ers ems ere pse; do
+for engine in ers ems ere pse sie; do
     python -m build "packages/$engine" --outdir dist
 done
 ```
@@ -71,12 +72,12 @@ For an EMS-only installation, run `python -m pip install ./packages/ems`.
 Install the full standalone chain from the checkout with:
 
 ```bash
-python -m pip install ./packages/ers ./packages/ems ./packages/ere ./packages/pse
+python -m pip install ./packages/ers ./packages/ems ./packages/ere ./packages/pse ./packages/sie
 ```
 
 The repository root still builds the unified `ovic-eon` wheel, including the
 same implementation and the `ovic_eon.ers`, `ovic_eon.ems`, `ovic_eon.ere`,
-and `ovic_eon.pse` imports. Use the unified wheel or install the standalone
+`ovic_eon.pse`, and `ovic_eon.sie` imports. Use the unified wheel or install the standalone
 packages in a separate environment because these distributions share import
 names. The standalone packages are buildable from source. This change
 does not publish them to an external package registry.
@@ -307,6 +308,43 @@ give space produces a pause with zero sentences and no check-in. SIE can
 use the delivery mode when scheduling turns, and ERG can use the style
 controls when rendering a response. The host enforces the output limits
 and retains responsibility for text generation, tools and hardware.
+
+## Phase 5 · Social Interaction Engine
+
+SIE coordinates one local interaction session. It accepts a matching ERE
+response plan and PSE delivery plan, and issues at most one active turn ID.
+
+```python
+from ovic_eon.ere import EmpathyEngine, EmpathyRequest, InteractionGoal
+from ovic_eon.pse import PersonalityEngine
+from ovic_eon.sie import SocialInteractionEngine, TurnAction
+
+session = SocialInteractionEngine(session_id="robot-session-42", turn_timeout_seconds=30)
+response = EmpathyEngine().reason(
+    EmpathyRequest(user_id="operator-42", goal=InteractionGoal.EXPLAIN)
+)
+delivery = PersonalityEngine().style(response)
+turn = session.submit(response, delivery)
+assert turn.action == TurnAction.RESPOND and turn.turn_id is not None
+# The host starts rendering here and completes the turn after delivery ends.
+assert session.complete(turn.turn_id)
+```
+
+- **Busy turns.** `BUSY` means no new turn was accepted. The host decides
+  whether to retry with fresh context. SIE keeps no backlog of plans.
+- **Interruptions.** Call `interrupt()` to cancel live output. Call `pause()`
+  when the user requests space, or submit an ERE/PSE give-space plan. Stop
+  output for the cancelled ID and call `resume()` only when appropriate for
+  the user. A late completion cannot release a different turn.
+- **Timeout and teardown.** Poll `expire_overdue()` from the host scheduler.
+  Cancel output for any ID it returns. Call `close()` at session teardown.
+  A closed session requires a new engine instance.
+- **Deployment boundary.** Bind each engine to one authenticated application
+  session and serialize delivery and cancellation in the host renderer.
+  Use `snapshot()` to check the current turn before delivery. The host owns
+  speech or display output, hardware controls, and timers. SIE uses
+  process-local state. ERG can consume the accepted delivery plan when
+  that phase is implemented.
 
 ## Run ERS Studio on your desktop
 

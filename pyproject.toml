@@ -54,6 +54,7 @@ packages = [
     "packages/ems/src/eon_ems",
     "packages/ere/src/eon_ere",
     "packages/pse/src/eon_pse",
+    "packages/sie/src/eon_sie",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -63,6 +64,7 @@ include = [
     "/packages/ems/src/eon_ems",
     "/packages/ere/src/eon_ere",
     "/packages/pse/src/eon_pse",
+    "/packages/sie/src/eon_sie",
     "/README.md",
     "/LICENSE",
     "/pyproject.toml",
@@ -71,7 +73,7 @@ include = [
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["packages/ers/tests"]
-pythonpath = ["src", "packages/ers/src", "packages/ems/src", "packages/ere/src", "packages/pse/src"]
+pythonpath = ["src", "packages/ers/src", "packages/ems/src", "packages/ere/src", "packages/pse/src", "packages/sie/src"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
