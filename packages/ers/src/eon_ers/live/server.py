@@ -51,7 +51,10 @@ def create_live_app(
     model_registry: ModelRegistry | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI live streaming application."""
-    env_auth = os.getenv("EON_ERS_API_AUTH", "").strip().lower() in ("1", "true", "yes")
+    auth_setting = os.getenv("EON_ERS_API_AUTH", "").strip().lower()
+    if auth_setting not in ("", "0", "false", "no", "off", "1", "true", "yes", "on"):
+        raise ValueError("Invalid EON_ERS_API_AUTH setting")
+    env_auth = auth_setting in ("1", "true", "yes", "on")
     if engine is not None:
         ers_engine = engine
     else:
@@ -71,12 +74,13 @@ def create_live_app(
         for entry in bootstrap_keys.split(","):
             parts = [p.strip() for p in entry.split(":", 2)]
             if len(parts) == 3 and parts[0] and parts[2]:
-                role = (
-                    Role(parts[1].lower())
-                    if parts[1].lower() in {r.value for r in Role}
-                    else Role.OPERATOR
-                )
+                try:
+                    role = Role(parts[1].lower())
+                except ValueError:
+                    raise ValueError("Invalid role in ERS bootstrap configuration") from None
                 auth.issue_key(parts[0], role, raw_secret=parts[2])
+            else:
+                raise ValueError("Incomplete ERS bootstrap configuration")
     limiter = SlidingWindowRateLimiter(
         max_requests_per_minute=ers_engine.config.rate_limit_requests_per_minute
     )
