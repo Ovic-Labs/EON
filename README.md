@@ -121,17 +121,54 @@ if preference is not None:
     # Use memory.forget(preference.id) if the user asks to remove it.
 ```
 
-Use a stable user ID assigned by the host application. Authorize access to that
-ID before opening EMS. Only pass summaries that the user has agreed to retain
-and set `confirmed=True` after the user confirms the preference. ERS observations
-are transient unless the host explicitly saves text. The SQLite file contains
-readable text, so keep it in the application's private data directory and apply
-your deployment's filesystem encryption and backup policy.
+### Production deployment
 
-Recall ranks whole-word overlap before recency. Call `recall()` for recent
-memories, use `kind="preference"` to filter, and use `clear()` when the user
-requests deletion of their saved memories. Deletion applies to the current
-database file. Manage external backups separately.
+Use a stable user ID assigned by the host application. Authorize access to that
+ID before opening EMS and only submit summaries the user has agreed to retain.
+Set `confirmed=True` after the user confirms a preference. ERS observations
+remain transient unless the host explicitly saves text.
+
+```python
+import os
+from datetime import timedelta
+
+from ovic_eon.ems import EmotionalMemory
+
+memory = EmotionalMemory(
+    "private/eon-memory.sqlite3",
+    user_id="operator-42",
+    encryption_key=bytes.fromhex(os.environ["EON_EMS_KEY_HEX"]),
+    interaction_ttl=timedelta(days=90),
+    max_interactions=1000,
+    max_preferences=100,
+)
+```
+
+Create the private directory first. Provision a random 32-byte key through
+your application's secret manager and keep it separate from the database.
+Use the same key when reopening this database. Losing the key leaves encrypted
+contents unreadable. The numbers above are example deployment limits.
+
+- **Storage.** Encrypted mode uses AES-256-GCM for summaries, preference keys,
+  and values. It uses keyed tokens for recall. User IDs, timestamps, record
+  types, ciphertext sizes, and token repetition within a user remain visible
+  to someone with file access. Keep the database in a private directory.
+- **Recall.** Results rank whole-word overlap before recency. Omit the query
+  for recent results or use `kind="preference"` to filter.
+- **Retention.** Expired interactions are excluded from recall and export.
+  Interaction writes purge expired rows and evict the oldest interactions
+  over the cap. Schedule `purge_expired()` for inactive users. Use consistent
+  retention and cap settings across processes. New preferences at capacity
+  raise `EMSError`. Existing preferences can still be updated.
+- **User data requests.** `export_memories()` returns the caller's unexpired
+  records. Exports contain readable text. Use `forget(id)` or `clear()` for
+  deletion and apply the same policy to backups and exported copies.
+- **Upgrade and recovery.** Existing plaintext databases open with the existing
+  constructor and receive the retention schema upgrade. TTL applies to new
+  writes. For encrypted operation, provision a new database and explicitly
+  re-save only records authorized for migration. Use SQLite's online backup
+  API for live databases and verify restoration with the corresponding key.
+  Deployments should retain the key separately from backups.
 
 ## Run ERS Studio on your desktop
 
