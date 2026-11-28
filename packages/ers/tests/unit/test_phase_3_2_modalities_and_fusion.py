@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import struct
@@ -19,6 +20,7 @@ from eon_ers.config import ERSConfig
 from eon_ers.contracts import EmotionObservation, ERSInput
 from eon_ers.core.adapter import CoreEventBusAdapter
 from eon_ers.engine import ERSEngine
+from eon_ers.evaluation.proof import EvaluationExecutionProof, SigningKeyPair, TrustedKeyRegistry
 from eon_ers.exceptions import (
     ERSSafetyViolationError,
     ERSUnsupportedCodecError,
@@ -329,7 +331,9 @@ def test_three_modality_fusion_dampening_and_validation_isolation() -> None:
     assert "text" not in res_iso.classification_eligible_modalities
 
 
-def test_model_registry_governance_and_checkpoint_integrity(tmp_path: Path) -> None:
+def test_model_registry_governance_and_checkpoint_integrity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     registry = ModelRegistry()
     discovered = registry.discover_directory("packages/ers/models")
     assert len(discovered) >= 2
@@ -376,10 +380,46 @@ def test_model_registry_governance_and_checkpoint_integrity(tmp_path: Path) -> N
         validation_timestamp="2026-11-25T00:00:00Z",
     )
     entry = registry.register(val_manifest, validation_record=val_rec)
+    assert entry.qualification_state == ModelQualificationState.MODEL_LOADED_UNVALIDATED
+    keys = TrustedKeyRegistry()
+    signing_key = SigningKeyPair.generate("unit-fixture")
+    keys.register_keypair(signing_key)
+    registry = ModelRegistry(keys)
+    dataset_digest = hashlib.sha256(b"test fixture").hexdigest()
+    proof = EvaluationExecutionProof.generate_proof(
+        val_rec.model_id,
+        val_rec.artifact_sha256,
+        dataset_digest,
+        "test",
+        "fixture",
+        3,
+        20,
+        signing_key,
+    )
+    val_rec = val_rec.model_copy(
+        update={
+            "dataset_archive_sha256": dataset_digest,
+            "execution_proof_key_id": proof.key_id,
+            "execution_proof_signature": proof.proof_signature,
+        }
+    )
+    assert not val_rec.is_approved_for(val_manifest)
+    monkeypatch.setenv("EON_ERS_FACIAL_VALIDATION_SHA256", val_rec.qualification_digest())
+    assert val_rec.is_approved_for(val_manifest)
+    assert not val_rec.model_copy(update={"evaluator": "changed"}).is_approved_for(val_manifest)
+    entry = registry.register(val_manifest, validation_record=val_rec, proof=proof)
     assert entry.qualification_state == ModelQualificationState.MODEL_VALIDATED
     registry.activate_model("valid-m")
     assert registry.get_entry("valid-m").activated is True  # type: ignore[union-attr]
+    assert keys.revoke_key(signing_key.key_id)
+    with pytest.raises(ERSSafetyViolationError):
+        registry.activate_model("valid-m")
+    assert registry.get_entry("valid-m").activated is False  # type: ignore[union-attr]
     registry.revoke_model("valid-m", "security-audit")
+    refreshed = registry.register(val_manifest, validation_record=val_rec, proof=proof)
+    assert refreshed.qualification_state == ModelQualificationState.MODEL_REVOKED
+    refreshed.qualification_state = ModelQualificationState.MODEL_VALIDATED
+
     assert (
         registry.get_entry("valid-m").qualification_state == ModelQualificationState.MODEL_REVOKED
     )  # type: ignore[union-attr]
