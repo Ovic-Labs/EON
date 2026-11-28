@@ -123,6 +123,7 @@ def compute_stage_stats(timings_ms: list[float]) -> dict[str, float]:
 async def run_stage_benchmarks(
     iterations: int = 40,
     warmup: int = 5,
+    output_path: Path = Path("packages/ers/benchmarks/live_benchmark_results.json"),
 ) -> dict[str, Any]:
     """Execute fine-grained stage measurements with real perf_counter timing."""
     print("=" * 70)
@@ -333,7 +334,6 @@ async def run_stage_benchmarks(
             f"{stats['max_ms']:>7.2f}ms"
         )
 
-    output_path = Path("packages/ers/benchmarks/live_benchmark_results.json")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)

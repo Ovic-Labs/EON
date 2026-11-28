@@ -9,12 +9,13 @@ import io
 import json
 from collections import Counter
 from pathlib import Path
+from typing import Annotated
 from uuid import uuid4
 
 from eon_ers.evaluation.metrics import compute_classification_metrics
 from eon_ers.types import ObservationStatus
 from PIL import Image
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 from qualify_desktop_sdk import Box, iou
 
 from ovic_eon.ers import ERSClient, ERSConfig
@@ -22,12 +23,15 @@ from ovic_eon.ers import ERSClient, ERSConfig
 LABELS = ["neutral", "happiness", "sadness", "anger", "fear", "surprise", "disgust"]
 
 
+Subject = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
 class Sample(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     image: Path
     box: Box | None
-    subject: str | None = None
+    subject: Subject | None = None
     expression: str | None = None
 
     @model_validator(mode="after")
@@ -51,13 +55,15 @@ class Holdout(BaseModel):
 
     dataset_id: str = Field(min_length=1)
     usage_reference: str = Field(min_length=1)
-    training_subjects: set[str]
-    validation_subjects: set[str]
+    training_subjects: set[Subject]
+    validation_subjects: set[Subject]
     samples: list[Sample] = Field(min_length=1)
 
     @model_validator(mode="after")
     def reject_leakage(self) -> Holdout:
         subjects = {sample.subject for sample in self.samples if sample.subject is not None}
+        if self.training_subjects & self.validation_subjects:
+            raise ValueError("Training and validation subjects overlap.")
         if subjects & (self.training_subjects | self.validation_subjects):
             raise ValueError("Held-out subject overlaps training or validation.")
         if not subjects or all(sample.box is not None for sample in self.samples):
