@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "eon-pse"
+version = "0.1.0"
+description = "Personality Simulation Engine for OVIC EON."
+license = "Apache-2.0"
+requires-python = ">=3.11,<3.13"
+authors = [{ name = "OVIC Labs", email = "engineering@oviclabs.com" }]
+dependencies = [
+    "eon-ere>=0.1.0,<0.2",
+    "pydantic>=2.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/eon_pse"]

@@ -48,15 +48,30 @@ eon-ers-studio = "ovic_eon.studio:main"
 eon-ers-live = "eon_ers.live.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ovic_eon", "packages/ers/src/eon_ers"]
+packages = [
+    "src/ovic_eon",
+    "packages/ers/src/eon_ers",
+    "packages/ems/src/eon_ems",
+    "packages/ere/src/eon_ere",
+    "packages/pse/src/eon_pse",
+]
 
 [tool.hatch.build.targets.sdist]
-include = ["/src/ovic_eon", "/packages/ers/src/eon_ers", "/README.md", "/LICENSE", "/pyproject.toml"]
+include = [
+    "/src/ovic_eon",
+    "/packages/ers/src/eon_ers",
+    "/packages/ems/src/eon_ems",
+    "/packages/ere/src/eon_ere",
+    "/packages/pse/src/eon_pse",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
+]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["packages/ers/tests"]
-pythonpath = ["src", "packages/ers/src"]
+pythonpath = ["src", "packages/ers/src", "packages/ems/src", "packages/ere/src", "packages/pse/src"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 

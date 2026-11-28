@@ -49,6 +49,38 @@ The host remains responsible for user identity, consent, and session binding.
 It decides which modules run per turn. For example, it can invoke ERE with
 an explicit user goal while ERS and EMS are unavailable.
 
+## Engine packages
+
+| Engine | Source package | Distribution | Python import |
+| --- | --- | --- | --- |
+| ERS | [packages/ers](packages/ers) | `eon-ers` | `eon_ers` |
+| EMS | [packages/ems](packages/ems) | `eon-ems` | `eon_ems` |
+| ERE | [packages/ere](packages/ere) | `eon-ere` | `eon_ere` |
+| PSE | [packages/pse](packages/pse) | `eon-pse` | `eon_pse` |
+
+Build the four local distributions from an EON checkout:
+
+```bash
+python -m pip install build
+for engine in ers ems ere pse; do
+    python -m build "packages/$engine" --outdir dist
+done
+```
+
+For an EMS-only installation, run `python -m pip install ./packages/ems`.
+Install the full standalone chain from the checkout with:
+
+```bash
+python -m pip install ./packages/ers ./packages/ems ./packages/ere ./packages/pse
+```
+
+The repository root still builds the unified `ovic-eon` wheel, including the
+same implementation and the `ovic_eon.ers`, `ovic_eon.ems`, `ovic_eon.ere`,
+and `ovic_eon.pse` imports. Use the unified wheel or install the standalone
+packages in a separate environment because these distributions share import
+names. The standalone packages are buildable from source. This change
+does not publish them to an external package registry.
+
 ## Physical AI SDK
 
 Install the Python SDK from a checkout. The `studio` extra includes the
@@ -112,9 +144,7 @@ dictionaries. The base SDK retains the heuristic detector for compatibility.
 Select `ERSConfig(face_detector="opencv")` to enable the OpenCV detector
 explicitly. ERS Studio selects it for you.
 
-SDK distributions exclude the synthetic baseline weights. The existing
-standalone `eon-ers` distribution remains available. Choose one distribution
-per environment because both provide the `eon_ers` implementation.
+SDK distributions exclude the synthetic baseline weights.
 
 ## Phase 2 · Emotional Memory System
 
